@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.88 2004-08-01 01:51:48 jpm Exp $
+# $Id: papercut.py,v 1.89 2004-08-01 20:57:59 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -322,8 +322,13 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOGROUPSELECTED)
             return
         if len(self.tokens) == 1:
-            self.tokens.append(self.selected_article)
-            report_article_number = self.tokens[1]
+            # check if the currently selected article pointer is set
+            if self.selected_article == 'ggg':
+                self.send_response(ERR_NOARTICLESELECTED)
+                return
+            else:                
+                self.tokens.append(self.selected_article)
+                report_article_number = self.tokens[1]
         else:
             # get the article number if it is the appropriate option
             if self.tokens[1].find('<') != -1:
