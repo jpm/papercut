@@ -1,6 +1,6 @@
         #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.26 2002-03-26 05:51:05 jpm Exp $
+# $Id: phorum_mysql.py,v 1.27 2002-03-26 05:55:44 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -207,12 +207,12 @@ To edit this message use this URL:
         # XXX: temporary implementation. Should work fine, I guess.
         mail_code_regexp = re.compile("(.*)PHORUM\['PhorumMailCode'\](.*)=(.*)'(.*)';", re.M)
         phorum_mail_code = mail_code_regexp.search(content, 0).groups()[3]
-        notification_mail_tpl = """Message-ID: %(random_msgid)s
+        notification_mail_tpl = """Message-ID: <%(random_msgid)s@%(phorum_server_hostname)s>
 From: %(msg_author)s %(msg_email)s
 Subject: %(msg_subject)s
 To: %(forum_name)s <%(email_list)s>
 Return-Path: <%(email_return)s>
-Reply-To: %(email_return)s
+Reply-To: <%(email_return)s>
 X-Phorum-%(phorum_mail_code)s-Version: Phorum $phorumver
 X-Phorum-%(phorum_mail_code)s-Forum: %(forum_name)s
 X-Phorum-%(phorum_mail_code)s-Thread: %(thread_id)s
