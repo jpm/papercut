@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.18 2002-01-13 07:31:26 jpm Exp $
+# $Id: mysql.py,v 1.19 2002-01-13 07:35:39 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -21,7 +21,7 @@ class Papercut_Backend:
         found = 0
         raw_headers = headers.split('\r\n')
         for line in raw_headers:
-            if line == '':
+            if not found and line == '':
                 found = 1
                 continue
             if found:
