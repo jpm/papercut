@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.17 2002-03-17 03:59:46 jpm Exp $
+# $Id: phorum_mysql.py,v 1.18 2002-03-24 00:08:35 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -54,7 +54,7 @@ class Papercut_Backend:
                 SELECT
                     COUNT(*) AS check
                 FROM
-                    forum.forums
+                    forums
                 WHERE
                     nntp_group_name='%s'""" % (group_name)
         self.cursor.execute(stmt)
@@ -66,7 +66,7 @@ class Papercut_Backend:
                 SELECT
                     COUNT(*) AS check
                 FROM
-                    forum.%s
+                    %s
                 WHERE
                     approved='Y'""" % (table_name)
         if style == 'range':
@@ -85,7 +85,7 @@ class Papercut_Backend:
                    MIN(id) AS maximum,
                    MAX(id) AS minimum
                 FROM
-                    forum.%s
+                    %s
                 WHERE
                     approved='Y'""" % (table_name)
         self.cursor.execute(stmt)
@@ -96,18 +96,20 @@ class Papercut_Backend:
                 SELECT
                     table_name
                 FROM
-                    forum.forums
+                    forums
                 WHERE
                     nntp_group_name='%s'""" % (group_name.replace('*', '%'))
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
-        
+
+#    def get_subscribers(self):
+#        
     def get_NEWGROUPS(self, ts, group='%'):
         stmt = """
                 SELECT
                     nntp_group_name
                 FROM
-                    forum.forums
+                    forums
                 WHERE
                     nntp_group_name LIKE '%%%s'
                 ORDER BY
@@ -125,7 +127,7 @@ class Papercut_Backend:
                     nntp_group_name,
                     table_name
                 FROM
-                    forum.forums
+                    forums
                 WHERE
                     nntp_group_name='%s'
                 ORDER BY
@@ -138,7 +140,7 @@ class Papercut_Backend:
                     SELECT
                         id
                     FROM
-                        forum.%s
+                        %s
                     WHERE
                         approved='Y' AND
                         UNIX_TIMESTAMP(datestamp) >= %s""" % (table, ts)
@@ -159,7 +161,7 @@ class Papercut_Backend:
                     nntp_group_name,
                     table_name
                 FROM
-                    forum.forums
+                    forums
                 ORDER BY
                     nntp_group_name ASC"""
         self.cursor.execute(stmt)
@@ -174,7 +176,7 @@ class Papercut_Backend:
                 SELECT
                     id
                 FROM
-                    forum.%s
+                    %s
                 WHERE
                     approved='Y' AND
                     id=%s""" % (table_name, id)
@@ -192,8 +194,8 @@ class Papercut_Backend:
                     body,
                     parent
                 FROM
-                    forum.%s A,
-                    forum.%s_bodies B
+                    %s A,
+                    %s_bodies B
                 WHERE
                     A.approved='Y' AND
                     A.id=B.id AND
@@ -225,7 +227,7 @@ class Papercut_Backend:
                 SELECT
                     id
                 FROM
-                    forum.%s
+                    %s
                 WHERE
                     approved='Y' AND
                     id < %s
@@ -243,7 +245,7 @@ class Papercut_Backend:
                 SELECT
                     id
                 FROM
-                    forum.%s
+                    %s
                 WHERE
                     approved='Y' AND
                     id > %s
@@ -266,7 +268,7 @@ class Papercut_Backend:
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
                     parent
                 FROM
-                    forum.%s
+                    %s
                 WHERE
                     approved='Y' AND
                     id=%s""" % (table_name, id)
@@ -297,8 +299,8 @@ class Papercut_Backend:
                 SELECT
                     B.body
                 FROM
-                    forum.%s A,
-                    forum.%s_bodies B
+                    %s A,
+                    %s_bodies B
                 WHERE
                     A.id=B.id AND
                     A.approved='Y' AND
@@ -321,8 +323,8 @@ class Papercut_Backend:
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
                     B.body
                 FROM
-                    forum.%s A, 
-                    forum.%s_bodies B
+                    %s A, 
+                    %s_bodies B
                 WHERE
                     A.approved='Y' AND
                     A.id=B.id AND
@@ -360,8 +362,8 @@ class Papercut_Backend:
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
                     B.body
                 FROM
-                    forum.%s A, 
-                    forum.%s_bodies B
+                    %s A, 
+                    %s_bodies B
                 WHERE
                     A.approved='Y' AND
                     %s REGEXP '%s' AND
@@ -402,7 +404,7 @@ class Papercut_Backend:
                 SELECT
                     id
                 FROM
-                    forum.%s
+                    %s
                 WHERE
                     approved='Y'
                 ORDER BY
@@ -417,7 +419,7 @@ class Papercut_Backend:
                     nntp_group_name,
                     description
                 FROM
-                    forum.forums
+                    forums
                 WHERE
                     nntp_group_name REGEXP '%s'
                 ORDER BY
@@ -438,8 +440,8 @@ class Papercut_Backend:
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
                     B.body
                 FROM
-                    forum.%s A,
-                    forum.%s_bodies B
+                    %s A,
+                    %s_bodies B
                 WHERE
                     A.approved='Y' AND
                     A.id = B.id AND """ % (table_name, table_name)
@@ -488,7 +490,7 @@ class Papercut_Backend:
                     SELECT
                         MAX(id)+1
                     FROM
-                        forum.%s
+                        %s
                     WHERE
                         approved='Y'""" % (table_name)
             self.cursor.execute(stmt)
@@ -499,7 +501,7 @@ class Papercut_Backend:
                         thread,
                         modifystamp
                     FROM
-                        forum.%s
+                        %s
                     WHERE
                         approved='Y' AND
                         id=%s
@@ -515,7 +517,7 @@ class Papercut_Backend:
                         MAX(id)+1,
                         UNIX_TIMESTAMP()
                     FROM
-                        forum.%s
+                        %s
                     WHERE
                         approved='Y'""" % (table_name)
             self.cursor.execute(stmt)
@@ -524,7 +526,7 @@ class Papercut_Backend:
             thread_id = new_id
         stmt = """
                 INSERT INTO
-                    forum.%s
+                    %s
                 (
                     id,
                     datestamp,
@@ -561,7 +563,7 @@ class Papercut_Backend:
             # insert into the '*_bodies' table
             stmt = """
                     INSERT INTO
-                        forum.%s_bodies
+                        %s_bodies
                     (
                         id,
                         body,
@@ -575,10 +577,13 @@ class Papercut_Backend:
                 # delete from 'table_name' before returning..
                 stmt = """
                         DELETE FROM
-                            forum.%s
+                            %s
                         WHERE
                             id=%s""" % (table_name, new_id)
                 self.cursor.execute(stmt)
                 return None
             else:
+                # check if we need to alert forum moderators
+                #if self.has_forum_moderators():
+                #    self.send_notifications()
                 return 1

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.34 2002-03-17 03:59:46 jpm Exp $
+# $Id: papercut.py,v 1.35 2002-03-24 00:08:35 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -8,7 +8,7 @@ import time
 import re
 import settings
 
-__VERSION__ = '0.7.4'
+__VERSION__ = '0.7.5'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 __TIMEOUT__ = 60
@@ -31,6 +31,7 @@ ERR_TIMEOUT = '503 Timeout after %s seconds, closing connection.'
 ERR_NOTPERFORMED = '503 program error, function not performed'
 ERR_POSTINGFAILED = '441 Posting failed'
 STATUS_POSTMODE = '200 Hello, you can post'
+STATUS_NOPOSTMODE = '201 Hello, you can\'t post'
 STATUS_HELPMSG = '100 help text follows'
 STATUS_GROUPSELECTED = '211 %s %s %s %s group selected'
 STATUS_LIST = '215 list of newsgroups follows'
@@ -51,6 +52,7 @@ STATUS_DATE = '111 %s'
 STATUS_OVERVIEWFMT = '215 information follows'
 STATUS_EXTENSIONS = '215 Extensions supported by server.'
 STATUS_SENDARTICLE = '340 Send article to be posted'
+STATUS_READONLYSERVER = '440 Posting not allowed'
 STATUS_POSTSUCCESSFULL = '240 Article received ok'
 
 # the currently supported overview headers
@@ -107,8 +109,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             command = self.tokens[0].upper()
             settings.logEvent('Received request: %s' % (line))
             if command == 'POST':
-                self.sending_article = 1
-                self.send_response(STATUS_SENDARTICLE)
+                if settings.server_type == 'read-only':
+                    settings.logEvent('Error - Read-only server received a post request from \'%s\'' % self.client_address[0])
+                    self.send_response(STATUS_READONLYSERVER)
+                else:
+                    self.sending_article = 1
+                    self.send_response(STATUS_SENDARTICLE)
             else:
                 if self.sending_article:
                     if self.inputline == '.\r\n':
@@ -612,7 +618,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             500 Command not understood
         """
         if self.tokens[1].upper() == 'READER':
-            self.send_response(STATUS_POSTMODE)
+            if settings.server_type == 'read-only':
+                self.send_response(STATUS_NOPOSTMODE)
+            else:
+                self.send_response(STATUS_POSTMODE)
         elif self.tokens[1].upper() == 'STREAM':
             self.send_response(ERR_NOSTREAM)
 

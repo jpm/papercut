@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.6 2002-01-21 17:39:02 jpm Exp $
+# $Id: settings.py,v 1.7 2002-03-24 00:08:35 jpm Exp $
 import time
 
 #
@@ -17,6 +17,9 @@ log_file = log_path + "papercut.log"
 # hostname that Papercut will bind against
 nntp_hostname = 'nntp.domain.com'
 nntp_port = 119
+
+# type of server ('read-only' or 'read-write')
+server_type = 'read-write'
 
 # backend that Papercut will use to get the actual articles content
 backend_type = "phorum_mysql"
