@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.43 2002-03-25 04:55:55 jpm Exp $
+# $Id: papercut.py,v 1.44 2002-03-25 05:01:45 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -531,7 +531,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 self.send_response(ERR_NOGROUPSELECTED)
                 return
             info = backend.get_XGTITLE(self.selected_group)
-        self.send_response("%s\r\n%s\r\n." % (STATUS_XGTITLE, info))
+        if len(info) == 0:
+            self.send_response("%s\r\n." % (STATUS_XGTITLE))
+        else:
+            self.send_response("%s\r\n%s\r\n." % (STATUS_XGTITLE, info))
 
     def do_LIST_NEWSGROUPS(self):
         """
