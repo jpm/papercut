@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.72 2003-01-04 04:36:18 jpm Exp $
+# $Id: papercut.py,v 1.73 2003-02-07 03:54:41 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -14,7 +14,7 @@ import StringIO
 import settings
 import papercut_cache
 
-__VERSION__ = '0.9.6'
+__VERSION__ = '0.9.7'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
@@ -471,12 +471,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 return
         else:
             ranges = self.tokens[1].split('-')
-            if len(ranges) == 2:
-                # this is a start-end style of XOVER
-                overviews = backend.get_XOVER(self.selected_group, ranges[0], ranges[1])
-            else:
+            if ranges[1] == '':
                 # this is a start-everything style of XOVER
                 overviews = backend.get_XOVER(self.selected_group, ranges[0])
+            else:
+                # this is a start-end style of XOVER
+                overviews = backend.get_XOVER(self.selected_group, ranges[0], ranges[1])
         if overviews == None:
             self.send_response(ERR_NOARTICLERETURNED)
             return
@@ -510,10 +510,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             return
         else:
             ranges = self.tokens[2].split('-')
-            if len(ranges) == 2:
-                overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0], ranges[1])
-            else:
+            if ranges[1] == '':
                 overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0])
+            else:
+                overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0], ranges[1])
         if overviews == None:
             self.send_response(ERR_NOSUCHARTICLE)
             return
@@ -625,10 +625,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 info = backend.get_XHDR(self.selected_group, self.tokens[1], 'unique', (self.tokens[2]))
             else:
                 ranges = self.tokens[2].split('-')
-                if len(ranges) == 2:
-                    info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0], ranges[1]))
-                else:
+                if ranges[1] == '':
                     info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0]))
+                else:
+                    info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0], ranges[1]))
         # check for empty results
         if info == None:
             self.send_response(ERR_NOSUCHARTICLE)
