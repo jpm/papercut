@@ -1,21 +1,19 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.5 2002-01-11 20:29:34 jpm Exp $
+# $Id: papercut.py,v 1.6 2002-01-11 22:29:35 jpm Exp $
 import SocketServer
 import sys
 import signal
 import time
 import settings
 
-__VERSION__ = '0.3.1'
+__VERSION__ = '0.3.9'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 1
 __TIMEOUT__ = 60
 
 # some constants to hold the possible responses
 ERR_NOTCAPABLE = '500 command not recognized'
-ERR_NOPOSTALLOWED = '440 posting not allowed'
-ERR_NOPOSTMODE = '201 Hello, you can\'t post'
 ERR_CMDSYNTAXERROR = '501 command syntax error (or un-implemented option)'
 ERR_NOSUCHGROUP = '411 no such news group'
 ERR_NOGROUPSELECTED = '412 no newsgroup has been selected'
@@ -24,12 +22,14 @@ ERR_NOARTICLERETURNED = '420 No article(s) selected'
 ERR_NOPREVIOUSARTICLE = '422 no previous article in this group'
 ERR_NONEXTARTICLE = '421 no next article in this group'
 ERR_NOSUCHARTICLENUM = '423 no such article number in this group'
-ERR_NOSLAVESHERE = '202 no slaves here please (this is a read-only server)'
+ERR_NOSLAVESHERE = '202 no slaves here please (this is a standalone server)'
 ERR_NOSUCHARTICLE = '430 no such article'
 ERR_NOIHAVEHERE = '435 article not wanted - do not send it'
 ERR_NOSTREAM = '500 Command not understood'
 ERR_TIMEOUT = '503 Timeout after %s seconds, closing connection.'
 ERR_NOTPERFORMED = '503 program error, function not performed'
+ERR_POSTINGFAILED = '441 Posting failed'
+STATUS_POSTMODE = '200 Hello, you can post'
 STATUS_HELPMSG = '100 help text follows'
 STATUS_GROUPSELECTED = '211 %s %s %s %s group selected'
 STATUS_LIST = '215 list of newsgroups follows'
@@ -39,7 +39,7 @@ STATUS_NEWGROUPS = '231 list of new newsgroups follows'
 STATUS_NEWNEWS = '230 list of new articles by message-id follows'
 STATUS_HEAD = '221 %s <%s@%s> article retrieved - head follows'
 STATUS_BODY = '222 %s <%s@%s> article retrieved - body follows'
-STATUS_READYNOPOST = '201 %s Papercut %s server ready (no posting allowed)'
+STATUS_READYNOPOST = '200 %s Papercut %s server ready (posting allowed)'
 STATUS_CLOSING = '205 closing connection - goodbye!'
 STATUS_XOVER = '224 Overview information follows'
 STATUS_XPAT = '221 Header follows'
@@ -49,6 +49,8 @@ STATUS_XHDR = '221 Header follows'
 STATUS_DATE = '111 %s'
 STATUS_OVERVIEWFMT = '215 information follows'
 STATUS_EXTENSIONS = '215 Extensions supported by server.'
+STATUS_SENDARTICLE = '340 Send article to be posted'
+STATUS_POSTSUCCESSFULL = '240 Article received ok'
 
 overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Bytes', 'Lines', 'Xref')
 
@@ -79,6 +81,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     selected_article = 'ggg'
     selected_group = 'ggg'
     tokens = []
+    sending_article = 0
+    article_lines = []
 
     def handle(self):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
@@ -87,14 +91,26 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.inputline = self.rfile.readline()
             line = self.inputline.strip()
             self.tokens = line.split(' ')
-            print self.tokens
+            if __DEBUG__: print self.tokens
             # NNTP commands are case-insensitive
             command = self.tokens[0].upper()
             settings.logEvent('Received request: %s' % (line))
-            if command in self.commands:
-                getattr(self, "do_%s" % (command))()
+            if command == 'POST':
+                self.sending_article = 1
+                self.send_response(STATUS_SENDARTICLE)
             else:
-                self.send_response(ERR_NOTCAPABLE)
+                if sending_article:
+                    if self.inputline == '.\r\n':
+                        self.sending_article = 0
+                        self.do_POST()
+                        self.article_lines = []
+                        continue
+                    self.article_lines.append(self.inputline)
+                else:
+                    if command in self.commands:
+                        getattr(self, "do_%s" % (command))()
+                    else:
+                        self.send_response(ERR_NOTCAPABLE)
         settings.logEvent('Connection closed (IP Address: %s)' % (self.client_address[0]))
 
     def do_NEWGROUPS(self):
@@ -574,7 +590,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             500 Command not understood
         """
         if self.tokens[1].upper() == 'READER':
-            self.send_response(ERR_NOPOSTMODE)
+            self.send_response(STATUS_POSTMODE)
         elif self.tokens[1].upper() == 'STREAM':
             self.send_response(ERR_NOSTREAM)
 
@@ -588,7 +604,15 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             440 posting not allowed
             441 posting failed
         """
-        self.send_response(ERR_NOPOSTALLOWED)
+        # check the 'Newsgroups' header
+        group_name = re.compile("^Newsgroups:(.*)", re.M).search(str, 1).groups()[0].strip()
+        if not backend.group_exists(group_name):
+            self.send_response(ERR_POSTINGFAILED)
+        result = backend.do_POST(group_name, self.article_lines)
+        if result == None:
+            self.send_response(ERR_POSTINGFAILED)
+        else:
+            self.send_response(STATUS_POSTSUCCESSFULL)
 
     def get_number_from_msg_id(self, msg_id):
         return msg_id[1:msg_id.find('@')]
@@ -611,6 +635,13 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.wfile.flush()
 
     def finish(self):
+        # cleaning up after ourselves
+        self.terminated = 0
+        self.selected_article = 'ggg'
+        self.selected_group = 'ggg'
+        self.tokens = []
+        self.sending_article = 0
+        self.article_lines = []
         if __DEBUG__: print 'Closing the request'
         pass
 

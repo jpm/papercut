@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.6 2002-01-11 20:29:34 jpm Exp $
+# $Id: mysql.py,v 1.7 2002-01-11 22:29:35 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -346,10 +346,13 @@ class Papercut_Backend:
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
-                    id,
+                    A.id,
+                    parent,
                     author,
                     email,
-                    subject
+                    subject,
+                    UNIX_TIMESTAMP(datestamp) AS datestamp,
+                    B.body
                 FROM
                     forum.%s
                 WHERE""" % (table_name)
@@ -369,3 +372,66 @@ class Papercut_Backend:
             elif header == 'FROM':
                 hdrs.append('%s %s <%s>' % (row[0], row[1], row[2]))
         return "\r\n".join(["%s" % k for k in hdrs])
+
+    def do_POST(self, group_name, lines):
+        table_name = self.get_table_name(group_name)
+        thread = None
+        parent = None
+        author = None
+        email = None
+        subject = None
+        host = None
+        # get the 'modifystamp' value from the parent (if any)
+        modifystamp = None
+        stmt = """
+                INSERT INTO
+                    forum.%s
+                (
+                    datestamp,
+                    thread,
+                    parent,
+                    author,
+                    subject,
+                    email,
+                    host,
+                    email_reply,
+                    approved,
+                    msgid,
+                    modifystamp,
+                    userid
+                ) VALUES (
+                    NOW(),
+                    %s,
+                    %s,
+                    '%s',
+                    '%s',
+                    '%s',
+                    '%s',
+                    'N',
+                    'Y',
+                    '',
+                    %s,
+                    0
+                )
+                """ % (table_name, thread, parent, author, subject, email, host, modifystamp)
+        if not self.cursor.execute(stmt):
+            return None
+        else:
+            # insert into the '*_bodies' table
+            stmt = """
+                    INSERT INTO
+                        forum.%s_bodies
+                    (
+                        id,
+                        body,
+                        thread
+                    ) VALUES (
+                        %s,
+                        '%s',
+                        %s
+                    )""" % (id, lines, thread)
+            if not self.cursor.execute(stmt):
+                # delete from 'table_name' before returning..
+                return None
+            else:
+                return 1
