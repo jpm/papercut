@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.6 2002-01-21 17:39:02 jpm Exp $
+# $Id: phorum_mysql.py,v 1.7 2002-02-01 15:55:33 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -12,6 +12,7 @@ singleline_regexp = re.compile("^\.", re.M)
 from_regexp = re.compile("^From:(.*)<(.*)>", re.M)
 subject_regexp = re.compile("^Subject:(.*)", re.M)
 references_regexp = re.compile("^References:(.*)<(.*)>", re.M)
+lines_regexp = re.compile("^Lines:(.*)", re.M)
 
 class Papercut_Backend:
     """
@@ -27,17 +28,11 @@ class Papercut_Backend:
         self.cursor = self.conn.cursor()
 
     def get_message_body(self, headers):
+        # how many lines do we have here..
+        lines = int(lines_regexp.search(headers, 1).groups()[0].strip())
         # XXX: Need to un-escape the doubled dots
-        body = []
-        found = 0
         raw_headers = headers.split('\r\n')
-        for line in raw_headers:
-            if not found and line == '':
-                found = 1
-                continue
-            if found:
-                body.append(doubleline_regexp.sub(".", line))
-        return "\r\n".join(body)
+        return doubleline_regexp.sub(".", "\r\n".join(raw_headers[:lines]))
 
     def get_formatted_time(self, time_tuple):
         return time.strftime('%a, %d %B %Y %H:%M:%S %Z', time_tuple)
@@ -206,7 +201,7 @@ class Papercut_Backend:
         headers.append("Date: %s" % (formatted_time))
         headers.append("Subject: %s" % (result[3]))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
-        headers.append("Xref: %s %s:%s" % (settings.hostname, group_name, result[0]))
+        headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
         if result[6] != "":
             headers.append("References: <%s@%s>" % (result[6], group_name))
         return ("\r\n".join(headers), self.format_body(result[5]))
@@ -272,7 +267,7 @@ class Papercut_Backend:
         headers.append("Date: %s" % (formatted_time))
         headers.append("Subject: %s" % (result[3]))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
-        headers.append("Xref: %s %s:%s" % (settings.hostname, group_name, result[0]))
+        headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
         if result[5] != "":
             headers.append("References: <%s@%s>" % (result[5], group_name))
         return "\r\n".join(headers)
@@ -319,7 +314,7 @@ class Papercut_Backend:
             formatted_time = self.get_formatted_time(time.localtime(row[5]))
             message_id = "<%s@%s>" % (row[0], group_name)
             line_count = len(row[6].split('\n'))
-            xref = 'Xref: %s %s:%s' % (settings.hostname, group_name, row[1])
+            xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, row[1])
             overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, row[1], len(self.format_body(row[6])), line_count, xref))
         return "\r\n".join(overviews)
 
@@ -364,7 +359,7 @@ class Papercut_Backend:
             elif header.upper() == 'LINES':
                 hdrs.append('%s %s' % (row[0], len(row[6].split('\n'))))
             elif header.upper() == 'XREF':
-                hdrs.append('%s %s %s:%s' % (row[0], settings.hostname, group_name, row[0]))
+                hdrs.append('%s %s %s:%s' % (row[0], settings.nntp_hostname, group_name, row[0]))
         return "\r\n".join(hdrs)
 
     def get_LISTGROUP(self, group_name):
@@ -437,7 +432,7 @@ class Papercut_Backend:
             elif header.upper() == 'LINES':
                 hdrs.append('%s %s' % (row[0], len(row[6].split('\n'))))
             elif header.upper() == 'XREF':
-                hdrs.append('%s %s %s:%s' % (row[0], settings.hostname, group_name, row[0]))
+                hdrs.append('%s %s %s:%s' % (row[0], settings.nntp_hostname, group_name, row[0]))
         return "\r\n".join(hdrs)
 
     def do_POST(self, group_name, lines, ip_address):
