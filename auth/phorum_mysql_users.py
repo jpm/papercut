@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql_users.py,v 1.4 2003-09-19 03:11:51 jpm Exp $
+# $Id: phorum_mysql_users.py,v 1.5 2004-01-14 22:26:40 jpm Exp $
 import MySQLdb
 import settings
 import crypt
@@ -37,7 +37,7 @@ class Papercut_Auth:
             result = (db_password != md5.new(password).hexdigest())
         else:
             result = (db_password != crypt.crypt(password, password[:settings.PHP_CRYPT_SALT_LENGTH]))
-        if not result:
+        if result:
             settings.logEvent('Error - Authentication failed for username \'%s\' (incorrect password)' % (username))
             return 0
         else:
