@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.19 2002-03-24 02:42:45 jpm Exp $
+# $Id: phorum_mysql.py,v 1.20 2002-03-24 18:48:50 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
 import re
 import settings
 import mime
+import smtplib
 
 doubleline_regexp = re.compile("^\.\.", re.M)
 singleline_regexp = re.compile("^\.", re.M)
@@ -102,8 +103,86 @@ class Papercut_Backend:
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
-#    def get_subscribers(self):
-#        
+    def get_notification_emails(self, forum_id):
+        # abrindo arquivo para pegar a configuracao de email
+        fp = open("%s%s.php" % (settings.phorum_settings_path, forum_id), "r")
+        content = fp.read()
+        fp.close()
+        # get the value of the configuration variable
+        recipients = []
+        moderator_regexp = re.compile("(.*)PHORUM\['ForumModeration'\](.*)='(.*)';", re.M)
+        mod_code = moderator_regexp.search(content, 0 ).groups()
+        if mod_code[2] == 'r' or mod_code[2] == 'a':
+            # get the moderator emails from the forum_auth table
+            stmt = """
+                    SELECT
+                        email
+                    FROM
+                        forum_auth,
+                        forum_moderators
+                    WHERE
+                        user_id=id AND
+                        forum_id=%s""" % (forum_id)
+            self.cursor.execute(stmt)
+            result = list(self.cursor.fetchall())
+            for email in result:
+                recipients.append(email)
+        # check if we need to also send an email to a mailing list
+        maillist_regexp = re.compile("(.*)PHORUM\['ForumEmailList'\](.*)='(.*)';", re.M)
+        mail_recipient = maillist_regexp.search(content, 0 ).groups()[2]
+        if mail_recipient != '':
+            recipients.append(mail_recipient)
+        return recipients
+
+    def send_notification(self, group_name, msg_id, thread_id, msg_author, msg_subject, msg_body):
+        msg_tpl = """
+From: Phorum <%(recipient)s>
+To: %(recipient)s
+Subject: Moderate for %(forum_name)s at %(phorum_server_hostname)s Message: %(msg_id)s.
+
+Subject: %(msg_subject)s
+Author: %(msg_author)s
+Message: %(phorum_url)s/read.php?f=%(forum_id)s&i=%(msg_id)s&t=%(thread_id)s&admview=1
+
+%(msg_body)s
+
+To delete this message use this URL:
+%(phorum_admin_url)s?page=easyadmin&action=del&type=quick&id=%(msg_id)s&num=1&thread=%(thread_id)s
+
+To edit this message use this URL:
+%(phorum_admin_url)s?page=edit&srcpage=easyadmin&id=%(msg_id)s&num=1&mythread=%(thread_id)s
+
+"""
+        # get the forum_id for this group_name
+        stmt = """
+                SELECT
+                    id,
+                    name
+                FROM
+                    forums
+                WHERE
+                    nntp_group_name='%s'""" % (group_name)
+        self.cursor.execute(stmt)
+        forum_id, forum_name = self.cursor.fetchone()
+        # abrindo arquivo para pegar a configuracao de email
+        fp = open("%sforums.php" % (settings.phorum_settings_path, forum_id), "r")
+        content = fp.read()
+        fp.close()
+        # regexps to get the content from the phorum configuration files
+        url_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)';", re.M)
+        phorum_url = url_regexp.search(content, 0 ).groups()[2]
+        admin_regexp = re.compile("(.*)PHORUM\['admin_url'\](.*)='(.*)';", re.M)
+        phorum_admin_url = admin_regexp.search(content, 0 ).groups()[2]
+        server_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)http://(.*)/(.*)';", re.M)
+        phorum_server_hostname = server_regexp.search(content, 0 ).groups()[3]
+        # connect to the SMTP server
+        smtp = smtplib.SMTP('localhost')
+        emails = self.get_notification_emails(forum_id)
+        for recipient in emails:
+            current_msg = msg_tpl % vars()
+            smtp.sendmail("Phorum <%s>" % (recipient), recipient, current_msg)
+        smtp.quit()
+
     def get_NEWGROUPS(self, ts, group='%'):
         stmt = """
                 SELECT
@@ -413,17 +492,20 @@ class Papercut_Backend:
         result = list(self.cursor.fetchall())
         return "\r\n".join(["%s" % k for k in result])
 
-    def get_XGTITLE(self, pattern):
+    def get_XGTITLE(self, pattern='none'):
         stmt = """
                 SELECT
                     nntp_group_name,
                     description
                 FROM
-                    forums
+                    forums"""
+        if pattern != 'none':
+            stmt = stmt + """
                 WHERE
-                    nntp_group_name REGEXP '%s'
+                    nntp_group_name REGEXP '%s'""" % (self.format_wildcards(pattern))
+        stmt = stmt + """
                 ORDER BY
-                    nntp_group_name ASC""" % (self.format_wildcards(pattern))
+                    nntp_group_name ASC"""
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         return "\r\n".join(["%s %s" % (k, v) for k, v in result])
@@ -583,7 +665,6 @@ class Papercut_Backend:
                 self.cursor.execute(stmt)
                 return None
             else:
-                # check if we need to alert forum moderators
-                #if self.has_forum_moderators():
-                #    self.send_notifications()
+                # alert forum moderators
+                self.send_notifications(group_name, new_id, thread_id, author.strip(), subject, body)
                 return 1

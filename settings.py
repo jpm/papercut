@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.7 2002-03-24 00:08:35 jpm Exp $
+# $Id: settings.py,v 1.8 2002-03-24 18:48:50 jpm Exp $
 import time
 
 #
@@ -23,6 +23,9 @@ server_type = 'read-write'
 
 # backend that Papercut will use to get the actual articles content
 backend_type = "phorum_mysql"
+
+# full path to the directory where the Phorum configuration files are stored
+phorum_settings_path = "/home/jpm/www/phpbrasil.com/phorum_settings/"
 
 # configuration values for 'backends/phorum_mysql.py'
 # database connection variables

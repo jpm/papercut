@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.38 2002-03-24 02:42:45 jpm Exp $
+# $Id: papercut.py,v 1.39 2002-03-24 18:48:50 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -47,6 +47,7 @@ STATUS_XOVER = '224 Overview information follows'
 STATUS_XPAT = '221 Header follows'
 STATUS_LISTGROUP = '211 list of article numbers follow'
 STATUS_XGTITLE = '282 list of groups and descriptions follows'
+STATUS_LISTNEWSGROUPS = '215 information follows'
 STATUS_XHDR = '221 Header follows'
 STATUS_DATE = '111 %s'
 STATUS_OVERVIEWFMT = '215 information follows'
@@ -227,9 +228,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response("%s\r\n%s\r\n." % (STATUS_EXTENSIONS, "\r\n".join(self.extensions)))
             return
         elif (len(self.tokens) > 1) and (self.tokens[1].upper() == 'NEWSGROUPS'):
-            # same functionality as the XGTITLE command, so let's use that existing code
-            self.tokens[1] = '%'
-            self.do_XGTITLE()
+            self.do_LIST_NEWSGROUPS()
             return
         elif len(self.tokens) == 2:
             self.send_response(ERR_NOTPERFORMED)
@@ -515,6 +514,23 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 return
             info = backend.get_XGTITLE(self.selected_group)
         self.send_response("%s\r\n%s\r\n." % (STATUS_XGTITLE, info))
+
+    def do_LIST_NEWSGROUPS(self):
+        """
+        Syntax:
+            LIST NEWSGROUPS [wildmat]
+        Responses:
+            503 program error, function not performed
+            215 list of groups and descriptions follows
+        """
+        if len(self.tokens) > 3:
+            self.send_response(ERR_CMDSYNTAXERROR)
+            return
+        if len(self.tokens) == 3:
+            info = backend.get_XGTITLE(self.tokens[2])
+        else:
+            info = backend.get_XGTITLE()
+        self.send_response("%s\r\n%s\r\n." % (STATUS_LISTNEWSGROUPS, info))
 
     def do_HDR(self):
         self.do_XHDR()
