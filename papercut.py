@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.73 2003-02-07 03:54:41 jpm Exp $
+# $Id: papercut.py,v 1.74 2003-02-07 19:52:11 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -14,7 +14,7 @@ import StringIO
 import settings
 import papercut_cache
 
-__VERSION__ = '0.9.7'
+__VERSION__ = '0.9.6.1'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
@@ -75,9 +75,6 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # so let's create them just once and re-use as needed
 newsgroups_regexp = re.compile("^Newsgroups:(.*)", re.M)
 contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
-
-def is_empty(str):
-    return len(str) > 0
 
 if os.name == 'posix':
     class NNTPServer(SocketServer.ForkingTCPServer):
@@ -141,8 +138,6 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                     self.terminated = 1
                 continue
             self.tokens = line.split(' ')
-            # remove empty items in list
-            #self.tokens = filter(is_empty, self.tokens)
             # NNTP commands are case-insensitive
             command = self.tokens[0].upper()
             settings.logEvent('Received request: %s' % (line))
