@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.80 2004-01-04 19:37:36 jpm Exp $
+# $Id: papercut.py,v 1.81 2004-01-04 20:27:07 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -437,6 +437,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if len(self.tokens) == 2:
             if self.tokens[1].find('@') != -1:
                 self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
+            else:
+                # only set the internal selected article when an article number is used
+                self.selected_article = self.tokens[1]
             article_number = self.tokens[1]
             head = backend.get_HEAD(self.selected_group, self.tokens[1])
         else:
@@ -481,7 +484,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 # this is a start-end style of XOVER
                 overviews = backend.get_XOVER(self.selected_group, ranges[0], ranges[1])
         if overviews == None:
-            self.send_response(ERR_NOARTICLERETURNED)
+            self.send_response(ERR_NOTCAPABLE)
             return
         if len(overviews) == 0:
             msg = "%s\r\n." % (STATUS_XOVER)
@@ -518,7 +521,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             else:
                 overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0], ranges[1])
         if overviews == None:
-            self.send_response(ERR_NOSUCHARTICLE)
+            self.send_response(ERR_NOTCAPABLE)
             return
         self.send_response("%s\r\n%s\r\n." % (STATUS_XPAT, overviews))
 
@@ -643,7 +646,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                     info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0], ranges[1]))
         # check for empty results
         if info == None:
-            self.send_response(ERR_NOSUCHARTICLE)
+            self.send_response(ERR_NOTCAPABLE)
         else:
             self.send_response("%s\r\n%s\r\n." % (STATUS_XHDR, info))
 
