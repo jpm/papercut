@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.36 2002-05-24 02:47:43 jpm Exp $
+# $Id: mysql.py,v 1.37 2002-07-19 04:20:31 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -305,7 +305,7 @@ class Papercut_Storage:
                     subject,
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
                     body,
-                    lines,
+                    line_num,
                     bytes
                 FROM
                     %s
@@ -337,7 +337,7 @@ class Papercut_Storage:
                     subject,
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
                     bytes,
-                    lines
+                    line_num
                 FROM
                     %s
                 WHERE
@@ -419,7 +419,7 @@ class Papercut_Storage:
                     subject,
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
                     bytes,
-                    lines
+                    line_num
                 FROM
                     %s
                 WHERE
@@ -511,7 +511,7 @@ class Papercut_Storage:
                     host,
                     body,
                     bytes,
-                    lines
+                    line_num
                 ) VALUES (
                     %s,
                     NOW(),
