@@ -1,0 +1,66 @@
+--------------------
+Papercut News Server
+--------------------
+
+For more information on what exactly Papercut is, and what are its main 
+objectives / intended audience, please read the README file.
+
+
+Requirements:
+-------------
+
+- Python 2.2 (it needs the email module to parse MIME based messages)
+- MySQL server (the Phorum backend needs MySQL as the storage driver)
+    - MySQLdb python module (http://sf.net/projects/mysql-python)
+
+- Permission to add a new column to one of the Phorum tables
+
+
+Step by Step Instructions:
+--------------------------
+
+1) Unpack the distribution tarball where you intend to run it from
+
+  $ cd /path/to/where/papercut/will/run
+  $ gunzip papercut-X.tar.gz
+  $ tar vxf papercut-X.tar
+  [lots of stuff shows up on the console]
+  $ cd papercut-X
+
+2) Edit the settings.py configuration file
+
+  - Change the 'log_path' variable to point to the appropriate directory on your
+    server (i.e. /usr/local/papercut/logs/)
+
+  - Modify the 'nntp_hostname' and 'nntp_port' variables to your appropriate
+    server name and port number. (Note: if you want to run Papercut on port 199,
+    you may need to be root depending on your system)
+
+  - Choose your backend type by changing the 'backend_type' variable. (Note: as
+    of version 0.7.1, there is only one backend -> phorum_mysql)
+
+  - Finally, change the MySQL related variables so Papercut can connect to the
+    appropriate database and get the content of the messages.
+
+3) If your backend type is 'phorum_mysql' (Only option as of the current 
+   version):
+
+  - You will need to add a new column under the main forum listing table to
+    associate the name of a newsgroup to a table name. Since Phorum is totally
+    dynamic on the number of forums it can create, we need an extra column to
+    prevent problems.
+
+    $ cd /path/to/where/papercut/will/run/
+    $ cd backends
+    $ less phorum_mysql_fix.sql
+    [read the information contained on the file]
+    $ mysql -u username_here -p database_here < phorum_mysql_fix.sql
+    [password will be requested now]
+
+  - Now that the new column was created on the main forum listing table, you 
+    will need to edit it and enter the name of the newsgroup that you want for
+    each forum.
+
+
+If you find any problems on this set of instructions, or if the instructions
+didn't work out for you, please let me know.
