@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mbox.py,v 1.3 2003-12-14 19:06:30 jpm Exp $
+# $Id: mbox.py,v 1.4 2004-01-25 04:27:28 jpm Exp $
 
 import os
 import mailbox
