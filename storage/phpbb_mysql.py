@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.8 2003-02-21 19:27:59 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.9 2003-03-31 15:31:47 jpm Exp $
 import MySQLdb
 import time
-from mimify import mime_encode_header
+from mimify import mime_encode_header, mime_decode_header
 import re
 import settings
 import md5
 import binascii
 import mime
 import strutil
+
+
+# patch by Andreas Wegmann <Andreas.Wegmann@VSA.de> to fix the handling of unusual encodings of messages
+q_quote_multiline = re.compile("=\?(.*?)\?[qQ]\?(.*?)\?=.*?=\?\\1\?[qQ]\?(.*?)\?=", re.M | re.S)
 
 # we don't need to compile the regexps everytime..
 doubleline_regexp = re.compile("^\.\.", re.M)
@@ -576,6 +580,8 @@ class Papercut_Storage:
     def do_POST(self, group_name, lines, ip_address, username=''):
         forum_id = self.get_forum(group_name)
         prefix = settings.phpbb_table_prefix
+        # patch by Andreas Wegmann <Andreas.Wegmann@VSA.de> to fix the handling of unusual encodings of messages
+        lines = mime_decode_header(re.sub(q_quote_multiline, "=?\\1?Q?\\2\\3?=", lines))
         body = self.get_message_body(lines)
         author, email = from_regexp.search(lines, 0).groups()
         subject = subject_regexp.search(lines, 0).groups()[0].strip()

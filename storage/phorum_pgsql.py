@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_pgsql.py,v 1.6 2003-02-22 00:48:06 jpm Exp $
+# $Id: phorum_pgsql.py,v 1.7 2003-03-31 15:31:47 jpm Exp $
 from pyPgSQL import PgSQL
 import time
-from mimify import mime_encode_header
+from mimify import mime_encode_header, mime_decode_header
 import re
 import settings
 import mime
@@ -12,6 +12,8 @@ import smtplib
 import binascii
 import md5
 
+# patch by Andreas Wegmann <Andreas.Wegmann@VSA.de> to fix the handling of unusual encodings of messages
+q_quote_multiline = re.compile("=\?(.*?)\?[qQ]\?(.*?)\?=.*?=\?\\1\?[qQ]\?(.*?)\?=", re.M | re.S)
 
 # we don't need to compile the regexps everytime..
 doubleline_regexp = re.compile("^\.\.", re.M)
@@ -645,6 +647,8 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         body = self.get_message_body(lines)
         author, email = from_regexp.search(lines, 0).groups()
         subject = subject_regexp.search(lines, 0).groups()[0].strip()
+        # patch by Andreas Wegmann <Andreas.Wegmann@VSA.de> to fix the handling of unusual encodings of messages
+        lines = mime_decode_header(re.sub(q_quote_multiline, "=?\\1?Q?\\2\\3?=", lines))
         if lines.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
             references = references_regexp.search(lines, 1).groups()
