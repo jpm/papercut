@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.92 2004-08-01 21:49:59 jpm Exp $
+# $Id: papercut.py,v 1.93 2005-03-05 04:06:54 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -621,7 +621,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             info = backend.get_XGTITLE(self.selected_group)
         if info is None:
             self.send_response(ERR_NODESCAVAILABLE)
-        if len(info) == 0:
+        elif len(info) == 0:
             self.send_response("%s\r\n." % (STATUS_XGTITLE))
         else:
             self.send_response("%s\r\n%s\r\n." % (STATUS_XGTITLE, info))
