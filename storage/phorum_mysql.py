@@ -1,6 +1,6 @@
         #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.28 2002-03-26 06:18:19 jpm Exp $
+# $Id: phorum_mysql.py,v 1.29 2002-03-26 06:24:01 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -249,7 +249,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
             from papercut import __VERSION__
             phorum_version = settings.phorum_version
             current_msg = notification_mail_tpl % vars()
-            smtp.sendmail('Phorum <%s>' % (email_list), email_list, current_msg)
+            smtp.sendmail('%s %s' % (msg_author, msg_email), email_list, current_msg)
         smtp.quit()
 
     def get_NEWGROUPS(self, ts, group='%'):
