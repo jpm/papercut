@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.69 2002-12-12 03:01:40 jpm Exp $
+# $Id: papercut.py,v 1.70 2002-12-12 05:55:13 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -13,7 +13,7 @@ import StringIO
 import settings
 import papercut_cache
 
-__VERSION__ = '0.9.5'
+__VERSION__ = '0.9.6'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
@@ -707,7 +707,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if not backend.group_exists(group_name):
             self.send_response(ERR_POSTINGFAILED)
             return
-        result = backend.do_POST(group_name, lines, self.client_address[0])
+        result = backend.do_POST(group_name, lines, self.client_address[0], self.auth_username)
         if result == None:
             self.send_response(ERR_POSTINGFAILED)
         else:

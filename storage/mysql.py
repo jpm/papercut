@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.38 2002-10-03 03:50:16 jpm Exp $
+# $Id: mysql.py,v 1.39 2002-12-12 05:55:13 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -459,7 +459,7 @@ class Papercut_Storage:
         else:
             return "\r\n".join(hdrs)
 
-    def do_POST(self, group_name, body, ip_address):
+    def do_POST(self, group_name, body, ip_address, username=''):
         table_name = self.get_table_name(group_name)
         author = from_regexp.search(body, 0).groups()[0].strip()
         subject = subject_regexp.search(body, 0).groups()[0].strip()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.39 2002-10-03 03:50:15 jpm Exp $
+# $Id: phorum_mysql.py,v 1.40 2002-12-12 05:55:13 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -633,7 +633,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         else:
             return "\r\n".join(hdrs)
 
-    def do_POST(self, group_name, lines, ip_address):
+    def do_POST(self, group_name, lines, ip_address, username=''):
         table_name = self.get_table_name(group_name)
         body = self.get_message_body(lines)
         author, email = from_regexp.search(lines, 0).groups()

@@ -158,7 +158,7 @@ class Papercut_Storage:
         result = map(lambda x: x[1], result)
         return "\r\n".join(result)
 
-    def do_POST(self, group_name, lines, ip_address):
+    def do_POST(self, group_name, lines, ip_address, username=''):
         log(">do_POST")  
         while lines.find("\r") > 0:
             lines = lines.replace("\r", "")
