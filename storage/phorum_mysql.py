@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.2 2002-01-14 16:46:08 jpm Exp $
+# $Id: phorum_mysql.py,v 1.3 2002-01-15 00:54:44 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -10,7 +10,6 @@ import settings
 class Papercut_Backend:
 
     def __init__(self):
-        print 'Connecting to the MySQL server...'
         self.conn = MySQLdb.connect(db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
         self.cursor = self.conn.cursor()
 
@@ -434,9 +433,8 @@ class Papercut_Backend:
         subject = re.compile("^Subject:(.*)", re.M).search(lines, 1).groups()[0].strip()
         if lines.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
-            references = re.compile("^References: <(.*)>", re.M).search(lines, 1).groups()
-            last_reference = references[-1].strip()
-            parent_id, void = references.split('@')
+            references = re.compile("^References:(.*)<(.*)>", re.M).search(lines, 1).groups()
+            parent_id, void = references[-1].strip().split('@')
             stmt = """
                     SELECT
                         MAX(id)+1
