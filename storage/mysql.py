@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.21 2002-01-14 06:05:37 jpm Exp $
+# $Id: mysql.py,v 1.22 2002-01-14 14:47:29 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -161,9 +161,7 @@ class Papercut_Backend:
                     forum.%s
                 WHERE
                     id=%s""" % (table_name, id)
-        self.cursor.execute(stmt)
-        result = list(self.cursor.fetchone())
-        return len(result)
+        return self.cursor.execute(stmt)
 
     def get_ARTICLE(self, group_name, id):
         table_name = self.get_table_name(group_name)
@@ -212,7 +210,9 @@ class Papercut_Backend:
                 ORDER BY
                     id DESC
                 LIMIT 0, 1""" % (table_name, current_id)
-        self.cursor.execute(stmt)
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 0:
+            return None
         return self.cursor.fetchone()[0]
 
     def get_NEXT(self, group_name, current_id):
@@ -227,7 +227,9 @@ class Papercut_Backend:
                 ORDER BY
                     id ASC
                 LIMIT 0, 1""" % (table_name, current_id)
-        self.cursor.execute(stmt)
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 0:
+            return None
         return self.cursor.fetchone()[0]
 
     def get_HEAD(self, group_name, id):
@@ -323,8 +325,8 @@ class Papercut_Backend:
                     forum.%s A, 
                     forum.%s_bodies B
                 WHERE
-                    %s REGEXP '%s'
-                    A.id=B.id AND
+                    %s REGEXP '%s' AND
+                    A.id = B.id AND
                     A.id >= %s""" % (table_name, table_name, header, self.format_wildcards(pattern), start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.id <= %s" % (stmt, end_id)
@@ -363,7 +365,7 @@ class Papercut_Backend:
                     id ASC""" % (table_name)
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
-        return "\r\n".join(result)
+        return "\r\n".join(["%s" % k for k in result])
 
     def get_XGTITLE(self, pattern):
         stmt = """
@@ -395,7 +397,7 @@ class Papercut_Backend:
                     forum.%s A,
                     forum.%s_bodies B
                 WHERE
-                    A.id = B.id AND """ % (table_name)
+                    A.id = B.id AND """ % (table_name, table_name)
         if style == 'range':
             stmt = '%s id >= %s' % (stmt, range[0])
             if len(range) == 2:

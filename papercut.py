@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.12 2002-01-14 06:15:27 jpm Exp $
+# $Id: papercut.py,v 1.13 2002-01-14 14:47:29 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -65,12 +65,7 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # - Add INSTALL and all of the other crap
 #
 # Known Problems:
-# - XOVER 999999-0 gives me a blank line and then the 'dot'
-# - Broken SQL query on 'XPAT subject 1-10 tes'
-# - Broken SQL query on 'Out of bounds' NEXT command
-# - Broken SQL query on 'Out of bounds' LAST command
-# - Broken LISTGROUP
-# - GROUP phpbrasil.windows; STAT 2; HDR breaks
+# - 
 
 class NNTPServer(SocketServer.ThreadingTCPServer):
     allow_reuse_address = 1
@@ -407,7 +402,11 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if overviews == None:
             self.send_response(ERR_NOARTICLERETURNED)
             return
-        self.send_response("%s\r\n%s\r\n." % (STATUS_XOVER, overviews))
+        if len(overviews) == 0:
+            msg = "%s\r\n." % (STATUS_XOVER)
+        else:
+            msg = "%s\r\n%s\r\n." % (STATUS_XOVER, overviews)
+        self.send_response(msg)
 
     def do_XPAT(self):
         """
