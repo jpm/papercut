@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.16 2002-12-12 03:01:40 jpm Exp $
+# $Id: settings.py,v 1.17 2002-12-13 07:32:10 jpm Exp $
 import time
 import sys
 import os
@@ -98,6 +98,13 @@ dbpass = "anonymous"
 # the prefix for the phpBB tables
 phpbb_table_prefix = "phpbb_"
 
+
+#
+# MBOX STORAGE MODULE OPTIONS
+#
+
+# the full path for where the mbox files are stored in
+mbox_path = "/home/papercut/mboxes/"
 
 
 # check for the appropriate options
