@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.57 2002-07-19 04:02:30 jpm Exp $
+# $Id: papercut.py,v 1.58 2002-09-09 21:32:36 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -126,33 +126,39 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                     settings.logEvent('Error - Read-only server received a post request from \'%s\'' % self.client_address[0])
                     self.send_response(STATUS_READONLYSERVER)
                 else:
-                    self.sending_article = 1
-                    self.send_response(STATUS_SENDARTICLE)
-            else:
-                if self.sending_article:
-                    if self.inputline == '.\r\n':
-                        self.sending_article = 0
-                        try:
-                            self.do_POST()
-                        except:
-                            # use a temporary file handle object to store the traceback information
-                            temp = StringIO.StringIO()
-                            traceback.print_exc(file=temp)
-                            temp_msg = temp.getvalue()
-                            # save on the log file
-                            settings.logEvent('Error - Posting failed for user from \'%s\' (exception triggered)' % self.client_address[0])
-                            settings.logEvent(temp_msg)
-                            if __DEBUG__:
-                                print 'Error - Posting failed for user from \'%s\' (exception triggered; details below)' % self.client_address[0]
-                                print temp_msg
-                            self.send_response(ERR_POSTINGFAILED)
-                        continue
-                    self.article_lines.append(line)
-                else:
-                    if command in self.commands:
-                        getattr(self, "do_%s" % (command))()
+                    if settings.nntp_auth == 'yes' and self.auth_username == '':
+                        self.send_response(STATUS_AUTH_REQUIRED)
                     else:
-                        self.send_response(ERR_NOTCAPABLE)
+                        self.sending_article = 1
+                        self.send_response(STATUS_SENDARTICLE)
+            else:
+                if settings.nntp_auth == 'yes' and self.auth_username == '' and command != 'AUTHINFO':
+                    self.send_response(STATUS_AUTH_REQUIRED)
+                else:
+                    if self.sending_article:
+                        if self.inputline == '.\r\n':
+                            self.sending_article = 0
+                            try:
+                                self.do_POST()
+                            except:
+                                # use a temporary file handle object to store the traceback information
+                                temp = StringIO.StringIO()
+                                traceback.print_exc(file=temp)
+                                temp_msg = temp.getvalue()
+                                # save on the log file
+                                settings.logEvent('Error - Posting failed for user from \'%s\' (exception triggered)' % self.client_address[0])
+                                settings.logEvent(temp_msg)
+                                if __DEBUG__:
+                                    print 'Error - Posting failed for user from \'%s\' (exception triggered; details below)' % self.client_address[0]
+                                    print temp_msg
+                                self.send_response(ERR_POSTINGFAILED)
+                            continue
+                        self.article_lines.append(line)
+                    else:
+                        if command in self.commands:
+                            getattr(self, "do_%s" % (command))()
+                        else:
+                            self.send_response(ERR_NOTCAPABLE)
         settings.logEvent('Connection closed (IP Address: %s)' % (self.client_address[0]))
 
     def do_NEWGROUPS(self):
