@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.34 2002-05-21 03:25:12 jpm Exp $
+# $Id: mysql.py,v 1.35 2002-05-24 02:31:48 jpm Exp $
 import MySQLdb
 import time
 import re
 import settings
 import strutil
+import mime
 
 # we don't need to compile the regexps everytime..
 singleline_regexp = re.compile("^\.", re.M)
-from_regexp = re.compile("^From:(.*)<(.*)>", re.M)
+from_regexp = re.compile("^From:(.*)", re.M)
 subject_regexp = re.compile("^Subject:(.*)", re.M)
 references_regexp = re.compile("^References:(.*)<(.*)>", re.M)
 
@@ -27,6 +28,12 @@ class Papercut_Storage:
     def quote_string(self, text):
         """Quotes strings the MySQL way."""
         return text.replace("'", "\\'")
+
+    def get_body(self, lines):
+        pass
+
+    def get_header(self, lines):
+        pass
 
     def group_exists(self, group_name):
         stmt = """
@@ -185,8 +192,7 @@ class Papercut_Storage:
         stmt = """
                 SELECT
                     id,
-                    author,
-                    email,
+                    from,
                     subject,
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
                     body,
@@ -199,22 +205,17 @@ class Papercut_Storage:
         if num_rows == 0:
             return None
         result = list(self.cursor.fetchone())
-        if len(result[2]) == 0:
-            author = result[1]
-        else:
-            author = "%s <%s>" % (result[1], result[2])
-        formatted_time = strutil.get_formatted_time(time.localtime(result[4]))
         headers = []
         headers.append("Path: %s" % (settings.nntp_hostname))
-        headers.append("From: %s" % (author))
+        headers.append("From: %s" % (result[1]))
         headers.append("Newsgroups: %s" % (group_name))
-        headers.append("Date: %s" % (formatted_time))
-        headers.append("Subject: %s" % (result[3]))
+        headers.append("Date: %s" % (strutil.get_formatted_time(time.localtime(result[3]))))
+        headers.append("Subject: %s" % (result[2]))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
         headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
-        if result[6] != 0:
-            headers.append("References: <%s@%s>" % (result[6], group_name))
-        return ("\r\n".join(headers), strutil.format_body(result[5]))
+        if result[5] != 0:
+            headers.append("References: <%s@%s>" % (result[5], group_name))
+        return ("\r\n".join(headers), strutil.format_body(result[4]))
 
     def get_LAST(self, group_name, current_id):
         table_name = self.get_table_name(group_name)
@@ -255,8 +256,7 @@ class Papercut_Storage:
         stmt = """
                 SELECT
                     id,
-                    author,
-                    email,
+                    from,
                     subject,
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
                     parent
@@ -268,21 +268,16 @@ class Papercut_Storage:
         if num_rows == 0:
             return None
         result = list(self.cursor.fetchone())
-        if len(result[2]) == 0:
-            author = result[1]
-        else:
-            author = "%s <%s>" % (result[1], result[2])
-        formatted_time = strutil.get_formatted_time(time.localtime(result[4]))
         headers = []
         headers.append("Path: %s" % (settings.nntp_hostname))
-        headers.append("From: %s" % (author))
+        headers.append("From: %s" % (result[1]))
         headers.append("Newsgroups: %s" % (group_name))
-        headers.append("Date: %s" % (formatted_time))
-        headers.append("Subject: %s" % (result[3]))
+        headers.append("Date: %s" % (strutil.get_formatted_time(time.localtime(result[3]))))
+        headers.append("Subject: %s" % (result[2]))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
         headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
-        if result[5] != 0:
-            headers.append("References: <%s@%s>" % (result[5], group_name))
+        if result[4] != 0:
+            headers.append("References: <%s@%s>" % (result[4], group_name))
         return "\r\n".join(headers)
 
     def get_BODY(self, group_name, id):
@@ -306,13 +301,14 @@ class Papercut_Storage:
                 SELECT
                     id,
                     parent,
-                    author,
-                    email,
+                    from,
                     subject,
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
-                    body
+                    body,
+                    lines,
+                    bytes
                 FROM
-                    %s 
+                    %s
                 WHERE
                     id >= %s""" % (table_name, start_id)
         if end_id != 'ggg':
@@ -321,20 +317,14 @@ class Papercut_Storage:
         result = list(self.cursor.fetchall())
         overviews = []
         for row in result:
-            if row[3] == '':
-                author = row[2]
-            else:
-                author = "%s <%s>" % (row[2], row[3])
-            formatted_time = strutil.get_formatted_time(time.localtime(row[5]))
             message_id = "<%s@%s>" % (row[0], group_name)
-            line_count = len(row[6].split('\n'))
             xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, row[0])
             if row[1] != 0:
                 reference = "<%s@%s>" % (row[1], group_name)
             else:
                 reference = ""
             # message_number <tab> subject <tab> author <tab> date <tab> message_id <tab> reference <tab> bytes <tab> lines <tab> xref
-            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, reference, len(strutil.format_body(row[6])), line_count, xref))
+            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[3], row[2], strutil.get_formatted_time(time.localtime(row[4])), message_id, reference, row[7], row[6], xref))
         return "\r\n".join(overviews)
 
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):
@@ -343,11 +333,11 @@ class Papercut_Storage:
                 SELECT
                     id,
                     parent,
-                    author,
-                    email,
+                    from,
                     subject,
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
-                    body
+                    bytes,
+                    lines
                 FROM
                     %s
                 WHERE
@@ -367,19 +357,19 @@ class Papercut_Storage:
         hdrs = []
         for row in result:
             if header.upper() == 'SUBJECT':
-                hdrs.append('%s %s' % (row[0], row[4]))
+                hdrs.append('%s %s' % (row[0], row[3]))
             elif header.upper() == 'FROM':
-                hdrs.append('%s %s <%s>' % (row[0], row[2], row[3]))
+                hdrs.append('%s %s' % (row[0], row[2]))
             elif header.upper() == 'DATE':
-                hdrs.append('%s %s' % (row[0], strutil.get_formatted_time(time.localtime(result[5]))))
+                hdrs.append('%s %s' % (row[0], strutil.get_formatted_time(time.localtime(result[4]))))
             elif header.upper() == 'MESSAGE-ID':
                 hdrs.append('%s <%s@%s>' % (row[0], row[0], group_name))
             elif (header.upper() == 'REFERENCES') and (row[1] != 0):
                 hdrs.append('%s <%s@%s>' % (row[0], row[1], group_name))
             elif header.upper() == 'BYTES':
-                hdrs.append('%s %s' % (row[0], len(row[6])))
+                hdrs.append('%s %s' % (row[0], row[5]))
             elif header.upper() == 'LINES':
-                hdrs.append('%s %s' % (row[0], len(row[6].split('\n'))))
+                hdrs.append('%s %s' % (row[0], row[6]))
             elif header.upper() == 'XREF':
                 hdrs.append('%s %s %s:%s' % (row[0], settings.nntp_hostname, group_name, row[0]))
         if len(hdrs) == 0:
@@ -425,11 +415,11 @@ class Papercut_Storage:
                 SELECT
                     id,
                     parent,
-                    author,
-                    email,
+                    from,
                     subject,
                     UNIX_TIMESTAMP(datestamp) AS datestamp,
-                    body
+                    bytes,
+                    lines
                 FROM
                     %s
                 WHERE
@@ -446,19 +436,19 @@ class Papercut_Storage:
         hdrs = []
         for row in result:
             if header.upper() == 'SUBJECT':
-                hdrs.append('%s %s' % (row[0], row[4]))
+                hdrs.append('%s %s' % (row[0], row[3]))
             elif header.upper() == 'FROM':
-                hdrs.append('%s %s <%s>' % (row[0], row[2], row[3]))
+                hdrs.append('%s %s' % (row[0], row[2]))
             elif header.upper() == 'DATE':
-                hdrs.append('%s %s' % (row[0], strutil.get_formatted_time(time.localtime(result[5]))))
+                hdrs.append('%s %s' % (row[0], strutil.get_formatted_time(time.localtime(result[4]))))
             elif header.upper() == 'MESSAGE-ID':
                 hdrs.append('%s <%s@%s>' % (row[0], row[0], group_name))
             elif (header.upper() == 'REFERENCES') and (row[1] != 0):
                 hdrs.append('%s <%s@%s>' % (row[0], row[1], group_name))
             elif header.upper() == 'BYTES':
-                hdrs.append('%s %s' % (row[0], len(row[6])))
+                hdrs.append('%s %s' % (row[0], row[6]))
             elif header.upper() == 'LINES':
-                hdrs.append('%s %s' % (row[0], len(row[6].split('\n'))))
+                hdrs.append('%s %s' % (row[0], row[7]))
             elif header.upper() == 'XREF':
                 hdrs.append('%s %s %s:%s' % (row[0], settings.nntp_hostname, group_name, row[0]))
         if len(hdrs) == 0:
@@ -468,10 +458,9 @@ class Papercut_Storage:
 
     def do_POST(self, group_name, body, ip_address):
         table_name = self.get_table_name(group_name)
-        author, email = from_regexp.search(body, 0).groups()
+        author = from_regexp.search(body, 0).groups()[0].strip()
         subject = subject_regexp.search(body, 0).groups()[0].strip()
         if body.find('References') != -1:
-            # get the 'modifystamp' value from the parent (if any)
             references = references_regexp.search(body, 1).groups()
             parent_id, void = references[-1].strip().split('@')
             stmt = """
@@ -508,6 +497,7 @@ class Papercut_Storage:
             new_id = self.cursor.fetchone()[0]
             parent_id = 0
             thread_id = new_id
+        body = mime.get_body(body)
         stmt = """
                 INSERT INTO
                     %s
@@ -516,11 +506,12 @@ class Papercut_Storage:
                     datestamp,
                     thread,
                     parent,
-                    author,
+                    from,
                     subject,
-                    email,
                     host,
-                    body
+                    body,
+                    bytes,
+                    lines
                 ) VALUES (
                     %s,
                     NOW(),
@@ -530,9 +521,10 @@ class Papercut_Storage:
                     '%s',
                     '%s',
                     '%s',
-                    '%s'
+                    %s,
+                    %s
                 )
-                """ % (table_name, new_id, thread_id, parent_id, self.quote_string(author.strip()), self.quote_string(subject), self.quote_string(email), ip_address, self.quote_string(body))
+                """ % (table_name, new_id, thread_id, parent_id, self.quote_string(author), self.quote_string(subject), ip_address, self.quote_string(body), len(body), len(body.split('\n')))
         if not self.cursor.execute(stmt):
             return None
         else:
