@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut_cache.py,v 1.4 2002-10-04 00:57:13 jpm Exp $
+# $Id: papercut_cache.py,v 1.5 2002-10-04 02:41:35 jpm Exp $
 
 import binascii
 import md5
@@ -10,6 +10,14 @@ import cPickle
 import portable_locker
 # papercut settings file
 import settings
+
+
+# methods that need to be cached
+cache_methods = ('get_XHDR', 'get_XGTITLE', 'get_LISTGROUP',
+                 'get_XPAT', 'get_XOVER', 'get_BODY',
+                 'get_HEAD', 'get_ARTICLE', 'get_STAT',
+                 'get_LIST')
+
 
 class CallableWrapper:
     name = None
@@ -65,13 +73,18 @@ class CallableWrapper:
 
 class Cache:
     backend = None
+    cacheable_methods = ()
 
-    def __init__(self, storage_handle):
+    def __init__(self, storage_handle, cacheable_methods):
         self.backend = storage_handle.Papercut_Storage()
+        self.cacheable_methods = cacheable_methods
 
     def __getattr__(self, name):
         result = getattr(self.backend, name)
         if callable(result):
-            result = CallableWrapper(name, result)
-        return result
+            if name not in cacheable_methods:
+                result = result()
+            else:
+                result = CallableWrapper(name, result)
+            return result
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.63 2002-10-03 03:50:15 jpm Exp $
+# $Id: papercut.py,v 1.64 2002-10-04 02:41:35 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -785,7 +785,7 @@ if __name__ == '__main__':
     # dynamic loading of the appropriate storage backend module
     temp = __import__('storage.%s' % (settings.storage_backend), globals(), locals(), ['Papercut_Storage'])
     if settings.nntp_cache == 'yes':
-        backend = papercut_cache.Cache(temp)
+        backend = papercut_cache.Cache(temp, papercut_cache.cache_methods)
     else:
         backend = temp.Papercut_Storage()
 
