@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.20 2002-03-24 18:48:50 jpm Exp $
+# $Id: phorum_mysql.py,v 1.21 2002-03-24 19:17:25 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -232,7 +232,7 @@ To edit this message use this URL:
     def get_GROUP(self, group_name):
         table_name = self.get_table_name(group_name)
         result = self.get_group_stats(table_name)
-        return (result[0], result[1], result[2])
+        return (result[0], result[2], result[1])
 
     def get_LIST(self):
         stmt = """
