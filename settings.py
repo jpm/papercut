@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.15 2002-10-02 04:31:01 jpm Exp $
+# $Id: settings.py,v 1.16 2002-12-12 03:01:40 jpm Exp $
 import time
 import sys
 import os
@@ -10,6 +10,11 @@ import os
 # please let me know if this is not complete or if more information / examples
 # are needed.
 #
+
+
+# what is the maximum number of concurrent connections that should be allowed
+max_connections = 20
+
 
 #
 # GENERAL PATH INFORMATION

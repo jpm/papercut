@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.68 2002-12-12 01:46:35 jpm Exp $
+# $Id: papercut.py,v 1.69 2002-12-12 03:01:40 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -78,6 +78,8 @@ contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
 
 class NNTPServer(SocketServer.ForkingTCPServer):
     allow_reuse_address = 1
+    if settings.max_connections:
+        max_children = settings.max_connections
 
 class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     # this is the list of supported commands
