@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql_users.py,v 1.2 2003-04-17 01:45:28 jpm Exp $
+# $Id: phpbb_mysql_users.py,v 1.3 2003-04-26 00:24:55 jpm Exp $
 import MySQLdb
 import settings
 import md5
@@ -12,7 +12,7 @@ class Papercut_Auth:
     
     This backend module tries to authenticate the users against the phpbb_users table.
     
-    Many thanks for Chip McClure <vhm3 AT gigguardian.com> for the work on this file.
+    Many thanks to Chip McClure <vhm3 AT gigguardian.com> for the work on this file.
     """
 
     def __init__(self):
@@ -29,7 +29,7 @@ class Papercut_Auth:
                     username='%s'
                 """ % (settings.phpbb_table_prefix, username)
         num_rows = self.cursor.execute(stmt)
-        if num_rows == 0:
+        if num_rows == 0 or num_rows is None:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))
             return 0
         db_password = self.cursor.fetchone()[0]

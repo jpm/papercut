@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql_users.py,v 1.2 2002-07-30 03:05:00 jpm Exp $
+# $Id: phorum_mysql_users.py,v 1.3 2003-04-26 00:24:55 jpm Exp $
 import MySQLdb
 import settings
 import crypt
@@ -27,7 +27,7 @@ class Papercut_Auth:
                     username='%s'
                 """ % (username)
         num_rows = self.cursor.execute(stmt)
-        if num_rows == 0:
+        if num_rows == 0 or num_rows is None:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))
             return 0
         db_password = self.cursor.fetchone()[0]
