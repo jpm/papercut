@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.6 2002-01-11 22:29:35 jpm Exp $
+# $Id: papercut.py,v 1.7 2002-01-12 01:33:10 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -91,7 +91,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.inputline = self.rfile.readline()
             line = self.inputline.strip()
             self.tokens = line.split(' ')
-            if __DEBUG__: print self.tokens
+            if __DEBUG__:
+                print self.inputline
+                #print self.tokens
             # NNTP commands are case-insensitive
             command = self.tokens[0].upper()
             settings.logEvent('Received request: %s' % (line))
@@ -99,7 +101,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 self.sending_article = 1
                 self.send_response(STATUS_SENDARTICLE)
             else:
-                if sending_article:
+                if self.sending_article:
                     if self.inputline == '.\r\n':
                         self.sending_article = 0
                         self.do_POST()
