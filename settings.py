@@ -1,16 +1,34 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.5 2002-01-16 23:11:45 jpm Exp $
+# $Id: settings.py,v 1.6 2002-01-21 17:39:02 jpm Exp $
 import time
 
-log_path = "/home/jpm/papercut/logs/"
-log_file = log_path + "papercut.log"
-hostname = 'phpbrasil.com'
-backend_type = "phorum_mysql"
-dbname = "phpbrasil_dev"
-dbuser = "anonimo"
-dbpass = "anonimo"
+#
+# The following configuration settings should be pretty self-explanatory, but
+# please let me know if this is not complete or if more information / examples
+# are needed.
+#
 
+# full path for where Papercut will store the log file
+log_path = "/home/jpm/papercut/logs/"
+# the actual log filename
+log_file = log_path + "papercut.log"
+
+# hostname that Papercut will bind against
+nntp_hostname = 'nntp.domain.com'
+nntp_port = 119
+
+# backend that Papercut will use to get the actual articles content
+backend_type = "phorum_mysql"
+
+# configuration values for 'backends/phorum_mysql.py'
+# database connection variables
+dbhost = "localhost"
+dbname = "phorum"
+dbuser = "anonymous"
+dbpass = "anonymous"
+
+# helper function to log information
 def logEvent(msg):
     f = open(log_file, "a")
     f.write("[%s] %s\n" % (time.strftime("%a %b %d %H:%M:%S %Y", time.gmtime()), msg))

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.5 2002-01-17 03:46:25 jpm Exp $
+# $Id: phorum_mysql.py,v 1.6 2002-01-21 17:39:02 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -23,7 +23,7 @@ class Papercut_Backend:
     """
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
+        self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
         self.cursor = self.conn.cursor()
 
     def get_message_body(self, headers):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.21 2002-01-17 22:40:24 jpm Exp $
+# $Id: papercut.py,v 1.22 2002-01-21 17:39:02 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -53,19 +53,11 @@ STATUS_EXTENSIONS = '215 Extensions supported by server.'
 STATUS_SENDARTICLE = '340 Send article to be posted'
 STATUS_POSTSUCCESSFULL = '240 Article received ok'
 
+# the currently supported overview headers
 overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Bytes', 'Lines', 'Xref')
 
-# TODO list:
-# ----------
-# - MODE STREAM (it means several commands at the same time without waiting for responses)
-# - Check more the patterns of searching (wildmat) -> backend.format_wildcards() -> Work in progress
-# - Show banner on the footer of the articles about the site
-# - Implement some sort of timeout mechanism (According to the new NNTP protocol timeouts should not be explained [i.e. no responses])
-# - Add INSTALL and all of the other crap
-#
-# Known Problems:
-# - 
-
+# we don't need to create the regular expression objects for every request, 
+# so let's create them just once and re-use as needed
 newsgroups_regexp = re.compile("^Newsgroups:(.*)", re.M)
 contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
 
@@ -73,6 +65,7 @@ class NNTPServer(SocketServer.ThreadingTCPServer):
     allow_reuse_address = 1
 
 class NNTPRequestHandler(SocketServer.StreamRequestHandler):
+    # this is the list of supported commands
     commands = ('ARTICLE', 'BODY', 'HEAD',
                 'STAT', 'GROUP', 'LIST', 'POST',
                 'HELP', 'LAST','NEWGROUPS',
@@ -81,6 +74,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 'LISTGROUP', 'XGTITLE', 'XHDR',
                 'SLAVE', 'DATE', 'IHAVE',
                 'OVER', 'HDR')
+    # this is the list of list of extensions supported that are obviously not in the official NNTP document
     extensions = ('XOVER', 'XPAT', 'LISTGROUP',
                   'XGTITLE', 'XHDR', 'MODE',
                   'OVER', 'HDR')
@@ -687,5 +681,5 @@ if __name__ == '__main__':
 
     signal.signal(signal.SIGINT, sighandler)
     if __DEBUG__: print 'Starting the server'
-    server = NNTPServer((settings.hostname, 31337), NNTPRequestHandler)
+    server = NNTPServer((settings.nntp_hostname, settings.nntp_port), NNTPRequestHandler)
     server.serve_forever()
