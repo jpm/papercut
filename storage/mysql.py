@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.2 2002-01-10 21:14:50 jpm Exp $
+# $Id: mysql.py,v 1.3 2002-01-11 02:11:37 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -96,9 +96,7 @@ class Papercut_Backend:
                     FROM
                         forum.%s
                     WHERE
-                        UNIX_TIMESTAMP(datestamp) >= %s
-                    ORDER BY
-                        datestamp DESC""" % (table, ts)
+                        UNIX_TIMESTAMP(datestamp) >= %s""" % (table, ts)
             self.cursor.execute(stmt)
             ids = list(self.cursor.fetchall())
             for id in ids:
@@ -248,7 +246,6 @@ class Papercut_Backend:
                     A.id >= %s""" % (table_name, table_name, start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.id <= %s" % (stmt, end_id)
-        stmt = "%s ORDER BY datestamp DESC" % (stmt)
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         overviews = []
@@ -284,7 +281,6 @@ class Papercut_Backend:
                     A.id >= %s""" % (table_name, table_name, header, self.format_wildcards(pattern), start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.id <= %s" % (stmt, end_id)
-        stmt = "%s ORDER BY datestamp DESC" % (stmt)
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         overviews = []
