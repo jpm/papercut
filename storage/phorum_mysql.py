@@ -1,11 +1,17 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.4 2002-01-16 23:11:45 jpm Exp $
+# $Id: phorum_mysql.py,v 1.5 2002-01-17 03:46:25 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
 import re
 import settings
+
+doubleline_regexp = re.compile("^\.\.", re.M)
+singleline_regexp = re.compile("^\.", re.M)
+from_regexp = re.compile("^From:(.*)<(.*)>", re.M)
+subject_regexp = re.compile("^Subject:(.*)", re.M)
+references_regexp = re.compile("^References:(.*)<(.*)>", re.M)
 
 class Papercut_Backend:
     """
@@ -30,14 +36,14 @@ class Papercut_Backend:
                 found = 1
                 continue
             if found:
-                body.append(line)
+                body.append(doubleline_regexp.sub(".", line))
         return "\r\n".join(body)
 
     def get_formatted_time(self, time_tuple):
         return time.strftime('%a, %d %B %Y %H:%M:%S %Z', time_tuple)
 
     def format_body(self, text):
-        return re.compile("^\.", re.M).sub("..", text)
+        return singleline_regexp.sub("..", text)
 
     def format_wildcards(self, pattern):
         pattern.replace('*', '.*')
@@ -437,11 +443,11 @@ class Papercut_Backend:
     def do_POST(self, group_name, lines, ip_address):
         table_name = self.get_table_name(group_name)
         body = self.get_message_body(lines)
-        author, email = re.compile("^From:(.*)<(.*)>", re.M).search(lines, 1).groups()
-        subject = re.compile("^Subject:(.*)", re.M).search(lines, 1).groups()[0].strip()
+        author, email = from_regexp.search(lines, 1).groups()
+        subject = subject_regexp.search(lines, 1).groups()[0].strip()
         if lines.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
-            references = re.compile("^References:(.*)<(.*)>", re.M).search(lines, 1).groups()
+            references = references_regexp.search(lines, 1).groups()
             parent_id, void = references[-1].strip().split('@')
             stmt = """
                     SELECT

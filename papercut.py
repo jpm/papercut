@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.19 2002-01-16 23:11:45 jpm Exp $
+# $Id: papercut.py,v 1.20 2002-01-17 03:46:25 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -65,6 +65,9 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 #
 # Known Problems:
 # - 
+
+newsgroups_regexp = re.compile("^Newsgroups:(.*)", re.M)
+contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
 
 class NNTPServer(SocketServer.ThreadingTCPServer):
     allow_reuse_address = 1
@@ -610,13 +613,13 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         """
         lines = "\r\n".join(self.article_lines)
         # check the 'Newsgroups' header
-        group_name = re.compile("^Newsgroups:(.*)", re.M).search(lines, 1).groups()[0].strip()
+        group_name = newsgroups_regexp.search(lines, 1).groups()[0].strip()
         if not backend.group_exists(group_name):
             self.send_response(ERR_POSTINGFAILED)
             return
         if lines.find('Content-Type') != -1:
             # check the 'Content-Type' header
-            content = re.compile("^Content-Type:(.*);", re.M).search(lines, 1).groups()[0].strip()
+            content = contenttype_regexp.search(lines, 1).groups()[0].strip()
             if content != 'text/plain':
                 self.send_response(ERR_POSTINGFAILED)
                 return
