@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.14 2002-02-08 16:11:14 jpm Exp $
+# $Id: phorum_mysql.py,v 1.15 2002-02-25 16:43:41 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -137,6 +137,7 @@ class Papercut_Backend:
                     FROM
                         forum.%s
                     WHERE
+                        approved='Y' AND
                         UNIX_TIMESTAMP(datestamp) >= %s""" % (table, ts)
             self.cursor.execute(stmt)
             ids = list(self.cursor.fetchall())
@@ -172,6 +173,7 @@ class Papercut_Backend:
                 FROM
                     forum.%s
                 WHERE
+                    approved='Y' AND
                     id=%s""" % (table_name, id)
         return self.cursor.execute(stmt)
 
@@ -190,6 +192,7 @@ class Papercut_Backend:
                     forum.%s A,
                     forum.%s_bodies B
                 WHERE
+                    A.approved='Y' AND
                     A.id=B.id AND
                     A.id=%s""" % (table_name, table_name, id)
         num_rows = self.cursor.execute(stmt)
@@ -220,6 +223,7 @@ class Papercut_Backend:
                 FROM
                     forum.%s
                 WHERE
+                    approved='Y' AND
                     id < %s
                 ORDER BY
                     id DESC
@@ -237,6 +241,7 @@ class Papercut_Backend:
                 FROM
                     forum.%s
                 WHERE
+                    approved='Y' AND
                     id > %s
                 ORDER BY
                     id ASC
@@ -259,6 +264,7 @@ class Papercut_Backend:
                 FROM
                     forum.%s
                 WHERE
+                    approved='Y' AND
                     id=%s""" % (table_name, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
@@ -310,6 +316,7 @@ class Papercut_Backend:
                     forum.%s A, 
                     forum.%s_bodies B
                 WHERE
+                    A.approved='Y' AND
                     A.id=B.id AND
                     A.id >= %s""" % (table_name, table_name, start_id)
         if end_id != 'ggg':
@@ -348,6 +355,7 @@ class Papercut_Backend:
                     forum.%s A, 
                     forum.%s_bodies B
                 WHERE
+                    A.approved='Y' AND
                     %s REGEXP '%s' AND
                     A.id = B.id AND
                     A.id >= %s""" % (table_name, table_name, header, self.format_wildcards(pattern), start_id)
@@ -388,6 +396,7 @@ class Papercut_Backend:
                 FROM
                     forum.%s
                 ORDER BY
+                    approved='Y' AND
                     id ASC""" % (table_name)
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
@@ -423,6 +432,7 @@ class Papercut_Backend:
                     forum.%s A,
                     forum.%s_bodies B
                 WHERE
+                    A.approved='Y' AND
                     A.id = B.id AND """ % (table_name, table_name)
         if style == 'range':
             stmt = '%s id >= %s' % (stmt, range[0])
@@ -469,7 +479,9 @@ class Papercut_Backend:
                     SELECT
                         MAX(id)+1
                     FROM
-                        forum.%s""" % (table_name)
+                        forum.%s
+                    WHERE
+                        approved='Y'""" % (table_name)
             self.cursor.execute(stmt)
             new_id = self.cursor.fetchone()[0]
             stmt = """
@@ -480,6 +492,7 @@ class Papercut_Backend:
                     FROM
                         forum.%s
                     WHERE
+                        approved='Y' AND
                         id=%s
                     GROUP BY
                         id""" % (table_name, parent_id)
@@ -493,7 +506,9 @@ class Papercut_Backend:
                         MAX(id)+1,
                         UNIX_TIMESTAMP()
                     FROM
-                        forum.%s""" % (table_name)
+                        forum.%s
+                    WHERE
+                        approved='Y'""" % (table_name)
             self.cursor.execute(stmt)
             new_id, modifystamp = self.cursor.fetchone()
             parent_id = 0
