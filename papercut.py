@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.85 2004-02-01 19:07:46 jpm Exp $
+# $Id: papercut.py,v 1.86 2004-05-01 23:15:43 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -138,9 +138,11 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 signal.alarm(0)
             if __DEBUG__:
                 print "client>", repr(self.inputline)
-            # Strip leading spaces only if NOT receiving article
-            if self.sending_article != 1:
+            # Strip spaces only if NOT receiving article
+            if not self.sending_article:
                 line = self.inputline.strip()
+            else:
+                line = self.inputline
             # somehow outlook express sends a lot of newlines (so we need to kill those users when this happens)
             if (not self.sending_article) and (line == ''):
                 self.broken_oe_checker += 1
