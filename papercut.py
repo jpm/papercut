@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.16 2002-01-14 16:46:08 jpm Exp $
+# $Id: papercut.py,v 1.17 2002-01-14 16:55:45 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -94,6 +94,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         while not self.terminated:
             self.inputline = self.rfile.readline()
             line = self.inputline.strip()
+            # somehow outlook express sends a lot of newlines (maybe its just my imagination)
+            if line == '':
+                continue
             self.tokens = line.split(' ')
             if __DEBUG__:
                 print line
