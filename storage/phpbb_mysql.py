@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002, 2003, 2004 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.15 2004-01-04 19:17:51 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.16 2004-01-04 19:43:57 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -624,7 +624,7 @@ class Papercut_Storage:
             post_username = author
         if lines.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
-            references = references_regexp.search(lines, 1).groups()
+            references = references_regexp.search(lines, 0).groups()
             parent_id, void = references[-1].strip().split('@')
             stmt = """
                     SELECT

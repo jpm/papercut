@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.43 2003-12-14 18:59:03 jpm Exp $
+# $Id: phorum_mysql.py,v 1.44 2004-01-04 19:43:57 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -643,7 +643,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         lines = mime_decode_header(re.sub(q_quote_multiline, "=?\\1?Q?\\2\\3?=", lines))
         if lines.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
-            references = references_regexp.search(lines, 1).groups()
+            references = references_regexp.search(lines, 0).groups()
             parent_id, void = references[-1].strip().split('@')
             stmt = """
                     SELECT

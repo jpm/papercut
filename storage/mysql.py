@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.40 2003-12-14 18:59:03 jpm Exp $
+# $Id: mysql.py,v 1.41 2004-01-04 19:43:57 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -464,7 +464,7 @@ class Papercut_Storage:
         author = from_regexp.search(body, 0).groups()[0].strip()
         subject = subject_regexp.search(body, 0).groups()[0].strip()
         if body.find('References') != -1:
-            references = references_regexp.search(body, 1).groups()
+            references = references_regexp.search(body, 0).groups()
             parent_id, void = references[-1].strip().split('@')
             stmt = """
                     SELECT
