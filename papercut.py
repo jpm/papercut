@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.78 2003-05-02 19:36:33 jpm Exp $
+# $Id: papercut.py,v 1.79 2003-12-14 19:02:54 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -14,7 +14,7 @@ import StringIO
 import settings
 import papercut_cache
 
-__VERSION__ = '0.9.9'
+__VERSION__ = '0.9.10'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
@@ -39,6 +39,7 @@ ERR_TIMEOUT = '503 Timeout after %s seconds, closing connection.'
 ERR_NOTPERFORMED = '503 program error, function not performed'
 ERR_POSTINGFAILED = '441 Posting failed'
 ERR_AUTH_NO_PERMISSION = '502 No permission'
+ERR_NODESCAVAILABLE = '481 Groups and descriptions unavailable'
 STATUS_POSTMODE = '200 Hello, you can post'
 STATUS_NOPOSTMODE = '201 Hello, you can\'t post'
 STATUS_HELPMSG = '100 help text follows'
@@ -370,7 +371,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOPREVIOUSARTICLE)
             return
         self.selected_article = article_num
-        self.send_response(STATUS_STAT % (article_num, article_num, self.selected_group))
+        self.send_response(STATUS_STAT % (article_num, backend.get_message_id(article_num, self.selected_group)))
 
     def do_NEXT(self):
         """
@@ -395,7 +396,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NONEXTARTICLE)
             return
         self.selected_article = article_num
-        self.send_response(STATUS_STAT % (article_num, article_num, self.selected_group))
+        self.send_response(STATUS_STAT % (article_num, backend.get_message_id(article_num, self.selected_group)))
 
     def do_BODY(self):
         """
@@ -548,6 +549,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             numbers = backend.get_LISTGROUP(self.selected_group)
         check = numbers.split('\r\n') 
         if len(check) > 0:
+            # When a valid group is selected by means of this command, the
+            # internally maintained "current article pointer" is set to the first
+            # article in the group.
             self.selected_article = check[0]
             if len(self.tokens) == 2:
                 self.selected_group = self.tokens[1]
@@ -571,6 +575,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 self.send_response(ERR_NOGROUPSELECTED)
                 return
             info = backend.get_XGTITLE(self.selected_group)
+        if info is None:
+            self.send_response(ERR_NODESCAVAILABLE)
         if len(info) == 0:
             self.send_response("%s\r\n." % (STATUS_XGTITLE))
         else:
