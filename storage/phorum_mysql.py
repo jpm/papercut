@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.13 2002-02-06 19:35:31 jpm Exp $
+# $Id: phorum_mysql.py,v 1.14 2002-02-08 16:11:14 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -32,7 +32,11 @@ class Papercut_Backend:
         return mime.get_text_message(headers)
 
     def get_formatted_time(self, time_tuple):
-        return time.strftime('%d %B %Y %H:%M:%S %Z', time_tuple)
+        # days without leading zeros, please
+        day = int(time.strftime('%d', time_tuple))
+        tmp1 = time.strftime('%a,', time_tuple)
+        tmp2 = time.strftime('%b %Y %H:%M:%S %Z', time_tuple)
+        return "%s %s %s" % (tmp1, day, tmp2)
 
     def format_body(self, text):
         return singleline_regexp.sub("..", text)
