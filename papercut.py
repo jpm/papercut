@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.51 2002-04-12 04:41:05 jpm Exp $
+# $Id: papercut.py,v 1.52 2002-04-25 04:32:51 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -254,14 +254,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOTPERFORMED)
             return
         result = backend.get_LIST()
-        lists = []
-        for group_name, table in result:
-            total, maximum, minimum = backend.get_group_stats(table)
-            if settings.server_type == 'read-only':
-                lists.append("%s %s %s n" % (group_name, maximum, minimum))
-            else:
-                lists.append("%s %s %s y" % (group_name, maximum, minimum))
-        self.send_response("%s\r\n%s\r\n." % (STATUS_LIST, "\r\n".join(lists)))
+        self.send_response("%s\r\n%s\r\n." % (STATUS_LIST, result))
 
     def do_STAT(self):
         """

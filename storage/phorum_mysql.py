@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.35 2002-04-24 04:22:44 jpm Exp $
+# $Id: phorum_mysql.py,v 1.36 2002-04-25 04:33:18 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -356,8 +356,16 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         if len(result) == 0:
-            return None
-        return result
+            return ""
+        else:
+            lists = []
+            for group_name, table in result:
+                total, maximum, minimum = self.get_group_stats(table)
+                if settings.server_type == 'read-only':
+                    lists.append("%s %s %s n" % (group_name, maximum, minimum))
+                else:
+                    lists.append("%s %s %s y" % (group_name, maximum, minimum))
+            return "\r\n".join(lists))
 
     def get_STAT(self, group_name, id):
         table_name = self.get_table_name(group_name)
@@ -541,6 +549,8 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         return "\r\n".join(overviews)
 
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):
+        # XXX: need to actually check for the header values being passed as
+        # XXX: not all header names map to column names on the tables
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
@@ -570,6 +580,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
             if header.upper() == 'SUBJECT':
                 hdrs.append('%s %s' % (row[0], row[4]))
             elif header.upper() == 'FROM':
+                # XXX: totally broken with empty values for the email address
                 hdrs.append('%s %s <%s>' % (row[0], row[2], row[3]))
             elif header.upper() == 'DATE':
                 hdrs.append('%s %s' % (row[0], self.get_formatted_time(time.localtime(result[5]))))
