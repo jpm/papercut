@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.9 2002-01-12 18:09:36 jpm Exp $
+# $Id: papercut.py,v 1.10 2002-01-13 07:25:27 jpm Exp $
 import SocketServer
 import sys
 import signal
 import time
+import re
 import settings
 
 __VERSION__ = '0.3.9'
@@ -92,7 +93,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             line = self.inputline.strip()
             self.tokens = line.split(' ')
             if __DEBUG__:
-                print self.inputline
+                print line
                 #print self.tokens
             # NNTP commands are case-insensitive
             command = self.tokens[0].upper()
@@ -107,7 +108,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                         self.do_POST()
                         self.article_lines = []
                         continue
-                    self.article_lines.append(self.inputline)
+                    self.article_lines.append(line)
                 else:
                     if command in self.commands:
                         getattr(self, "do_%s" % (command))()
@@ -606,18 +607,19 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             440 posting not allowed
             441 posting failed
         """
+        lines = "\r\n".join(self.article_lines)
         # check the 'Newsgroups' header
-        group_name = re.compile("^Newsgroups:(.*)", re.M).search(self.article_lines, 1).groups()[0].strip()
+        group_name = re.compile("^Newsgroups:(.*)", re.M).search(lines, 1).groups()[0].strip()
         if not backend.group_exists(group_name):
             self.send_response(ERR_POSTINGFAILED)
             return
-        if self.article_lines.find('Content-Type') != -1:
+        if lines.find('Content-Type') != -1:
             # check the 'Content-Type' header
-            content = re.compile("^Content-Type:(.*);", re.M).search(self.article_lines, 1).groups()[0].strip()
+            content = re.compile("^Content-Type:(.*);", re.M).search(lines, 1).groups()[0].strip()
             if content != 'text/plain':
                 self.send_response(ERR_POSTINGFAILED)
                 return
-        result = backend.do_POST(group_name, self.article_lines, self.client_address[0])
+        result = backend.do_POST(group_name, lines, self.client_address[0])
         if result == None:
             self.send_response(ERR_POSTINGFAILED)
         else:
