@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.4 2002-09-12 01:09:35 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.5 2002-10-03 03:50:15 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -115,6 +115,9 @@ class Papercut_Storage:
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
+    def get_message_id(self, msg_num, group):
+        return '<%s@%s>' % (msg_num, group)
+
     def get_NEWGROUPS(self, ts, group='%'):
         stmt = """
                 SELECT
@@ -220,10 +223,15 @@ class Papercut_Storage:
                     A.post_time,
                     B.post_text,
                     A.topic_id,
-                    A.post_username
+                    A.post_username,
+                    MIN(D.post_id)
                 FROM
                     %sposts A,
                     %sposts_text B
+                INNER JOIN
+                    %sposts D
+                ON
+                    D.topic_id=A.topic_id
                 LEFT JOIN
                     %susers C
                 ON
@@ -231,13 +239,15 @@ class Papercut_Storage:
                 WHERE
                     A.forum_id=%s AND
                     A.post_id=B.post_id AND
-                    A.post_id=%s""" % (prefix, prefix, prefix, forum_id, id)
+                    A.post_id=%s
+                GROUP BY
+                    D.topic_id""" % (prefix, prefix, prefix, prefix, forum_id, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
         result = list(self.cursor.fetchone())
         # check if there is a registered user
-        if len(result[7]) == 0:
+        if result[7] == '':
             if len(result[2]) == 0:
                 author = result[1]
             else:
@@ -253,8 +263,8 @@ class Papercut_Storage:
         headers.append("Subject: %s" % (result[3]))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
         headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
-        if result[6] != result[0]:
-            headers.append("References: <%s@%s>" % (result[6], group_name))
+        if result[8] != result[0]:
+            headers.append("References: <%s@%s>" % (result[8], group_name))
         return ("\r\n".join(headers), strutil.format_body(result[5]))
 
     def get_LAST(self, group_name, current_id):
@@ -304,10 +314,15 @@ class Papercut_Storage:
                     B.post_subject,
                     A.post_time,
                     A.topic_id,
-                    A.post_username
+                    A.post_username,
+                    MIN(D.post_id)
                 FROM
                     %sposts A,
                     %sposts_text B
+                INNER JOIN
+                    %sposts D
+                ON
+                    D.topic_id=A.topic_id
                 LEFT JOIN
                     %susers C
                 ON
@@ -315,7 +330,9 @@ class Papercut_Storage:
                 WHERE
                     A.forum_id=%s AND
                     A.post_id=B.post_id AND
-                    A.post_id=%s""" % (prefix, prefix, prefix, forum_id, id)
+                    A.post_id=%s
+                GROUP BY
+                    D.topic_id""" % (prefix, prefix, prefix, prefix, forum_id, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -337,8 +354,8 @@ class Papercut_Storage:
         headers.append("Subject: %s" % (result[3]))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
         headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
-        if result[5] != result[0]:
-            headers.append("References: <%s@%s>" % (result[5], group_name))
+        if result[7] != result[0]:
+            headers.append("References: <%s@%s>" % (result[7], group_name))
         return "\r\n".join(headers)
 
     def get_BODY(self, group_name, id):
@@ -372,10 +389,15 @@ class Papercut_Storage:
                     B.post_subject,
                     A.post_time,
                     B.post_text,
-                    A.post_username
+                    A.post_username,
+                    MIN(D.post_id)
                 FROM
                     %sposts A, 
                     %sposts_text B
+                INNER JOIN
+                    %sposts D
+                ON
+                    D.topic_id=A.topic_id
                 LEFT JOIN
                     %susers C
                 ON
@@ -383,7 +405,9 @@ class Papercut_Storage:
                 WHERE
                     A.post_id=B.post_id AND
                     A.forum_id=%s AND
-                    A.post_id >= %s""" % (prefix, prefix, prefix, forum_id, start_id)
+                    A.post_id >= %s
+                GROUP BY
+                    D.topic_id""" % (prefix, prefix, prefix, prefix, forum_id, start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.post_id <= %s" % (stmt, end_id)
         self.cursor.execute(stmt)
@@ -401,8 +425,8 @@ class Papercut_Storage:
             message_id = "<%s@%s>" % (row[0], group_name)
             line_count = len(row[6].split('\n'))
             xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, row[0])
-            if row[1] != row[0]:
-                reference = "<%s@%s>" % (row[1], group_name)
+            if row[8] != row[0]:
+                reference = "<%s@%s>" % (row[8], group_name)
             else:
                 reference = ""
             # message_number <tab> subject <tab> author <tab> date <tab> message_id <tab> reference <tab> bytes <tab> lines <tab> xref
@@ -591,7 +615,7 @@ class Papercut_Storage:
                     WHERE
                         post_id=%s
                     GROUP BY
-                        post_id""" % (table_name, parent_id)
+                        post_id""" % (prefix, parent_id)
             num_rows = self.cursor.execute(stmt)
             if num_rows == 0:
                 return None
@@ -602,7 +626,6 @@ class Papercut_Storage:
                     INSERT INTO
                         %stopics
                     (
-                        topic_id,
                         forum_id,
                         topic_title,
                         topic_poster,
@@ -612,14 +635,13 @@ class Papercut_Storage:
                         topic_type
                     ) VALUES (
                         %s,
-                        %s,
                         '%s',
                         %s,
                         UNIX_TIMESTAMP(),
                         0,
                         0,
                         0
-                    )""" % (prefix, thread_id, forum_id, self.quote_string(subject), poster_id)
+                    )""" % (prefix, forum_id, self.quote_string(subject), poster_id)
             self.cursor.execute(stmt)
             thread_id = self.cursor.insert_id()
         stmt = """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.38 2002-07-19 04:04:29 jpm Exp $
+# $Id: phorum_mysql.py,v 1.39 2002-10-03 03:50:15 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -115,6 +115,9 @@ class Papercut_Storage:
                     nntp_group_name='%s'""" % (group_name.replace('*', '%'))
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
+
+    def get_message_id(self, msg_num, group):
+        return '<%s@%s>' % (msg_num, group)
 
     def get_notification_emails(self, forum_id):
         # open the configuration file

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.62 2002-10-03 00:30:54 jpm Exp $
+# $Id: papercut.py,v 1.63 2002-10-03 03:50:15 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -42,12 +42,12 @@ STATUS_NOPOSTMODE = '201 Hello, you can\'t post'
 STATUS_HELPMSG = '100 help text follows'
 STATUS_GROUPSELECTED = '211 %s %s %s %s group selected'
 STATUS_LIST = '215 list of newsgroups follows'
-STATUS_STAT = '223 %s <%s@%s> article retrieved - request text separately'
-STATUS_ARTICLE = '220 <%s@%s> All of the article follows'
+STATUS_STAT = '223 %s %s article retrieved - request text separately'
+STATUS_ARTICLE = '220 %s All of the article follows'
 STATUS_NEWGROUPS = '231 list of new newsgroups follows'
 STATUS_NEWNEWS = '230 list of new articles by message-id follows'
-STATUS_HEAD = '221 %s <%s@%s> article retrieved - head follows'
-STATUS_BODY = '222 %s <%s@%s> article retrieved - body follows'
+STATUS_HEAD = '221 %s %s article retrieved - head follows'
+STATUS_BODY = '222 %s %s article retrieved - body follows'
 STATUS_READYNOPOST = '200 %s Papercut %s server ready (posting allowed)'
 STATUS_CLOSING = '205 closing connection - goodbye!'
 STATUS_XOVER = '224 Overview information follows'
@@ -292,7 +292,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOSUCHARTICLENUM)
             return
         self.selected_article = self.tokens[1]
-        self.send_response(STATUS_STAT % (self.tokens[1], self.tokens[1], self.selected_group))
+        self.send_response(STATUS_STAT % (self.tokens[1], backend.get_message_id(self.tokens[1], self.selected_group)))
 
     def do_ARTICLE(self):
         """
@@ -323,7 +323,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if result == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
-            response = STATUS_ARTICLE % (self.selected_article, self.selected_group)
+            response = STATUS_ARTICLE % (backend.get_message_id(self.selected_article, self.selected_group))
             self.send_response("%s\r\n%s\r\n\r\n%s\r\n." % (response, result[0], result[1]))
 
     def do_LAST(self):
@@ -397,7 +397,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if body == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
-            self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (article_number, self.selected_article, self.selected_group), body))
+            self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (article_number, backend.get_message_id(self.selected_article, self.selected_group)), body))
 
     def do_HEAD(self):
         """
@@ -423,7 +423,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if head == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
-            self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (article_number, self.selected_article, self.selected_group), head))
+            self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (article_number, backend.get_message_id(self.selected_article, self.selected_group)), head))
 
     def do_OVER(self):
         self.do_XOVER()

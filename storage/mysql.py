@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.37 2002-07-19 04:20:31 jpm Exp $
+# $Id: mysql.py,v 1.38 2002-10-03 03:50:16 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -95,6 +95,9 @@ class Papercut_Storage:
                     name='%s'""" % (group_name.replace('*', '%'))
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
+
+    def get_message_id(self, msg_num, group):
+        return '<%s@%s>' % (msg_num, group)
 
     def get_NEWGROUPS(self, ts, group='%'):
         stmt = """

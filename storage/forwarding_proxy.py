@@ -39,6 +39,9 @@ class Papercut_Storage:
         max, min = container
         return (max-min, max, min)
 
+    def get_message_id(self, msg_num, group):
+        return '<%s@%s>' % (msg_num, group)
+
     def get_NEWGROUPS(self, ts, group='%'):
         log(">get_NEWGROUPS")
         date = time.strftime("%y%m%d", ts)
