@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.2 2002-05-05 16:40:59 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.3 2002-05-07 15:20:32 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -8,6 +8,7 @@ import re
 import settings
 import md5
 import mime
+import strutil
 
 # we don't need to compile the regexps everytime..
 doubleline_regexp = re.compile("^\.\.", re.M)
@@ -38,35 +39,9 @@ class Papercut_Storage:
         """
         return mime.get_text_message(headers)
 
-    def get_formatted_time(self, time_tuple):
-        """Formats the time tuple in a NNTP friendly way.
-        
-        Some newsreaders didn't like the date format being sent using leading
-        zeros on the days, so we needed to hack our own little format.
-        """
-        # days without leading zeros, please
-        day = int(time.strftime('%d', time_tuple))
-        tmp1 = time.strftime('%a,', time_tuple)
-        tmp2 = time.strftime('%b %Y %H:%M:%S %Z', time_tuple)
-        return "%s %s %s" % (tmp1, day, tmp2)
-
-    def format_body(self, text):
-        """Formats the body of message being sent to the client.
-        
-        Since the NNTP protocol uses a single dot on a line to denote the end
-        of the response, we need to substitute all leading dots on the body of
-        the message with two dots.
-        """
-        return singleline_regexp.sub("..", text)
-
     def quote_string(self, text):
         """Quotes strings the MySQL way."""
         return text.replace("'", "\\'")
-
-    def format_wildcards(self, pattern):
-        pattern.replace('*', '.*')
-        pattern.replace('?', '.*')
-        return pattern
 
     def make_bbcode_uid(self):
         return md5.new(str(time.clock())).digest()
@@ -269,7 +244,7 @@ class Papercut_Storage:
                 author = "%s <%s>" % (result[1], result[2])
         else:
             author = result[7]
-        formatted_time = self.get_formatted_time(time.localtime(result[4]))
+        formatted_time = strutil.get_formatted_time(time.localtime(result[4]))
         headers = []
         headers.append("Path: %s" % (settings.nntp_hostname))
         headers.append("From: %s" % (author))
@@ -280,7 +255,7 @@ class Papercut_Storage:
         headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
         if result[6] != result[0]:
             headers.append("References: <%s@%s>" % (result[6], group_name))
-        return ("\r\n".join(headers), self.format_body(result[5]))
+        return ("\r\n".join(headers), strutil.format_body(result[5]))
 
     def get_LAST(self, group_name, current_id):
         forum_id = self.get_forum(group_name)
@@ -353,7 +328,7 @@ class Papercut_Storage:
                 author = "%s <%s>" % (result[1], result[2])
         else:
             author = result[6]
-        formatted_time = self.get_formatted_time(time.localtime(result[4]))
+        formatted_time = strutil.get_formatted_time(time.localtime(result[4]))
         headers = []
         headers.append("Path: %s" % (settings.nntp_hostname))
         headers.append("From: %s" % (author))
@@ -383,7 +358,7 @@ class Papercut_Storage:
         if num_rows == 0:
             return None
         else:
-            return self.format_body(self.cursor.fetchone()[0])
+            return strutil.format_body(self.cursor.fetchone()[0])
 
     def get_XOVER(self, group_name, start_id, end_id='ggg'):
         forum_id = self.get_forum(group_name)
@@ -422,7 +397,7 @@ class Papercut_Storage:
                     author = "%s <%s>" % (row[2], row[3])
             else:
                 author = row[7]
-            formatted_time = self.get_formatted_time(time.localtime(row[5]))
+            formatted_time = strutil.get_formatted_time(time.localtime(row[5]))
             message_id = "<%s@%s>" % (row[0], group_name)
             line_count = len(row[6].split('\n'))
             xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, row[0])
@@ -431,7 +406,7 @@ class Papercut_Storage:
             else:
                 reference = ""
             # message_number <tab> subject <tab> author <tab> date <tab> message_id <tab> reference <tab> bytes <tab> lines <tab> xref
-            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, reference, len(self.format_body(row[6])), line_count, xref))
+            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, reference, len(strutil.format_body(row[6])), line_count, xref))
         return "\r\n".join(overviews)
 
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):
@@ -460,7 +435,7 @@ class Papercut_Storage:
                     A.forum_id=%s AND
                     %s REGEXP '%s' AND
                     A.post_id = B.post_id AND
-                    A.post_id >= %s""" % (prefix, prefix, prefix, forum_id, header, self.format_wildcards(pattern), start_id)
+                    A.post_id >= %s""" % (prefix, prefix, prefix, forum_id, header, strutil.format_wildcards(pattern), start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.post_id <= %s" % (stmt, end_id)
         num_rows = self.cursor.execute(stmt)
@@ -475,7 +450,7 @@ class Papercut_Storage:
                 # XXX: totally broken with empty values for the email address
                 hdrs.append('%s %s <%s>' % (row[0], row[2], row[3]))
             elif header.upper() == 'DATE':
-                hdrs.append('%s %s' % (row[0], self.get_formatted_time(time.localtime(result[5]))))
+                hdrs.append('%s %s' % (row[0], strutil.get_formatted_time(time.localtime(result[5]))))
             elif header.upper() == 'MESSAGE-ID':
                 hdrs.append('%s <%s@%s>' % (row[0], row[0], group_name))
             elif (header.upper() == 'REFERENCES') and (row[1] != 0):
@@ -517,7 +492,7 @@ class Papercut_Storage:
                     LENGTH(nntp_group_name) > 0""" % (settings.phpbb_table_prefix)
         if pattern != None:
             stmt = stmt + """ AND
-                    nntp_group_name REGEXP '%s'""" % (self.format_wildcards(pattern))
+                    nntp_group_name REGEXP '%s'""" % (strutil.format_wildcards(pattern))
         stmt = stmt + """
                 ORDER BY
                     nntp_group_name ASC"""
@@ -564,7 +539,7 @@ class Papercut_Storage:
             elif header.upper() == 'FROM':
                 hdrs.append('%s %s <%s>' % (row[0], row[2], row[3]))
             elif header.upper() == 'DATE':
-                hdrs.append('%s %s' % (row[0], self.get_formatted_time(time.localtime(result[5]))))
+                hdrs.append('%s %s' % (row[0], strutil.get_formatted_time(time.localtime(result[5]))))
             elif header.upper() == 'MESSAGE-ID':
                 hdrs.append('%s <%s@%s>' % (row[0], row[0], group_name))
             elif (header.upper() == 'REFERENCES') and (row[1] != 0):
