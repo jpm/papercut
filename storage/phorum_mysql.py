@@ -1,6 +1,6 @@
         #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.25 2002-03-26 05:34:35 jpm Exp $
+# $Id: phorum_mysql.py,v 1.26 2002-03-26 05:51:05 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -8,6 +8,8 @@ import re
 import settings
 import mime
 import smtplib
+import binascii
+import md5
 
 doubleline_regexp = re.compile("^\.\.", re.M)
 singleline_regexp = re.compile("^\.", re.M)
@@ -242,6 +244,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                 msg_email = '<%s>' % msg_email
             else:
                 msg_email = ''
+            random_msgid = binascii.hexlify(md5.new(str(time.clock())).digest())
             # this is pretty ugly, right ?
             from papercut import __VERSION__
             current_msg = notification_mail_tpl % vars()
