@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.47 2002-04-03 23:07:22 jpm Exp $
+# $Id: papercut.py,v 1.48 2002-04-04 05:04:57 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -10,7 +10,7 @@ import settings
 import traceback
 import StringIO
 
-__VERSION__ = '0.7.10'
+__VERSION__ = '0.8.0'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 __TIMEOUT__ = 60
@@ -32,6 +32,7 @@ ERR_NOSTREAM = '500 Command not understood'
 ERR_TIMEOUT = '503 Timeout after %s seconds, closing connection.'
 ERR_NOTPERFORMED = '503 program error, function not performed'
 ERR_POSTINGFAILED = '441 Posting failed'
+ERR_AUTH_NO_PERMISSION = '502 No permission'
 STATUS_POSTMODE = '200 Hello, you can post'
 STATUS_NOPOSTMODE = '201 Hello, you can\'t post'
 STATUS_HELPMSG = '100 help text follows'
@@ -57,6 +58,9 @@ STATUS_EXTENSIONS = '215 Extensions supported by server.'
 STATUS_SENDARTICLE = '340 Send article to be posted'
 STATUS_READONLYSERVER = '440 Posting not allowed'
 STATUS_POSTSUCCESSFULL = '240 Article received ok'
+STATUS_AUTH_REQUIRED = '480 Authentication required'
+STATUS_AUTH_ACCEPTED = '281 Authentication accepted'
+STATUS_AUTH_CONTINUE = '381 More authentication information required'
 
 # the currently supported overview headers
 overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Bytes', 'Lines', 'Xref')
@@ -78,11 +82,11 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 'MODE', 'XOVER', 'XPAT',
                 'LISTGROUP', 'XGTITLE', 'XHDR',
                 'SLAVE', 'DATE', 'IHAVE',
-                'OVER', 'HDR')
+                'OVER', 'HDR', 'AUTHINFO')
     # this is the list of list of extensions supported that are obviously not in the official NNTP document
     extensions = ('XOVER', 'XPAT', 'LISTGROUP',
                   'XGTITLE', 'XHDR', 'MODE',
-                  'OVER', 'HDR')
+                  'OVER', 'HDR', 'AUTHINFO')
     terminated = 0
     selected_article = 'ggg'
     selected_group = 'ggg'
@@ -686,6 +690,33 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_POSTINGFAILED)
         else:
             self.send_response(STATUS_POSTSUCCESSFULL)
+
+    def do_AUTHINFO(self):
+        """
+        Syntax:
+            AUTHINFO USER username
+            AUTHINFO PASS password
+        Responses:
+            281 Authentication accepted
+            381 More authentication information required
+            480 Authentication required
+            482 Authentication rejected
+            502 No permission
+        """
+        if len(self.tokens) != 3:
+            self.send_response(ERR_CMDSYNTAXERROR)
+            return
+        if self.tokens[1].upper() == 'USER':
+            if settings.nntp_auth == 'no':
+                self.send_response(STATUS_AUTH_ACCEPTED)
+            else:
+                self.send_response(STATUS_AUTH_CONTINUE)
+        elif self.tokens[1].upper() == 'PASS':
+            # XXX: we don't have the 'auth' package or the self.auth variable yet
+            if auth.is_valid_user(self.auth['username'], self.tokens[2]):
+                self.send_response(STATUS_AUTH_ACCEPTED)
+            else:
+                self.send_response(ERR_AUTH_NO_PERMISSION)
 
     def get_number_from_msg_id(self, msg_id):
         return msg_id[1:msg_id.find('@')]
