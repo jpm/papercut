@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql_users.py,v 1.3 2003-04-26 00:24:55 jpm Exp $
+# $Id: phorum_mysql_users.py,v 1.4 2003-09-19 03:11:51 jpm Exp $
 import MySQLdb
 import settings
 import crypt
+import md5
 
 class Papercut_Auth:
     """
@@ -31,7 +32,12 @@ class Papercut_Auth:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))
             return 0
         db_password = self.cursor.fetchone()[0]
-        if db_password != crypt.crypt(password, password[:settings.PHP_CRYPT_SALT_LENGTH]):
+        # somehow detect the version of phorum being used and guess the encryption type
+        if len(db_password) == 32:
+            result = (db_password != md5.new(password).hexdigest())
+        else:
+            result = (db_password != crypt.crypt(password, password[:settings.PHP_CRYPT_SALT_LENGTH]))
+        if not result:
             settings.logEvent('Error - Authentication failed for username \'%s\' (incorrect password)' % (username))
             return 0
         else:
