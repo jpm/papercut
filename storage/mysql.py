@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.32 2002-05-07 15:20:31 jpm Exp $
+# $Id: mysql.py,v 1.33 2002-05-21 03:12:16 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -466,14 +466,13 @@ class Papercut_Storage:
         else:
             return "\r\n".join(hdrs)
 
-    def do_POST(self, group_name, lines, ip_address):
+    def do_POST(self, group_name, body, ip_address):
         table_name = self.get_table_name(group_name)
-        body = '\r\n'.join(lines)
-        author, email = from_regexp.search(lines, 0).groups()
+        author, email = from_regexp.search(body, 0).groups()
         subject = subject_regexp.search(lines, 0).groups()[0].strip()
-        if lines.find('References') != -1:
+        if body.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
-            references = references_regexp.search(lines, 1).groups()
+            references = references_regexp.search(body, 1).groups()
             parent_id, void = references[-1].strip().split('@')
             stmt = """
                     SELECT
