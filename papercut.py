@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.83 2004-01-25 05:01:21 jpm Exp $
+# $Id: papercut.py,v 1.84 2004-02-01 05:23:13 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -14,7 +14,7 @@ import StringIO
 import settings
 import papercut_cache
 
-__VERSION__ = '0.9.11'
+__VERSION__ = '0.9.12'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients (draft 20 of the new NNTP protocol says at least 3 minutes)
@@ -56,7 +56,7 @@ STATUS_READYOKPOST = '200 %s Papercut %s server ready (posting allowed)'
 STATUS_CLOSING = '205 closing connection - goodbye!'
 STATUS_XOVER = '224 Overview information follows'
 STATUS_XPAT = '221 Header follows'
-STATUS_LISTGROUP = '211 list of article numbers follow'
+STATUS_LISTGROUP = '211 %s %s %s %s Article numbers follow (multiline)'
 STATUS_XGTITLE = '282 list of groups and descriptions follows'
 STATUS_LISTNEWSGROUPS = '215 information follows'
 STATUS_XHDR = '221 Header follows'
@@ -298,7 +298,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     def do_STAT(self):
         """
         Syntax:
-            STAT nnn|<message-id>
+            STAT [nnn|<message-id>]
         Responses:
             223 n a article retrieved - request text separately
                (n = article number, a = unique article id)
@@ -307,18 +307,22 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             421 no next article in this group
         """
         # check the syntax of the command
-        if len(self.tokens) != 2:
+        if len(self.tokens) > 2:
             self.send_response(ERR_CMDSYNTAXERROR)
             return
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
             return
-        # get the article number if it is the appropriate option
-        if self.tokens[1].find('<') != -1:
-            self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
-            report_article_number = 0
+        if len(self.tokens) == 1:
+            self.tokens.append(self.selected_article)
+            report_article_number = self.tokens[1]
         else:
-            report_article_number = self.tokens[1]      
+            # get the article number if it is the appropriate option
+            if self.tokens[1].find('<') != -1:
+                self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
+                report_article_number = 0
+            else:
+                report_article_number = self.tokens[1]      
         if not backend.get_STAT(self.selected_group, self.tokens[1]):
             self.send_response(ERR_NOSUCHARTICLENUM)
             return
@@ -582,7 +586,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.selected_article = check[0]
             if len(self.tokens) == 2:
                 self.selected_group = self.tokens[1]
-        self.send_response("%s\r\n%s\r\n." % (STATUS_LISTGROUP, numbers))
+        else:
+            # If an empty newsgroup is selected, the current article pointer is made invalid.
+            self.selected_article = 'ggg'
+        self.send_response("%s\r\n%s\r\n." % (STATUS_LISTGROUP % (backend.get_group_stats(self.selected_group)), numbers))
 
     def do_XGTITLE(self):
         """

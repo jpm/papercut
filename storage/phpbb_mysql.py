@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002, 2003, 2004 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.16 2004-01-04 19:43:57 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.17 2004-02-01 05:23:13 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -95,7 +95,11 @@ class Papercut_Storage:
         num_rows = self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
-    def get_group_stats(self, forum_id):
+    def get_group_stats(self, group_name):
+        total, max, min = self.get_forum_stats(self.get_forum(group_name))
+        return (total, min, max, group_name)
+
+    def get_forum_stats(self, forum_id):
         stmt = """
                 SELECT
                    COUNT(post_id) AS total,
@@ -175,7 +179,7 @@ class Papercut_Storage:
 
     def get_GROUP(self, group_name):
         forum_id = self.get_forum(group_name)
-        result = self.get_group_stats(forum_id)
+        result = self.get_forum_stats(forum_id)
         return (result[0], result[2], result[1])
 
     def get_LIST(self):
@@ -196,7 +200,7 @@ class Papercut_Storage:
         else:
             lists = []
             for group_name, forum_id in result:
-                total, maximum, minimum = self.get_group_stats(forum_id)
+                total, maximum, minimum = self.get_forum_stats(forum_id)
                 if settings.server_type == 'read-only':
                     lists.append("%s %s %s n" % (group_name, maximum, minimum))
                 else:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mbox.py,v 1.4 2004-01-25 04:27:28 jpm Exp $
+# $Id: mbox.py,v 1.5 2004-02-01 05:23:13 jpm Exp $
 
 import os
 import mailbox
@@ -42,6 +42,10 @@ class Papercut_Storage:
         return 1
 
     def get_group_stats(self, filename):
+        total, max, min = self.get_mbox_stats(filename)
+        return (total, min, max, filename)
+
+    def get_mbox_stats(self, filename):
         mbox = self.get_mailbox(filename)
         dir(mbox)
         cnt = 0
@@ -63,7 +67,7 @@ class Papercut_Storage:
         return ''
 
     def get_GROUP(self, group_name):
-        result = self.get_group_stats(group_name.replace('papercut.mbox.', ''))
+        result = self.get_mbox_stats(group_name.replace('papercut.mbox.', ''))
         return (result[0], result[2], result[1])
 
     def get_LIST(self):
@@ -73,7 +77,7 @@ class Papercut_Storage:
         else:
             groups = []
             for mbox in result:
-                total, maximum, minimum = self.get_group_stats(mbox)
+                total, maximum, minimum = self.get_mbox_stats(mbox)
                 if settings.server_type == 'read-only':
                     groups.append("papercut.mbox.%s %s %s n" % (mbox, maximum, minimum))
                 else:

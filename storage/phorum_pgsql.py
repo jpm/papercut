@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_pgsql.py,v 1.10 2004-01-04 19:43:57 jpm Exp $
+# $Id: phorum_pgsql.py,v 1.11 2004-02-01 05:23:13 jpm Exp $
 from pyPgSQL import PgSQL
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -94,7 +94,11 @@ class Papercut_Storage:
         else:
             return minimum
 
-    def get_group_stats(self, table_name):
+    def get_group_stats(self, group_name):
+        total, max, min = self.get_table_stats(self.get_table_name(group_name))
+        return (total, min, max, group_name)
+
+    def get_table_stats(self, table_name):
         stmt = """
                 SELECT
                    COUNT(id) AS total,
@@ -298,7 +302,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
 
     def get_GROUP(self, group_name):
         table_name = self.get_table_name(group_name)
-        result = self.get_group_stats(table_name)
+        result = self.get_table_stats(table_name)
         return (result[0], result[2], result[1])
 
     def get_LIST(self):
@@ -319,7 +323,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         else:
             lists = []
             for group_name, table in result:
-                total, maximum, minimum = self.get_group_stats(table)
+                total, maximum, minimum = self.get_table_stats(table)
                 if settings.server_type == 'read-only':
                     lists.append("%s %s %s n" % (group_name, maximum, minimum))
                 else:
