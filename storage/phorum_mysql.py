@@ -1,6 +1,6 @@
         #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.27 2002-03-26 05:55:44 jpm Exp $
+# $Id: phorum_mysql.py,v 1.28 2002-03-26 06:18:19 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -212,8 +212,8 @@ From: %(msg_author)s %(msg_email)s
 Subject: %(msg_subject)s
 To: %(forum_name)s <%(email_list)s>
 Return-Path: <%(email_return)s>
-Reply-To: <%(email_return)s>
-X-Phorum-%(phorum_mail_code)s-Version: Phorum $phorumver
+Reply-To: %(email_return)s
+X-Phorum-%(phorum_mail_code)s-Version: Phorum %(phorum_version)s
 X-Phorum-%(phorum_mail_code)s-Forum: %(forum_name)s
 X-Phorum-%(phorum_mail_code)s-Thread: %(thread_id)s
 X-Phorum-%(phorum_mail_code)s-Parent: %(parent_id)s
@@ -247,6 +247,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
             random_msgid = binascii.hexlify(md5.new(str(time.clock())).digest())
             # this is pretty ugly, right ?
             from papercut import __VERSION__
+            phorum_version = settings.phorum_version
             current_msg = notification_mail_tpl % vars()
             smtp.sendmail('Phorum <%s>' % (email_list), email_list, current_msg)
         smtp.quit()
