@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.1 2002-01-14 15:23:13 jpm Exp $
+# $Id: phorum_mysql.py,v 1.2 2002-01-14 16:46:08 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -102,7 +102,7 @@ class Papercut_Backend:
         if len(result) == 0:
             return None
         else:
-            return "\r\n".join(result)
+            return "\r\n".join(["%s" % k for k in result])
 
     def get_NEWNEWS(self, ts, group='*'):
         stmt = """
@@ -434,7 +434,8 @@ class Papercut_Backend:
         subject = re.compile("^Subject:(.*)", re.M).search(lines, 1).groups()[0].strip()
         if lines.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
-            references = re.compile("^References: <(.*)>", re.M).search(lines, 1).groups()[0].strip()
+            references = re.compile("^References: <(.*)>", re.M).search(lines, 1).groups()
+            last_reference = references[-1].strip()
             parent_id, void = references.split('@')
             stmt = """
                     SELECT
