@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.1 2002-05-24 04:01:04 jpm Exp $
+# $Id: mysql.py,v 1.2 2002-09-12 01:09:35 jpm Exp $
 import MySQLdb
 import settings
-import crypt
 
 class Papercut_Auth:
     """

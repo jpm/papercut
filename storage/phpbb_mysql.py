@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.3 2002-05-07 15:20:32 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.4 2002-09-12 01:09:35 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -377,7 +377,7 @@ class Papercut_Storage:
                     %sposts A, 
                     %sposts_text B
                 LEFT JOIN
-                    %susers
+                    %susers C
                 ON
                     A.poster_id=C.user_id
                 WHERE
@@ -428,7 +428,7 @@ class Papercut_Storage:
                     %sposts A, 
                     %sposts_text B
                 LEFT JOIN
-                    %susers
+                    %susers C
                 ON
                     A.poster_id=C.user_id
                 WHERE
@@ -517,7 +517,7 @@ class Papercut_Storage:
                     %sposts A,
                     %sposts_text B
                 LEFT JOIN
-                    %susers
+                    %susers C
                 ON
                     A.poster_id=C.user_id
                 WHERE
@@ -685,3 +685,4 @@ class Papercut_Storage:
                 return None
             else:
                 return 1
+
