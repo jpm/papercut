@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_pgsql.py,v 1.4 2003-02-21 18:52:08 jpm Exp $
+# $Id: phorum_pgsql.py,v 1.5 2003-02-21 18:55:23 jpm Exp $
 from pyPgSQL import PgSQL
 import time
 from mimify import mime_encode_header
@@ -503,7 +503,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
             else:
                 reference = ""
             # message_number <tab> subject <tab> author <tab> date <tab> message_id <tab> reference <tab> bytes <tab> lines <tab> xref
-            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, reference, len(strutil.format_body(row[6])), line_count, xref))
+            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4].strip(), author, formatted_time, message_id, reference, len(strutil.format_body(row[6])), line_count, xref))
         return "\r\n".join(overviews)
 
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):
