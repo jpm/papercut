@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.8 2002-02-02 22:23:41 jpm Exp $
+# $Id: phorum_mysql.py,v 1.9 2002-02-03 06:17:43 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
 import re
 import settings
+import mime
 
 doubleline_regexp = re.compile("^\.\.", re.M)
 singleline_regexp = re.compile("^\.", re.M)
@@ -28,7 +29,7 @@ class Papercut_Backend:
         self.cursor = self.conn.cursor()
 
     def get_message_body(self, headers):
-        return get_text_message(headers)
+        return mime.get_text_message(headers)
 
     def get_formatted_time(self, time_tuple):
         return time.strftime('%a, %d %B %Y %H:%M:%S %Z', time_tuple)
