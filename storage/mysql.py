@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more informationB
-# $Id: mysql.py,v 1.25 2002-04-24 04:09:00 jpm Exp $
+# $Id: mysql.py,v 1.26 2002-04-24 04:16:17 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -95,28 +95,22 @@ class Papercut_Storage:
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
-                    MIN(id) AS first_article
+                    IF(MIN(id) IS NULL, 0, MIN(id)) AS first_article
                 FROM
                     %s""" % (table_name)
         num_rows = self.cursor.execute(stmt)
-        if num_rows == 0:
-            return None
-        else:
-            return self.cursor.fetchone()[0]
+        return self.cursor.fetchone()[0]
 
     def get_group_stats(self, table_name):
         stmt = """
                 SELECT
                    COUNT(id) AS total,
-                   MAX(id) AS maximum,
-                   MIN(id) AS minimum
+                   IF(MAX(id) IS NULL, 0, MAX(id)) AS maximum,
+                   IF(MIN(id) IS NULL, 0, MIN(id)) AS minimum
                 FROM
                     %s""" % (table_name)
         num_rows = self.cursor.execute(stmt)
-        if num_rows == 0:
-            return (0, 0, 0)
-        else:
-            return self.cursor.fetchone()
+        return self.cursor.fetchone()
 
     def get_table_name(self, group_name):
         stmt = """
