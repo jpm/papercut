@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.55 2002-05-21 03:17:19 jpm Exp $
+# $Id: papercut.py,v 1.56 2002-05-21 03:19:48 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -783,6 +783,6 @@ if __name__ == '__main__':
         auth = temp.Papercut_Auth()
 
     signal.signal(signal.SIGINT, sighandler)
-    print 'Papercut %s - starting up' % __VERSION__
+    print 'Papercut %s (%s storage module) - starting up' % (__VERSION__, settings.storage_backend)
     server = NNTPServer((settings.nntp_hostname, settings.nntp_port), NNTPRequestHandler)
     server.serve_forever()
