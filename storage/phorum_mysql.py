@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.3 2002-01-15 00:54:44 jpm Exp $
+# Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
+# $Id: phorum_mysql.py,v 1.4 2002-01-16 23:11:45 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -8,12 +8,20 @@ import re
 import settings
 
 class Papercut_Backend:
+    """
+    Backend interface for the Phorum web message board software (http://phorum.org)
+    
+    This is the interface for Phorum running on a MySQL database. For more information
+    on the structure of the 'backends' package, please refer to the __init__.py
+    available on the 'backends' sub-directory.
+    """
 
     def __init__(self):
         self.conn = MySQLdb.connect(db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
         self.cursor = self.conn.cursor()
 
     def get_message_body(self, headers):
+        # XXX: Need to un-escape the doubled dots
         body = []
         found = 0
         raw_headers = headers.split('\r\n')

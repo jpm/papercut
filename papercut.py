@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.18 2002-01-15 00:53:57 jpm Exp $
+# Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
+# $Id: papercut.py,v 1.19 2002-01-16 23:11:45 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -630,8 +630,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         return msg_id[1:msg_id.find('@')]
 
     def index_in_list(self, list, index):
-        for i in list:
-            if i.upper() == index.upper():
+        for item in list:
+            if item.upper() == index.upper():
                 return 1
         return 0
 
@@ -660,8 +660,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.tokens = []
         self.sending_article = 0
         self.article_lines = []
+        # calling the parent's method to clean up
+        SocketServer.StreamRequestHandler.finish()
         if __DEBUG__: print 'Closing the request'
-        pass
 
 
 if __name__ == '__main__':

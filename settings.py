@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.4 2002-01-14 15:23:13 jpm Exp $
+# Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
+# $Id: settings.py,v 1.5 2002-01-16 23:11:45 jpm Exp $
 import time
 
 log_path = "/home/jpm/papercut/logs/"
