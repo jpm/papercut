@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.71 2003-01-02 03:11:45 jpm Exp $
+# $Id: papercut.py,v 1.72 2003-01-04 04:36:18 jpm Exp $
 import SocketServer
 import sys
+import os
 import signal
 import time
 import re
@@ -78,10 +79,15 @@ contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
 def is_empty(str):
     return len(str) > 0
 
-class NNTPServer(SocketServer.ForkingTCPServer):
-    allow_reuse_address = 1
-    if settings.max_connections:
-        max_children = settings.max_connections
+if os.name == 'posix':
+    class NNTPServer(SocketServer.ForkingTCPServer):
+        allow_reuse_address = 1
+        if settings.max_connections:
+            max_children = settings.max_connections
+else:
+    class NNTPServer(SocketServer.ThreadingTCPServer):
+        allow_reuse_address = 1
+
 
 class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     # this is the list of supported commands
@@ -116,13 +122,15 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         while not self.terminated:
             if self.sending_article == 0:
                 self.article_lines = []
-            signal.signal(signal.SIGALRM, self.handle_timeout)
-            signal.alarm(__TIMEOUT__)
+            if os.name == 'posix':
+                signal.signal(signal.SIGALRM, self.handle_timeout)
+                signal.alarm(__TIMEOUT__)
             try:
                 self.inputline = self.rfile.readline()
             except IOError:
                 continue
-            signal.alarm(0)
+            if os.name == 'posix':
+                signal.alarm(0)
             if __DEBUG__:
                 print "client>", repr(self.inputline)
             line = self.inputline.strip()
@@ -134,7 +142,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 continue
             self.tokens = line.split(' ')
             # remove empty items in list
-            #self.tokens = filter(is_empty, self.tokens) [XXX: isn't this going to break a lot of commands ?]
+            #self.tokens = filter(is_empty, self.tokens)
             # NNTP commands are case-insensitive
             command = self.tokens[0].upper()
             settings.logEvent('Received request: %s' % (line))
