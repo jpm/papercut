@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.37 2002-05-07 15:20:32 jpm Exp $
+# $Id: phorum_mysql.py,v 1.38 2002-07-19 04:04:29 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -313,7 +313,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                     lists.append("%s %s %s n" % (group_name, maximum, minimum))
                 else:
                     lists.append("%s %s %s y" % (group_name, maximum, minimum))
-            return "\r\n".join(lists))
+            return "\r\n".join(lists)
 
     def get_STAT(self, group_name, id):
         table_name = self.get_table_name(group_name)
