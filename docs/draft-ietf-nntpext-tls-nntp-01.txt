@@ -1,0 +1,614 @@
+Network Working Group                                         J. Vinocur
+INTERNET DRAFT                                        Cornell University
+Document: draft-ietf-nntpext-tls-nntp-01.txt                   C. Newman
+                                                        Sun Microsystems
+                                                            October 2003
+
+
+                          Using TLS with NNTP
+
+
+Status of this memo
+
+     This document is an Internet-Draft and is in full conformance with
+     all provisions of Section 10 of RFC 2026.
+
+     Internet-Drafts are working documents of the Internet Engineering
+     Task Force (IETF), its areas, and its working groups.  Note that
+     other groups may also distribute working documents as
+     Internet-Drafts.
+
+     Internet-Drafts are draft documents valid for a maximum of six
+     months and may be updated, replaced, or obsoleted by other
+     documents at any time.  It is inappropriate to use Internet-Drafts
+     as reference material or to cite them other than as "work in
+     progress."
+
+     The list of current Internet-Drafts can be accessed at
+     http://www.ietf.org/ietf/1id-abstracts.html.
+
+     The list of Internet-Draft Shadow Directories can be accessed at
+     http://www.ietf.org/shadow.html.
+
+Copyright Notice
+
+     Copyright (C) The Internet Society (2002).  All Rights Reserved.
+
+Abstract
+
+     This memo defines an extension to the Network News Transport
+     Protocol [NNTP] to provide connection-based encryption (via
+     Transport Layer Security [TLS]).  The primary goal is to provide
+     encryption for single-link confidentiality purposes, but data
+     integrity and (optional) certificate-based peer entity
+     authentication are also possible.
+
+
+
+
+
+
+
+Vinocur & Newman           Expires April 2004                   [Page 1]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+Table of Contents
+
+     0. Changes from Previous Version ............................  2
+     1. Introduction .............................................  3
+        1.1. Conventions Used in this Document ...................  3
+     2. Advertising Capabilities with the Extensions Mechanism ...  3
+     3. STARTTLS Command .........................................  4
+        3.1. Usage ...............................................  4
+        3.2. Description .........................................  4
+           3.2.1. Processing After the STARTTLS Command ..........  5
+           3.2.2. Result of the STARTTLS Command .................  6
+        3.3. Examples ............................................  7
+     4. Augmented BNF Syntax for STARTTLS ........................  8
+     5. Security Considerations ..................................  8
+     6. Acknowledgements ......................................... 10
+     7. Normative References ..................................... 10
+     8. Informative References ................................... 10
+     9. Authors' Addresses ....................................... 11
+
+0. Changes from Previous Version
+
+     New:
+     o  Text needed to comply with extensions framework guidelines:
+        -  Allows 483 to be returned for most commands
+        -  No pipelining
+        -  Not impacted by MODE READER
+     o  Examples section
+
+     Changed:
+     o  Welcome banner is *not* reissued after STARTTLS
+     o  STARTTLS on an already-secure link gives 502 (not 580)
+     o  Failed negotiation gives 580 on the reestablished insecure link
+     o  Removed MULTIDOMAIN, need is resolved by RFC 3546 (a SHOULD)
+     o  Removed definition of 483, which is now included in base spec
+     o  Use HDR instead of PAT in the LIST EXTENSIONS example
+
+     Clarified:
+     o  When the capability can be advertised
+     o  The specifc octet where encrypted session begins
+
+     Other:
+     o  Reformatting to match base spec style
+     o  Assorted updates of phrasing and typographical varieties
+     o  Updated several references per new versions of documents
+
+
+
+
+
+
+
+Vinocur & Newman           Expires April 2004                   [Page 2]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+1. Introduction
+
+     Historically, unencrypted NNTP [NNTP] connections were satisfactory
+     for most purposes.  However, sending passwords unencrypted over the
+     network is no longer appropriate, and sometimes strong encryption
+     is desired for the entire connection.
+
+     The STARTTLS extension provides a way to use the popular TLS [TLS]
+     service with the existing NNTP protocol.  The current
+     (unstandardized) use of TLS for NNTP is most commonly on a
+     dedicated TCP port; this practice is discouraged for the reasons
+     documented in section 7 of "Using TLS with IMAP, POP3 and ACAP"
+     [TLS-IMAPPOP].  Therefore, this specification formalizes and
+     extends the STARTTLS command already in occasional use by the
+     installed base.
+
+1.1. Conventions Used in this Document
+
+     The key words "REQUIRED", "MUST", "MUST NOT", "SHOULD", "SHOULD
+     NOT", "MAY", and "OPTIONAL" in this document are to be interpreted
+     as described in "Key words for use in RFCs to Indicate Requirement
+     Levels" [KEYWORDS].
+
+     Terms related to authentication are defined in "On Internet
+     Authentication" [AUTH].
+
+     This document assumes you are familiar with NNTP [NNTP] and TLS
+     [TLS].
+
+     In the examples, commands from the client are indicated with [C],
+     and responses from the server are indicated with [S].
+
+2. Advertising Capabilities with the Extensions Mechanism
+
+     The LIST EXTENSIONS command, documented in section 8 of [NNTP],
+     provides a mechanism for clients to discover what extensions are
+     available.
+
+     A server supporting the STARTTLS command as defined in section 4
+     will advertise the "STARTTLS" capability in response to the LIST
+     EXTENSIONS command.  However, this capability is not advertised
+     after successful authentication [NNTP-AUTH], nor is it advertised
+     once a TLS layer is active (see section 4.2.2).  This capability
+     may be advertised both before and after any use of MODE READER,
+     with the same semantics.
+
+     As the STARTTLS command is related to security, cached results of
+     LIST EXTENSIONS from a previous session MUST NOT be used, as per
+
+
+
+Vinocur & Newman           Expires April 2004                   [Page 3]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+     section 11.6 of [NNTP].
+
+     Example:
+        [C] LIST EXTENSIONS
+        [S] 202 Extensions supported:
+        [S]  OVER
+        [S]  HDR
+        [S]  LISTGROUP
+        [S]  STARTTLS
+        [S] .
+
+     Note that the STARTTLS command constitutes a mode change and thus
+     clients MUST wait for completion prior to sending additional
+     commands.
+
+3. STARTTLS Command
+
+3.1. Usage
+
+     This command MUST NOT be pipelined.
+
+     Syntax
+        STARTTLS
+
+     Responses
+        382 Continue with TLS negotiation
+        403 TLS temporarily not available
+        501 Command not supported or command syntax error
+        502 Command unavailable [1]
+        580 TLS negotiation failed
+
+    [1] If a TLS layer is already active, or authentication has
+        occurred, STARTTLS is not a valid command (see sections 4.2 and
+        4.2.2).
+
+     Clients MUST support other response codes by processing them based
+     on the first digit.  However, the server MUST NOT return 483 in
+     response to STARTTLS.  (See section 3.2.1 of [NNTP].)
+
+3.2. Description
+
+     A client issues the STARTTLS command to request negotiation of TLS.
+     The client MUST NOT send any additional commands on the socket
+     until after it has received the server response to the command;
+     this command MUST NOT be pipelined as per section 3.2 of [NNTP].
+     The STARTTLS command is usually used to request session encryption,
+     although it can be used for client certificate authentication.
+
+
+
+
+Vinocur & Newman           Expires April 2004                   [Page 4]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+     An NNTP server MAY require the client to perform a TLS negotiation
+     before accepting any commands.  In this case, the server SHOULD
+     return the 483 encryption-required response code to every command
+     other than HELP, LIST EXTENSIONS, QUIT, and any commands that
+     establish encryption, such as STARTTLS; the server MUST NOT return
+     483 in response to these commands.  Additionally, the client MAY
+     decide to establish a security layer without first receiving a 483
+     response.
+
+     If the client receives a failure response to STARTTLS, the client
+     must decide whether or not to continue the NNTP session.  Such a
+     decision is based on local policy.  For instance, if TLS was being
+     used for client authentication, the client might try to continue
+     the session, in case the server allows it to do so even with no
+     authentication.  However, if TLS was being negotiated for
+     encryption, a client that gets a failure response needs to decide
+     whether to continue without TLS encryption, to wait and try again
+     later, or to give up and notify the user of the error.
+
+     After receiving a 382 response to a STARTTLS command, the client
+     MUST start the TLS negotiation before giving any other NNTP
+     commands.  The TLS negotiation begins with the first octet
+     following the CRLF of the 382 response.  If, after having issued
+     the STARTTLS command, the client finds out that some failure
+     prevents it from actually starting a TLS handshake, then it SHOULD
+     immediately close the connection.
+
+     Servers MUST be able to understand backwards-compatible TLS Client
+     Hello messages (provided that client_version is TLS 1.0 or later),
+     and clients MAY use backwards-compatible Client Hello messages.
+     Neither clients or servers are required to actually support Client
+     Hello messages for anything other than TLS 1.0.  However, the TLS
+     extension for Server Name Indication [TLS-EXT] SHOULD be
+     implemented by all clients; it also SHOULD be implemented by any
+     server implementing STARTTLS that is known by multiple names
+     (otherwise it is not possible for a server with several hostnames
+     to present the correct certificate to the client).
+
+     Although current use of TLS most often involves the dedication of
+     port 563 for NNTP over TLS, the continued use of TLS on a separate
+     port is discouraged for the reasons documented in section 7 of
+     "Using TLS with IMAP, POP3 and ACAP" [TLS-IMAPPOP].
+
+3.2.1. Processing After the STARTTLS Command
+
+     After the TLS handshake has been completed successfully, both
+     parties MUST immediately decide whether or not to continue based on
+     the authentication and privacy achieved.  The NNTP client and
+
+
+
+Vinocur & Newman           Expires April 2004                   [Page 5]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+     server may decide to move ahead even if the TLS negotiation ended
+     with no authentication and/or no privacy because NNTP services are
+     often performed without authentication or privacy, but some NNTP
+     clients or servers may want to continue only if a particular level
+     of authentication and/or privacy was achieved.
+
+     If the NNTP client decides that the level of authentication or
+     privacy is not high enough for it to continue, it SHOULD issue a
+     QUIT command immediately after the TLS negotiation is complete.  If
+     the NNTP server decides that the level of authentication or privacy
+     is not high enough for it to continue, it SHOULD do at least one of
+     (1) close the connection, being aware that the client may interpret
+     this behavior as a network problem and immediately reconnect and
+     issue the same command sequence, or (2) keep the connection open
+     and reply to NNTP commands from the client with the 483 response
+     code (with a possible text string such as "Command refused due to
+     lack of security"), however this behavior may tie up resources
+     unacceptably.
+
+     The decision of whether or not to believe the authenticity of the
+     other party in a TLS negotiation is a local matter.  However, some
+     general rules for the decisions are:
+
+     o  The client MAY check that the identity presented in the server's
+        certificate matches the intended server hostname or domain.
+        This check is not required (and may fail in the absence of the
+        TLS server_name extension [TLS-EXT], as described above), but if
+        it is implemented and the match fails, the client SHOULD either
+        request explicit user confirmation, or terminate the connection
+        but allow the user to disable the check in the future.
+     o  Generally an NNTP server would want to accept any verifiable
+        certificate from a client, however authentication can be done
+        using the client certificate (perhaps in combination with the
+        SASL EXTERNAL mechanism [NNTP-AUTH], although an implementation
+        supporting STARTTLS is not required to support SASL in general
+        or that mechanism in particular).  The server MAY use
+        information about the client certificate for identification of
+        connections or posted articles (either in its logs or directly
+        in posted articles).
+
+3.2.2. Result of the STARTTLS Command
+
+     If the TLS handshake fails in such a way that recovery is possible,
+     the server will send a 580 response (without encryption), beginning
+     with the first post-handshake octet.
+
+     Upon successful completion of the TLS handshake, the NNTP protocol
+     is reset to the initial state (the state in NNTP directly after the
+
+
+
+Vinocur & Newman           Expires April 2004                   [Page 6]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+     connection is established).  The server MUST discard any knowledge
+     obtained from the client, such as the current newsgroup and article
+     number, that was not obtained from the TLS negotiation itself;
+     immediately after the TLS handshake, the server MUST NOT issue a
+     welcome banner and MUST be prepared to accept commands from the
+     client.  The client MUST discard any knowledge obtained from the
+     server, such as the list of NNTP service extensions, which was not
+     obtained from the TLS negotiation itself.
+
+     The extensions returned in response to a LIST EXTENSIONS command
+     received after the TLS handshake MAY be different than the list
+     returned before the TLS handshake.  For example, an NNTP server
+     supporting SASL [NNTP-AUTH] might not want to advertise support for
+     a particular mechanism unless a client has sent an appropriate
+     client certificate during a TLS handshake.
+
+     Both the client and the server MUST know if there is a TLS session
+     active.  A client MUST NOT attempt to start a TLS session if a TLS
+     session is already active. A server MUST NOT return the STARTTLS
+     extension in response to a LIST EXTENSIONS command received after a
+     TLS handshake has completed, and a server MUST respond with a 502
+     response code if a STARTTLS command is received while a TLS session
+     is already active.
+
+3.3. Examples
+
+     Example of a client being prompted to use encryption and
+     negotiating it successfully (showing the removal of STARTTLS from
+     the extensions list once a TLS layer is active), followed by an
+     (inappropriate) attempt by the client to initiate another TLS
+     negotiation:
+        [C] LIST EXTENSIONS
+        [S] 202 Extensions supported:
+        [S]  STARTTLS
+        [S]  OVER
+        [S] .
+        [C] GROUP local.confidential
+        [S] 483 Encryption or stronger authentication required
+        [C] STARTTLS
+        [S] 382 Continue with TLS negotiation
+        [TLS negotiation occurs here]
+        [Following successful negotiation, traffic is via the TLS layer]
+        [C] LIST EXTENSIONS
+        [S] 202 Extensions supported:
+        [S]  OVER
+        [S] .
+        [C] STARTTLS
+        [S] 502 STARTTLS not allowed with active TLS layer
+
+
+
+Vinocur & Newman           Expires April 2004                   [Page 7]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+     Example of a request to begin TLS negotiation declined by the
+     server:
+        [C] STARTTLS
+        [S] 403 TLS temporarily not available
+
+4. Augmented BNF Syntax for STARTTLS
+
+     This amends the formal syntax for NNTP [NNTP] to add the STARTTLS
+     command.  The syntax is defined using ABNF [ABNF], including the
+     core rules from section 6 of [ABNF].
+
+     command              /= starttls-command
+     starttls-command      = "STARTTLS" *WSP CRLF
+                    ; WSP and CRLF are defined in sec. 13 of [NNTP]
+
+5. Security Considerations
+
+     In general, the security considerations of the TLS protocol [TLS]
+     and any implemented extensions [TLS-EXT] are applicable here; only
+     the most important are highlighted specifically below.  Also, this
+     extension is not intended to cure the security considerations
+     described in section 14 of [NNTP]; those considerations remain
+     relevant to any NNTP implementation.
+
+     Use of STARTTLS cannot protect protocol exchanges conducted prior
+     to authentication.  For this reason, the LIST EXTENSIONS command
+     SHOULD be re-issued after successful negotiation of a security
+     layer, and other protocol state SHOULD be re-negotiated as well.
+
+     It should be noted that NNTP is not an end-to-end mechanism. Thus,
+     if an NNTP client/server pair decide to add TLS privacy, they are
+     securing the transport only for that link.  Further, because
+     delivery of a single piece of news may go between more than two
+     NNTP servers, adding TLS privacy to one pair of servers does not
+     mean that the entire NNTP chain has been made private.  Further,
+     just because an NNTP server can authenticate an NNTP client, it
+     does not mean that the articles from the NNTP client were
+     authenticated by the NNTP client when the client received them.
+
+     Both the NNTP client and server must check the result of the TLS
+     negotiation to see whether an acceptable degree of authentication
+     and privacy was achieved.  Ignoring this step completely
+     invalidates using TLS for security.  The decision about whether
+     acceptable authentication or privacy was achieved is made locally,
+     is implementation-dependent, and is beyond the scope of this
+     document.
+
+     The NNTP client and server should note carefully the result of the
+
+
+
+Vinocur & Newman           Expires April 2004                   [Page 8]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+     TLS negotiation.  If the negotiation results in no privacy, or if
+     it results in privacy using algorithms or key lengths that are
+     deemed not strong enough, or if the authentication is not good
+     enough for either party, the client may choose to end the NNTP
+     session with an immediate QUIT command, or the server may choose
+     not to accept any more NNTP commands.
+
+     The client and server should also be aware that the TLS protocol
+     permits privacy and security capabilities to be renegotiated mid-
+     connection (see section 7.4.1 of [TLS]).  For example, one of the
+     parties may desire minimal encryption after any authentication
+     steps have been performed.  This underscores the fact that security
+     is not present simply because TLS has been negotiated; the nature
+     of the established security layer must be considered.
+
+     A man-in-the-middle attack can be launched by deleting the 382
+     response from the server. This would cause the client not to try to
+     start a TLS session.  Another man-in-the-middle attack is to allow
+     the server to announce its STARTTLS capability, but to alter the
+     client's request to start TLS and the server's response.  An NNTP
+     client can partially protect against these attacks by recording the
+     fact that a particular NNTP server offers TLS during one session
+     and generating an alarm if it does not appear in the LIST
+     EXTENSIONS response for a later session (of course, the STARTTLS
+     extension would not be listed after a security layer is in place).
+
+     If the TLS negotiation fails or if the client receives a 483
+     response, the client has to decide what to do next.  The client has
+     to choose among three main options:  to go ahead with the rest of
+     the NNTP session, to retry TLS at a later time, or to give up and
+     postpone newsreading activity.  If a failure or error occurs, the
+     client can assume that the server may be able to negotiate TLS in
+     the future, and should try to negotiate TLS in a later session.
+     However, if the client and server were only using TLS for
+     authentication and no previous 480 response was received, the
+     client may want to proceed with the NNTP session, in case some of
+     the operations the client wanted to perform are accepted by the
+     server even if the client is unauthenticated.
+
+     Before the TLS handshake has begun, any protocol interactions are
+     performed in the clear and may be modified by an active attacker.
+     For this reason, clients and servers MUST discard any sensitive
+     knowledge obtained prior to the start of the TLS handshake upon
+     completion of the TLS handshake.
+
+
+
+
+
+
+
+Vinocur & Newman           Expires April 2004                   [Page 9]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+6. Acknowledgements
+
+     A significant amount of the STARTTLS text was lifted from RFC 3207
+     by Paul Hoffman.
+
+     Special acknowledgement goes also to the people who commented
+     privately on intermediate revisions of this document, as well as
+     the members of the IETF NNTP Working Group for continual insight in
+     discussion.
+
+7. Normative References
+
+     [ABNF] Crocker, D., Overell, P., "Augmented BNF for Syntax
+     Specifications:  ABNF", RFC 2234, November 1997.
+
+     [AUTH] Haller, N., Atkinson, R., "On Internet Authentication", RFC 1704,
+     October 1994.
+
+     [KEYWORDS] Bradner, S., "Key words for use in RFCs to Indicate
+     Requirement Levels", RFC 2119, March 1997.
+
+     [NNTP] Feather, C., "Network News Transport Protocol"
+     (draft-ietf-nntpext-base-20.txt).
+
+     [SMTP] Klensin, J., "Simple Mail Transport Protocol", RFC 2821, April
+     2001.
+
+     [TLS] Dierks, T., Allen, C., "The TLS Protocol Version 1.0", RFC 2246,
+     January 1999.
+
+     [TLS-EXT] Blake-Wilson, S., Nystrom, M., Hopwood, D., Mikkelsen, J.,
+     Wright, T., "Transport Layer Security (TLS) Extensions", RFC 3546, June
+     2003.
+
+     [TLS-IMAPPOP] Newman, C., "Using TLS with IMAP, POP3 and ACAP", RFC
+     2595, June 1999.
+
+8. Informative References
+
+     [HTTP] Fielding, R., Gettys, J., Mogul, J., Frystyk, H., Masinter,
+     L., Leach, P., Berners-Lee, T., "Hypertext Transfer Protocol --
+     HTTP/1.1", RFC 2616, June 1999.
+
+     [NNTP-AUTH] Vinocur, J., Newman, C., "NNTP Extension for
+     Authentication", Work in Progress.
+
+
+
+
+
+
+Vinocur & Newman           Expires April 2004                  [Page 10]
+
+Internet Draft                TLS for NNTP                  October 2003
+
+
+9. Authors' Addresses
+
+     Jeffrey M. Vinocur
+     Department of Computer Science
+     Upson Hall
+     Cornell University
+     Ithaca, NY  14853
+
+     EMail: vinocur@cs.cornell.edu
+
+
+     Chris Newman
+     Sun Microsystems
+     1050 Lakes Drive, Suite 250
+     West Covina, CA  91790
+
+     EMail: cnewman@iplanet.com
+
+Full Copyright Statement
+
+     Copyright (C) The Internet Society (2002).  All Rights Reserved.
+
+     This document and translations of it may be copied and furnished to
+     others, and derivative works that comment on or otherwise explain
+     it or assist in its implementation may be prepared, copied,
+     published and distributed, in whole or in part, without restriction
+     of any kind, provided that the above copyright notice and this
+     paragraph are included on all such copies and derivative works.
+     However, this document itself may not be modified in any way, such
+     as by removing the copyright notice or references to the Internet
+     Society or other Internet organizations, except as needed for the
+     purpose of developing Internet standards in which case the
+     procedures for copyrights defined in the Internet Standards process
+     must be followed, or as required to translate it into languages
+     other than English.
+
+     The limited permissions granted above are perpetual and will not be
+     revoked by the Internet Society or its successors or assigns.
+
+     This document and the information contained herein is provided on
+     an "AS IS" basis and THE INTERNET SOCIETY AND THE INTERNET
+     ENGINEERING TASK FORCE DISCLAIMS ALL WARRANTIES, EXPRESS OR
+     IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF
+     THE INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED
+     WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+
+
+
+
+
+
+Vinocur & Newman           Expires April 2004                  [Page 11]
+
+

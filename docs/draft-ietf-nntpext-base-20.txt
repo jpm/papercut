@@ -1,0 +1,5991 @@
+
+NNTP                                                          C. Feather
+Internet-Draft                                                  Thus plc
+Expires: April 15, 2004                                 October 16, 2003
+
+
+                    Network News Transport Protocol
+                       draft-ietf-nntpext-base-20
+
+Status of this Memo
+
+   This document is an Internet-Draft and is in full conformance with
+   all provisions of Section 10 of RFC2026.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF), its areas, and its working groups. Note that other
+   groups may also distribute working documents as Internet-Drafts.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time. It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   The list of current Internet-Drafts can be accessed at http://
+   www.ietf.org/ietf/1id-abstracts.txt.
+
+   The list of Internet-Draft Shadow Directories can be accessed at
+   http://www.ietf.org/shadow.html.
+
+   This Internet-Draft will expire on April 15, 2004.
+
+Copyright Notice
+
+   Copyright (C) The Internet Society (2003). All Rights Reserved.
+
+Abstract
+
+   The Network News Transport Protocol (NNTP) has been in use in the
+   Internet for a decade and remains one of the most popular protocols
+   (by volume) in use today. This document is a replacement for RFC 977
+   and officially updates the protocol specification. It clarifies some
+   vagueness in RFC 977, includes some new base functionality, and
+   provides a specific mechanism to add standardized extensions to NNTP.
+
+Administration
+
+   This document is a product of the NNTP Working Group, chaired by Russ
+   Allbery and Ned Freed.
+
+   This is draft 20.
+
+
+
+Feather                  Expires April 15, 2004                 [Page 1]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+Author's Note
+
+   This draft is written in XML using an NNTP-specific DTD. Custom
+   software is used to convert this to RFC 2629 [RFC2629] format, and
+   then the public "xml2rfc" package to further reduce this to text,
+   nroff source, and HTML.
+
+   No perl was used in producing this draft.
+
+Rights
+
+   UNIX is a registered trademark of the X/Open Company Ltd.
+
+Table of Contents
+
+   1.      Introduction . . . . . . . . . . . . . . . . . . . . . .    5
+   2.      Notation . . . . . . . . . . . . . . . . . . . . . . . .    6
+   3.      Basic Concepts . . . . . . . . . . . . . . . . . . . . .    8
+   3.1     Commands and Responses . . . . . . . . . . . . . . . . .    8
+   3.2     Response Codes . . . . . . . . . . . . . . . . . . . . .   10
+   3.2.1   Generic Response Codes . . . . . . . . . . . . . . . . .   11
+   3.2.1.1 Examples . . . . . . . . . . . . . . . . . . . . . . . .   13
+   3.3     Pipelining . . . . . . . . . . . . . . . . . . . . . . .   15
+   3.3.1   Examples . . . . . . . . . . . . . . . . . . . . . . . .   15
+   3.4     Articles . . . . . . . . . . . . . . . . . . . . . . . .   16
+   4.      The WILDMAT format . . . . . . . . . . . . . . . . . . .   18
+   4.1     Wildmat syntax . . . . . . . . . . . . . . . . . . . . .   18
+   4.2     Wildmat semantics  . . . . . . . . . . . . . . . . . . .   18
+   4.3     Extensions . . . . . . . . . . . . . . . . . . . . . . .   19
+   4.4     Examples . . . . . . . . . . . . . . . . . . . . . . . .   19
+   5.      Session administration commands  . . . . . . . . . . . .   21
+   5.1     Initial Connection . . . . . . . . . . . . . . . . . . .   21
+   5.2     MODE READER  . . . . . . . . . . . . . . . . . . . . . .   22
+   5.3     LIST EXTENSIONS  . . . . . . . . . . . . . . . . . . . .   24
+   5.4     QUIT . . . . . . . . . . . . . . . . . . . . . . . . . .   27
+   6.      Article posting and retrieval  . . . . . . . . . . . . .   28
+   6.1     Group and article selection  . . . . . . . . . . . . . .   28
+   6.1.1   GROUP  . . . . . . . . . . . . . . . . . . . . . . . . .   28
+   6.1.2   LAST . . . . . . . . . . . . . . . . . . . . . . . . . .   31
+   6.1.3   NEXT . . . . . . . . . . . . . . . . . . . . . . . . . .   32
+   6.2     Retrieval of articles and article sections . . . . . . .   34
+   6.2.1   ARTICLE  . . . . . . . . . . . . . . . . . . . . . . . .   34
+   6.2.2   HEAD . . . . . . . . . . . . . . . . . . . . . . . . . .   37
+   6.2.3   BODY . . . . . . . . . . . . . . . . . . . . . . . . . .   39
+   6.2.4   STAT . . . . . . . . . . . . . . . . . . . . . . . . . .   41
+   6.3     Article posting  . . . . . . . . . . . . . . . . . . . .   43
+   6.3.1   POST . . . . . . . . . . . . . . . . . . . . . . . . . .   43
+   6.3.2   IHAVE  . . . . . . . . . . . . . . . . . . . . . . . . .   45
+
+
+
+Feather                  Expires April 15, 2004                 [Page 2]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   7.      Information commands . . . . . . . . . . . . . . . . . .   49
+   7.1     DATE . . . . . . . . . . . . . . . . . . . . . . . . . .   49
+   7.2     HELP . . . . . . . . . . . . . . . . . . . . . . . . . .   49
+   7.3     NEWGROUPS  . . . . . . . . . . . . . . . . . . . . . . .   50
+   7.4     NEWNEWS  . . . . . . . . . . . . . . . . . . . . . . . .   52
+   7.5     Time . . . . . . . . . . . . . . . . . . . . . . . . . .   53
+   7.5.1   Examples . . . . . . . . . . . . . . . . . . . . . . . .   53
+   7.6     The LIST commands  . . . . . . . . . . . . . . . . . . .   54
+   7.6.1   LIST ACTIVE  . . . . . . . . . . . . . . . . . . . . . .   54
+   7.6.2   LIST ACTIVE.TIMES  . . . . . . . . . . . . . . . . . . .   56
+   7.6.3   LIST DISTRIBUTIONS . . . . . . . . . . . . . . . . . . .   57
+   7.6.4   LIST DISTRIB.PATS  . . . . . . . . . . . . . . . . . . .   58
+   7.6.5   LIST NEWSGROUPS  . . . . . . . . . . . . . . . . . . . .   60
+   8.      Framework for NNTP extensions  . . . . . . . . . . . . .   62
+   8.1     Initial IANA registry  . . . . . . . . . . . . . . . . .   64
+   8.2     Standard extensions  . . . . . . . . . . . . . . . . . .   64
+   8.3     The LISTGROUP extension  . . . . . . . . . . . . . . . .   64
+   8.3.1   LISTGROUP  . . . . . . . . . . . . . . . . . . . . . . .   64
+   8.4     Article metadata . . . . . . . . . . . . . . . . . . . .   66
+   8.4.1   The :bytes metadata item . . . . . . . . . . . . . . . .   67
+   8.4.2   The :lines metadata item . . . . . . . . . . . . . . . .   67
+   8.5     The OVER extension . . . . . . . . . . . . . . . . . . .   67
+   8.5.1   OVER . . . . . . . . . . . . . . . . . . . . . . . . . .   68
+   8.5.2   LIST OVERVIEW.FMT  . . . . . . . . . . . . . . . . . . .   72
+   8.6     The HDR extension  . . . . . . . . . . . . . . . . . . .   74
+   8.6.1   HDR  . . . . . . . . . . . . . . . . . . . . . . . . . .   74
+   8.6.2   LIST HEADERS . . . . . . . . . . . . . . . . . . . . . .   78
+   9.      Augmented BNF Syntax for NNTP  . . . . . . . . . . . . .   81
+   9.1     Commands . . . . . . . . . . . . . . . . . . . . . . . .   81
+   9.2     Responses  . . . . . . . . . . . . . . . . . . . . . . .   83
+   9.3     Articles . . . . . . . . . . . . . . . . . . . . . . . .   83
+   9.4     General non-terminals  . . . . . . . . . . . . . . . . .   83
+   10.     IANA Considerations  . . . . . . . . . . . . . . . . . .   85
+   11.     Security Considerations  . . . . . . . . . . . . . . . .   86
+   11.1    Personal and Proprietary Information . . . . . . . . . .   86
+   11.2    Abuse of Server Log Information  . . . . . . . . . . . .   86
+   11.3    Weak Authentication and Access Control . . . . . . . . .   86
+   11.4    DNS Spoofing . . . . . . . . . . . . . . . . . . . . . .   87
+   11.5    UTF-8 issues . . . . . . . . . . . . . . . . . . . . . .   87
+   11.6    Caching of LIST EXTENSIONS results . . . . . . . . . . .   88
+   12.     Acknowledgments  . . . . . . . . . . . . . . . . . . . .   90
+           Normative References . . . . . . . . . . . . . . . . . .   92
+           Informative References . . . . . . . . . . . . . . . . .   93
+           Author's Address . . . . . . . . . . . . . . . . . . . .   93
+   A.      Future Directions  . . . . . . . . . . . . . . . . . . .   94
+   B.      Interaction with other specifications  . . . . . . . . .   95
+   B.1     Header folding . . . . . . . . . . . . . . . . . . . . .   95
+   B.2     Message-IDs  . . . . . . . . . . . . . . . . . . . . . .   95
+
+
+
+Feather                  Expires April 15, 2004                 [Page 3]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   B.3     Article posting  . . . . . . . . . . . . . . . . . . . .   96
+   C.      Summary of Response Codes  . . . . . . . . . . . . . . .   98
+   D.      Formal specification of the standard extensions  . . . .  103
+   D.1     The LISTGROUP extension  . . . . . . . . . . . . . . . .  103
+   D.2     The OVER extension . . . . . . . . . . . . . . . . . . .  103
+   D.3     The HDR extension  . . . . . . . . . . . . . . . . . . .  104
+           Intellectual Property and Copyright Statements . . . . .  106
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                 [Page 4]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+1. Introduction
+
+   This document specifies the Network News Transport Protocol (NNTP),
+   which is used for the distribution, inquiry, retrieval, and posting
+   of Netnews articles using a reliable stream-based mechanism. For news
+   reading clients, NNTP enables retrieval of news articles that are
+   stored in a central database, giving subscribers the ability to
+   select only those articles they wish to read.
+
+   The Netnews model provides for indexing, cross-referencing, and
+   expiration of aged messages. For server-to-server interaction, NNTP
+   is designed for efficient transmission of Netnews articles over a
+   reliable full duplex communication channel.
+
+   Every attempt is made to ensure that the protocol specification in
+   this document is compatible with the version specified in RFC 977
+   [RFC977]. However, this version does not support the ill-defined
+   SLAVE command and permits four digit years to be specified in the
+   NEWNEWS and NEWGROUPS commands. It changes the default character set
+   to UTF-8 [RFC2279] instead of US-ASCII [ANSI1986]. It now requires
+   all articles to have a message-id, eliminating the "<0>" placeholder
+   used in RFC 977. It also extends the newsgroup name matching
+   capabilities already documented in RFC 977.
+
+   Generally, new functionality is made available using new commands. A
+   number of such commands (including some commands taken from RFC 2980
+   [RFC2980]) are now mandatory. Part of the new functionality involves
+   a mechanism to discover what new functionality is available to
+   clients from a server. This mechanism can also be used to add more
+   functionality as needs merit such additions.
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [RFC2119].
+
+   An implementation is not compliant if it fails to satisfy one or more
+   of the MUST requirements for this protocol. An implementation that
+   satisfies all the MUST and all the SHOULD requirements for its
+   protocols is said to be "unconditionally compliant"; one that
+   satisfies all the MUST requirements but not all the SHOULD
+   requirements for NNTP is said to be "conditionally compliant".
+
+   For the remainder of this document, the term "client" or "client
+   host" refers to a host making use of the NNTP service, while the term
+   "server" or "server host" refers to a host that offers the NNTP
+   service.
+
+
+
+
+
+Feather                  Expires April 15, 2004                 [Page 5]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+2. Notation
+
+   The following notational conventions are used in this document.
+
+     UPPERCASE     indicates literal text to be included in the
+                   command;
+     lowercase     indicates a token described elsewhere;
+     [brackets]    indicate that the argument is optional;
+     ellipsis...   indicates that the argument may be repeated any
+                   number of times (it must occur at least once);
+     vertical|bar  indicates a choice of two mutually exclusive
+                   arguments (exactly one must be provided).
+
+   The name "message-id" for a command or response argument indicates
+   that it is the message-id of an article as described in Section 3.4,
+   including the angle brackets.
+
+   The name "wildmat" for a argument indicates that it is a wildmat as
+   defined in Section 4. If the argument does not meet the requirements
+   of that section (for example, if it does not fit the grammar of
+   Section 4.1) the NNTP server MAY place some interpretation on it (not
+   specified by this document) or otherwise MUST treat it as a syntax
+   error.
+
+   Responses for each command will be described in tables listing the
+   required format of a response followed by the meaning that should be
+   ascribed to that response.
+
+   The terms "NUL", "TAB", "LF", "CR, and "space" refer to the octets
+   with those codes in US-ASCII [ANSI1986] (that is, %x00, %x09, %x0A,
+   %x0D, and %x20 respectively), as do quoted characters (so "." and "<"
+   refer to %x2E and %x3C). The term "CRLF" or "CRLF pair" means the
+   sequence CR immediately followed by LF (that is, %x0D.0A). A
+   "printable US-ASCII character" is an octet in the range %x21-7E.
+
+   Examples in this document are not normative but serve to illustrate
+   usages, arguments, and responses. In the examples, a "[C]" will be
+   used to represent the client host and a "[S]" will be used to
+   represent the server host. Most of the examples do not rely on a
+   particular server state. In some cases, however, they do assume that
+   the current selected newsgroup (see the GROUP command (Section
+   6.1.1)) is invalid; when so, this is indicated at the start of the
+   example.
+
+   Terms which might be read as specifying details of a client or server
+   implementation, such as "database", are used simply to ease
+   description. Providing that implementations conform to the protocol
+   and format specifications in this document, no specific technique is
+
+
+
+Feather                  Expires April 15, 2004                 [Page 6]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   mandated.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                 [Page 7]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+3. Basic Concepts
+
+3.1 Commands and Responses
+
+   NNTP operates over any reliable data stream 8-bit-wide channel.
+   Initially, the server host starts the NNTP service by listening on a
+   TCP port; when running over TCP/IP, the official port for the NNTP
+   service is 119. When a client host wishes to make use of the service,
+   it MUST establish a TCP connection with the server host by connecting
+   to that host on the same port on which the server is listening. When
+   the connection is established, the NNTP server host MUST send a
+   greeting. The client host and server host then exchange commands and
+   responses (respectively) until the connection is closed or aborted.
+
+   The character set for all NNTP commands is UTF-8 [RFC2279]. Commands
+   in NNTP MUST consist of a keyword, which MAY be followed by one or
+   more arguments. A CRLF pair MUST terminate all commands. Multiple
+   commands MUST NOT be on the same line. Keywords MUST consist of
+   printable US-ASCII characters. Unless otherwise noted elsewhere in
+   this document, arguments SHOULD consist of printable US-ASCII
+   characters. Keywords and arguments MUST be each separated by one or
+   more space or TAB characters. Keywords MUST be at least three
+   characters and MUST NOT exceed 12 characters. Command lines MUST NOT
+   exceed 512 octets, which includes the terminating CRLF pair. The
+   arguments MUST NOT exceed 497 octets. A server MAY relax these limits
+   for commands defined in an extension.
+
+   Where this specification permits UTF-8 characters outside the range
+   U+0000 to U+007F, implementations MUST NOT use the Byte Order Mark
+   (U+FEFF, encoding %xEF.BB.BF), and MUST use the Word Joiner (U+2060,
+   encoding %xE2.91.A0) for the meaning Zero Width No-Break Space, in
+   command lines and the initial lines of responses, and SHOULD apply
+   these same principles throughout.
+
+   Commands may have variants, using a second keyword immediately after
+   the first to indicate which variant is required. The only such
+   commands in this specification are LIST and MODE. Note that such
+   variants are sometimes referred to as if they were commands in their
+   own right: "the LIST ACTIVE" command should be read as shorthand for
+   "the ACTIVE variant of the LIST command".
+
+   Keywords are case-insensitive; the case of keywords for commands MUST
+   be ignored by the server. Command and response arguments are case or
+   language specific only when stated, either in this document or in
+   other relevant specifications.
+
+   An NNTP server MUST implement all the commands in this specification
+   except for those marked as optional and those in extensions.
+
+
+
+Feather                  Expires April 15, 2004                 [Page 8]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Each response MUST start with a three-digit response code that is
+   sufficient to distinguish all responses. Certain valid responses are
+   defined to be multi-line; for all others, the response is contained
+   in a single line. The first or only line of the response MUST NOT
+   exceed 512 octets, which includes the response code and the
+   terminating CRLF pair; an extension MAY specify a greater maximum for
+   commands that it defines, but not for any other command.
+
+   All multi-line responses MUST adhere to the following format:
+
+   1.  The response consists of a sequence of one or more "lines", each
+       being a stream of octets ending with a CRLF pair. Apart from
+       those line endings, the stream MUST NOT include the octets NUL,
+       LF, or CR.
+
+   2.  The first such line contains the response code as with a single
+       line response.
+
+   3.  If any subsequent line begins with the "termination octet" ("."
+       or %x2E), that line MUST be "byte-stuffed" by pre-pending an
+       additional termination octet to that line of the response.
+
+   4.  The lines of the response MUST be followed by a terminating line
+       consisting of a single termination octet followed by a CRLF pair
+       in the normal way. Thus a multi-line response is always
+       terminated with the five octets CRLF "." CRLF (%x0D.0A.2E.0D.0A).
+
+   5.  When interpreting a multi-line response, the "byte stuffing" MUST
+       be undone; i.e. the client MUST ensure that, in any line
+       beginning with the termination octet followed by octets other
+       than a CRLF pair, that initial termination octet is disregarded.
+
+   6.  Likewise, the terminating line ("." CRLF or %x2E.0D.0A) MUST NOT
+       be considered part of the multi-line response; i.e. the client
+       MUST ensure that any line beginning with the termination octet
+       followed immediately by a CRLF pair is disregarded; (the first
+       CRLF pair of the terminating CRLF "." CRLF is, of course, part of
+       the last line of the response).
+
+   Note that texts using an encoding (such as UTF-16 or UTF-32) that may
+   contain the octets NUL, LF, or CR other than a CRLF pair cannot be
+   reliably conveyed in the above format. However, except when stated
+   otherwise, this specification does not require the content to be
+   UTF-8 and it is possible for octets above and below 128 to be mixed
+   arbitrarily.
+
+   This document does not place any limit on the length of a subsequent
+   line in a multi-line response. However, the standards that define the
+
+
+
+Feather                  Expires April 15, 2004                 [Page 9]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   format of articles may do so.
+
+   An NNTP server MAY have an inactivity autologout timer. Such a timer
+   SHOULD be of at least three minutes duration, with the exception that
+   there MAY be a shorter limit on how long the server is willing to
+   wait for the first command from the client. The receipt of any
+   command from the client during the timer interval SHOULD suffice to
+   reset the autologout timer. Similarly, the receipt of any significant
+   amount of data from the client while in the midst of sending a
+   multi-line message to the server (such as during a POST or IHAVE
+   command) SHOULD suffice to reset the autologout timer. When the timer
+   expires, the server SHOULD close the TCP connection without sending
+   any response to the client.
+
+3.2 Response Codes
+
+   Each response MUST begin with a three-digit status indicator. These
+   are status reports from the server and indicate the response to the
+   last command received from the client.
+
+   The first digit of the response broadly indicates the success,
+   failure, or progress of the previous command:
+
+      1xx - Informative message.
+      2xx - Command completed OK.
+      3xx - Command OK so far; send the rest of it.
+      4xx - Command was syntactically correct but failed for some
+      reason.
+      5xx - Command unknown, unsupported, unavailable, or syntax error.
+
+   The next digit in the code indicates the function response category:
+
+      x0x - Connection, setup, and miscellaneous messages
+      x1x - Newsgroup selection
+      x2x - Article selection
+      x3x - Distribution functions
+      x4x - Posting
+      x8x - Reserved for authentication and privacy extensions
+      x9x - Reserved for private use (non-standard extensions)
+
+   Certain responses contain arguments such as numbers and names in
+   addition to the status indicator. In those cases, to simplify
+   interpretation by the client the number and type of such arguments is
+   fixed for each response code, as is whether or not the code
+   introduces a multi-line response. Any extension MUST follow this
+   principle as well, but note that, for historical reasons, the 211
+   response code is an exception to this. In all other cases, the client
+   MUST only use the status indicator itself to determine the nature of
+
+
+
+Feather                  Expires April 15, 2004                [Page 10]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   the response. The exact response codes that can be returned by any
+   given command are detailed in the description of that command.
+
+   Arguments MUST be separated from the numeric status indicator and
+   from each other by a single space. All numeric arguments MUST be in
+   base 10 (decimal) format, and MAY have leading zeros. String
+   arguments MUST contain at least one character and MUST NOT contain
+   TAB, LF, CR, or space. The server MAY add any text after the response
+   code or last argument as appropriate, and the client MUST NOT make
+   decisions based on this text. Such text MUST be separated from the
+   numeric status indicator or the last argument by at least one space.
+
+   The server MUST respond to any command with the appropriate generic
+   response (given in Section 3.2.1) if it represents the situation.
+   Otherwise, each recognized command MUST return one of the response
+   codes specifically listed in its description or in an extension. A
+   server MAY provide extensions to this specification, including new
+   commands, new variants or features of existing commands, and other
+   ways of changing the internal state of the server. However, the
+   server MUST NOT produce any other responses to a client that does not
+   invoke any of the additional features. (Therefore a client that
+   restricts itself to this specification will only receive the
+   responses that are listed.)
+
+   If a client receives an unexpected response, it SHOULD use the first
+   digit of the response to determine the result. For example, an
+   unexpected 2xx should be taken as success and an unexpected 4xx or
+   5xx as failure.
+
+   Response codes not specified in this document MAY be used for any
+   installation-specific additional commands also not specified. These
+   SHOULD be chosen to fit the pattern of x9x specified above.
+
+   Neither this document nor any extension registered with IANA (see
+   Section 8) will specify any response codes of the x9x pattern.
+   (Implementers of extensions are accordingly cautioned not to use such
+   responses for extensions that may subsequently be submitted for
+   registration.)
+
+3.2.1 Generic Response Codes
+
+   The server MUST respond to any command with the appropriate one of
+   the following generic responses if it represents the situation.
+
+   If the command is not recognized, or it is an optional command or
+   extension that is not implemented by the server, the response code
+   500 MUST be returned.
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 11]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   If there is a syntax error in the arguments of a recognized command,
+   including the case where more arguments are provided than the command
+   specifies or the command line is longer than the server accepts, the
+   response code 501 MUST be returned. The line MUST NOT be truncated or
+   split and then interpreted. Note that where a command has variants
+   depending on a second keyword (e.g. LIST ACTIVE and LIST NEWSGROUPS),
+   then 501 MUST be used when the base command is implemented but the
+   requested variant is not, and 500 MUST be used only when the base
+   command itself is not implemented.
+
+   If the server experiences an internal fault or problem that means it
+   is unable to carry out the command (for example, a necessary file is
+   missing or a necessary service could not be contacted), the response
+   code 403 MUST be returned. If the server recognises the command but
+   does not provide an optional feature (for example because it does not
+   store the required information), or only handles a subset of
+   legitimate cases (see the HDR command (Section 8.6.1) for an
+   example), the response code 503 MUST be returned. Note that where a
+   command is optional (e.g. LIST ACTIVE.TIMES) and is not provided by a
+   server, this MAY be treated as an unimplemented command (response
+   code 500 or 501 as appropriate) or as a working command where the
+   information is not available (response code 503).
+
+   If the client is not authorized to use the specified facility when
+   the server is in its current state, then the appropriate one of the
+   following response codes MUST be used.
+
+   502: it is necessary to terminate the connection and start a new one
+      with the appropriate authority before the command can be used.
+      Note that the server MUST NOT close the TCP connection immediately
+      after a 502 response except at the initial connection (Section
+      5.1) and with the MODE READER (Section 5.2) command. See also the
+      latter command for historical usage of this response.
+
+   480: the client must authenticate itself to the server (that is,
+      provide information as to the identity of the client) before the
+      facility can be used. This will involve the use of an
+      authentication extension.
+
+   483: the client must negotiate appropriate privacy protection on the
+      connection. This will involve the use of a privacy extension.
+
+   401: the client must change the state of the connection in some other
+      manner. The first argument of the response MUST be the
+      extension-label (see Section 8) of the extension (which may be a
+      private extension) that provides the necessary mechanism, or
+      "MODE-READER" if it is necessary to use the MODE READER (Section
+      5.2) command.
+
+
+
+Feather                  Expires April 15, 2004                [Page 12]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   If the server has to terminate the connection for some reason, it
+   MUST give a 400 response code to the next command and then
+   immediately close the TCP connection.
+
+   The client MUST be prepared to receive any of these responses for any
+   command (except, of course, that the server MUST NOT generate a 500
+   response code for mandatory commands).
+
+3.2.1.1 Examples
+
+   Example of an unknown command:
+
+      [C] MAIL
+      [S] 500 Unknown command
+
+   Example of an unsupported extension:
+
+      [C] LIST EXTENSIONS
+      [S] 202 Extensions supported:
+      [S] LISTGROUP
+      [S] .
+      [C] OVER
+      [S] 500 Unknown command
+
+   Example of an unsupported variant:
+
+      [C] MODE POSTER
+      [S] 501 Unknown MODE option
+
+   Example of a syntax error:
+
+      [C] ARTICLE   a.message.id@no.angle.brackets
+      [S] 501 Syntax error
+
+   Example of an overlong command line:
+
+      [C] HEAD   53 54 55
+      [S] 501 Too many arguments
+
+   Example of a bad wildmat:
+
+      [C] LIST ACTIVE   u[ks].*
+      [S] 501 Syntax error
+
+   Example of an attempt to access a facility not available to this
+   connection:
+
+      [C] MODE READER
+
+
+
+Feather                  Expires April 15, 2004                [Page 13]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 200 Reader mode, posting permitted
+      [C] IHAVE   <i.am.an.article.you.will.want@example.com>
+      [S] 502 Permission denied
+
+   Example of an attempt to access a facility requiring authentication:
+
+      [C] GROUP   secret.group
+      [S] 480 Permission denied
+
+   followed by a successful attempt following such authentication:
+
+      [C] XSECRET   fred flintstone
+      [S] 290 Password for fred accepted
+      [C] GROUP   secret.group
+      [S] 211 5 1 20 secret.group selected
+
+   Example of an attempt to access a facility requiring privacy:
+
+      [C] GROUP   secret.group
+      [S] 483 Secure connection required
+      [C] XENCRYPT
+      [Client and server negotiate encryption on the link]
+      [S] 283 Encrypted link established
+      [C] GROUP   secret.group
+      [S] 211 5 1 20 secret.group selected
+
+   Example of a need to change mode before using a facility:
+
+      [C] GROUP   binary.group
+      [S] 401 XHOST Not on this virtual host
+      [C] XHOST   binary.news.example.org
+      [S] 290 binary.news.example.org virtual host selected
+      [C] GROUP   binary.group
+      [S] 211 5 1 77 binary.group selected
+
+   Example of a temporary failure:
+
+      [C] GROUP   archive.local
+      [S] 403 Archive server temporarily offline
+
+   Example of the server needing to close down immediately:
+
+      [C] ARTICLE   123
+      [S] 400 Power supply failed, running on UPS
+      [Server closes connection.]
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 14]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+3.3 Pipelining
+
+   NNTP is designed to operate over a reliable bi-directional connection
+   such as TCP. Therefore, if a command does not depend on the response
+   to the previous one, it should not matter if it is sent before that
+   response is received. Doing this is called "pipelining". However,
+   certain server implementations throw away all text received from the
+   client following certain commands before sending their response. If
+   this happens, pipelining will be affected because one or more
+   commands will have been ignored or misinterpreted, and the client
+   will be matching the wrong responses to each command. Since there are
+   significant benefits to pipelining, but also circumstances where it
+   is reasonable or common for servers to behave in the above manner,
+   this document puts certain requirements on both clients and servers.
+
+   Except where stated otherwise, a client MAY use pipelining. That is,
+   it may send a command before receiving the response for the previous
+   command. The server MUST allow pipelining and MUST NOT throw away any
+   text received after a command. Irrespective of whether or not
+   pipelining is used, the server MUST process commands in the order
+   they are sent.
+
+   If the specific description of a command says it "MUST NOT be
+   pipelined", that command MUST end any pipeline of commands. That is,
+   the client MUST NOT send any following command until receiving the
+   CRLF at the end of the response from the command. The server MAY
+   ignore any data received after the command and before the CRLF at the
+   end of the response is sent to the client.
+
+   The initial connection must not be part of a pipeline; that is, the
+   client MUST NOT send any command until receiving the CRLF at the end
+   of the greeting.
+
+   If the client uses blocking system calls to send commands, it MUST
+   ensure that the amount of text sent in pipelining does not cause a
+   deadlock between transmission and reception. The amount of text
+   involved will depend on window sizes in the transmission layer, and
+   is typically 4k octets for TCP.
+
+3.3.1 Examples
+
+   Example of correct use of pipelining:
+
+      [C] GROUP   misc.test
+      [C] STAT
+      [C] NEXT
+      [S] 211 1234 3000234 3002322 misc.test
+      [S] 223 3000234 <45223423@example.com> retrieved
+
+
+
+Feather                  Expires April 15, 2004                [Page 15]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 223 3000237 <668929@example.org> retrieved
+
+   Example of incorrect use of pipelining (the MODE READER command may
+   not be pipelined):
+
+      [C] GROUP   misc.test
+      [C] MODE READER
+      [C] DATE
+      [C] NEXT
+      [S] 211 1234 3000234 3002322 misc.test
+      [S] 200 Server ready, posting allowed
+      [S] 223 3000237 <668929@example.org> retrieved
+
+   The DATE command has been thrown away by the server and so there is
+   no 111 response to match it.
+
+3.4 Articles
+
+   NNTP is intended to transfer articles between clients and servers.
+   For the purposes of this specification, articles are required to
+   conform to the rules in this section and clients and servers MUST
+   correctly process any article received from the other that does so.
+   Note that this requirement applies only to the contents of
+   communications over NNTP; it does not prevent the client or server
+   from subsequently rejecting an article for reasons of local policy.
+   Also see Appendix B for further restrictions on the format of
+   articles in some uses of NNTP.
+
+   An article consists of two parts: the headers and the body. They are
+   separated by a single empty line, or in other words by two
+   consecutive CRLF pairs (if there is more than one empty line, the
+   second and subsequent ones are part of the body). In order to meet
+   the general requirements of NNTP, an article MUST NOT include the
+   octet NUL, MUST NOT contain the octets LF and CR other than as part
+   of a CRLF pair, and MUST end with a CRLF pair. This specification
+   puts no further restrictions on the body; in particular, it MAY be
+   empty.
+
+   The headers of an article consist of one or more header lines. Each
+   header line consists of a header name, a colon, a space, the header
+   content, and a CRLF in that order. The name consists of one or more
+   printable US-ASCII characters other than colon and, for the purposes
+   of this specification, is not case sensitive. There MAY be more than
+   one header line with the same name. The content MUST NOT contain CRLF
+   but is otherwise unrestricted; in particular, it MAY be empty. A
+   header may be "folded"; that is, a CRLF pair may be placed before any
+   TAB or space in the line; there MUST still be some other octet
+   between any two CRLF pairs in a header line. (Note that folding means
+
+
+
+Feather                  Expires April 15, 2004                [Page 16]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   that the header line occupies more than one line when displayed or
+   transmitted; nevertheless it is still referred to as "a" header
+   line.) The presence or absence of folding does not affect the meaning
+   of the header line; that is, the CRLF pairs introduced by folding are
+   not considered part of the header value. Header lines SHOULD NOT be
+   folded before the space after the colon that follows the header name,
+   and should include at least one octet other than %x09 or %x20 between
+   CRLF pairs. However, if an article has been received from elsewhere
+   with one of these, clients and servers MAY transfer it to the other
+   without re-folding it.
+
+   Each article MUST have a unique message-id; two articles offered by
+   an NNTP server MUST NOT have the same message-id. For the purposes of
+   this specification, message-ids are opaque strings that MUST meet the
+   following requirements:
+
+   o  A message-id MUST begin with "<" and end with ">", and MUST NOT
+      contain the latter except at the end.
+
+   o  A message-id MUST be between 3 and 250 octets in length.
+
+   o  A message-id MUST NOT contain octets other than printable US-ASCII
+      characters.
+
+   Two message-ids are the same if and only if they consist of the same
+   sequence of octets.
+
+   This specification does not describe how the message-id of an article
+   is determined. If the server does not have any way to determine a
+   message-id from the article itself, it MUST synthesise one (this
+   specification does not require the article to be changed as a
+   result).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 17]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+4. The WILDMAT format
+
+   The WILDMAT format described here is based on the version first
+   developed by Rich Salz [SALZ1992], which in turn was derived from the
+   format used in the UNIX "find" command to articulate file names. It
+   was developed to provide a uniform mechanism for matching patterns in
+   the same manner that the UNIX shell matches filenames.
+
+4.1 Wildmat syntax
+
+   A wildmat is described by the following ABNF [RFC2234] syntax (note
+   that this syntax contains ambiguities and special cases described at
+   the end):
+
+
+
+      wildmat = wildmat-pattern *("," ["!"] wildmat-pattern)
+
+      wildmat-pattern = 1*wildmat-item
+
+      wildmat-item = wildmat-exact / wildmat-wild
+
+      wildmat-exact = %x21-29 / %x2B / %x2D-3E / %x40-5A / %x5E-7E /
+         UTF8-non-ascii ; exclude * , ? [ \ ]
+
+      wildmat-wild = "*" / "?"
+
+   UTF8-non-ascii is defined in Section 9.
+
+   This syntax must be interpreted subject to the following rule:
+
+   Where a wildmat-pattern is not immediately preceded by "!", it shall
+   not begin with a "!".
+
+   Note: the characters \ , [ and ] are not allowed in wildmats, while *
+   and ? are always wildcards. This should not be a problem since these
+   characters cannot occur in newsgroup names, which is the only current
+   use of wildmats. Backslash is commonly used to suppress the special
+   meaning of characters while brackets are used to introduce sets.
+   However, these usages are not universal and interpretation of these
+   characters in the context of UTF-8 strings is both potentially
+   complex and differs from existing practice, so they were omitted from
+   this specification. A future extension to this specification may
+   provide semantics for these characters.
+
+4.2 Wildmat semantics
+
+   A wildmat is tested against a string, and either matches or does not
+
+
+
+Feather                  Expires April 15, 2004                [Page 18]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   match. To do this, each constituent wildmat-pattern is matched
+   against the string and the rightmost pattern that matches is
+   identified. If that wildmat-pattern is not preceded with "!", the
+   whole wildmat matches. If it is preceded by "!", or if no
+   wildmat-pattern matches, the whole wildmat does not match.
+
+   For example, consider the wildmat "a*,!*b,*c*":
+
+      the string "aaa" matches because the rightmost match is with "a*"
+
+      the string "abb" does not match because the rightmost match is
+      with "*b"
+
+      the string "ccb" matches because the rightmost match is with "*c*"
+
+      the string "xxx" does not match because no wildmat-pattern matches
+
+   A wildmat-pattern matches a string if the string can be broken into
+   components, each of which matches the corresponding wildmat-item in
+   the pattern; the matches must be in the same order, and the whole
+   string must be used in the match. The pattern is "anchored"; that is,
+   the first and last characters in the string must match the first and
+   last item respectively (unless that item is an asterisk matching zero
+   characters).
+
+   A wildmat-exact matches the same character (which may be more than
+   one octet in UTF-8).
+
+   "?" matches exactly one character (which may be more than one octet).
+
+   "*" matches zero or more characters. It can match an empty string,
+   but it cannot match a subsequence of a UTF-8 sequence that is not
+   aligned to the character boundaries.
+
+4.3 Extensions
+
+   An NNTP server or extension MAY extend the syntax or semantics of
+   wildmats provided that all wildmats that meet the requirements of
+   Section 4.1 have the meaning ascribed to them by Section 4.2. Future
+   editions of this document may also extend wildmats.
+
+4.4 Examples
+
+    In these examples, $ and @ are used to represent the two octets %xC2
+   and %xA3 respectively; $@ is thus the UTF-8 encoding for the pound
+   sterling symbol, shown as # in the descriptions.
+
+     Wildmat    Description of strings that match
+
+
+
+Feather                  Expires April 15, 2004                [Page 19]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+       abc      the one string "abc"
+       abc,def  the two strings "abc" and "def"
+       $@       the one character string "#"
+       a*       any string that begins with "a"
+       a*b      any string that begins with "a" and ends with "b"
+       a*,*b    any string that begins with "a" or ends with "b"
+       a*,!*b   any string that begins with "a" and does not end with
+                "b"
+     a*,!*b,c*  any string that begins with "a" and does not end with
+                "b", and any string that begins with "c" no matter
+                what it ends with
+     a*,c*,!*b  any string that begins with "a" or "c" and does not
+                end with "b"
+       ?a*      any string with "a" as its second character
+       ??a*     any string with "a" as its third character
+       *a?      any string with "a" as its penultimate character
+       *a??     any string with "a" as its antepenultimate character
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 20]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+5. Session administration commands
+
+5.1 Initial Connection
+
+5.1.1 Usage
+
+   Responses
+      200   Service available, posting allowed
+      201   Service available, posting prohibited
+      400   Service temporarily unavailable [1]
+      502   Service permanently unavailable [1]
+
+      These are the only valid response codes for the initial greeting;
+      the server MUST not return any other generic response code.
+
+   [1] Following a 400 or 502 response the server MUST immediately close
+      the connection.
+
+
+5.1.2 Description
+
+   There is no command presented by the client upon initial connection
+   to the server. The server MUST present an appropriate response code
+   as a greeting to the client. This response informs the client whether
+   service is available and whether the client is permitted to post.
+
+   If the server will accept further commands from the client including
+   POST, the server MUST present a 200 greeting code. If the server will
+   accept further commands from the client, but it is not authorized to
+   post articles using the POST command, the server MUST present a 201
+   greeting code.
+
+   Otherwise the server MUST present a 400 or 502 greeting code and then
+   immediately close the connection. 502 MUST be used if the client is
+   not permitted under any circumstances to interact with the server and
+   400 otherwise.
+
+5.1.3 Examples
+
+   Example of a normal connection from an authorized client which then
+   terminates the session (see Section 5.4):
+
+      [Initial TCP connection setup completed.]
+      [S] 200 NNTP Service Ready, posting permitted
+      [C] QUIT
+      [S] 205 NNTP Service exits normally
+      [Server closes connection.]
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 21]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Example of a normal connection from an authorized client that is not
+   permitted to post; it also immediately terminates the session:
+
+      [Initial TCP connection setup completed.]
+      [S] 201 NNTP Service Ready, posting prohibited
+      [C] QUIT
+      [S] 205 NNTP Service exits normally
+      [Server closes connection.]
+
+   Example of a normal connection from an unauthorized client:
+
+      [Initial TCP connection setup completed.]
+      [S] 502 NNTP Service permanently unavailable
+      [Server closes connection.]
+
+   Example of a connection from a client where the server is unable to
+   provide service:
+
+      [Initial TCP connection setup completed.]
+      [S] 400 NNTP Service temporarily unavailable
+      [Server closes connection.]
+
+
+5.2 MODE READER
+
+5.2.1 Usage
+
+   This command MUST NOT be pipelined.
+
+   Syntax
+      MODE READER
+
+   Responses
+      200   Posting allowed
+      201   Posting prohibited
+      400   Service temporarily unavailable [1]
+      502   Service permanently unavailable [1]
+
+   [1] Following a 400 or 502 response the server MUST immediately close
+      the connection.
+
+
+5.2.2 Description
+
+   MODE READER SHOULD be sent by any client that intends to use any
+   command in this specification (including Section 8) other than IHAVE,
+   HEAD, STAT, LIST ACTIVE, or LIST EXTENSIONS; other extensions MAY
+   also require MODE READER to be used. Servers MAY require that this
+
+
+
+Feather                  Expires April 15, 2004                [Page 22]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   command be issued before any commands other than the above are sent
+   and MAY reject such commands until after a MODE READER command has
+   been sent. Such rejections SHOULD use response code 401 with argument
+   "MODE-READER", but for historical reasons response code 502 MAY be
+   used, even though this situation does not meet the conditions for
+   that response.
+
+   Once MODE READER is sent, IHAVE (and any related extensions) MAY no
+   longer be permitted, even if it were permitted before the MODE READER
+   command. The results of LIST EXTENSIONS MAY be different following a
+   MODE READER command than prior to the issuing of that command.
+
+   The server MUST return a response using the same codes as the initial
+   greeting (as described in Section 5.1.1) to indicate its ability to
+   provide reading service to the client. Note that the response need
+   not be the same as the one presented during the initial greeting.
+
+   Servers are encouraged to not require this command even though
+   clients SHOULD send it when appropriate. It is present to support
+   some news architectures that switch between modes based on whether a
+   given connection is a peer-to-peer connection with another server or
+   a news reading client.
+
+5.2.3 Examples
+
+   Example of use of the MODE READER command by an authorized client
+   which then terminates the session (see Section 5.4):
+
+      [C] MODE READER
+      [S] 200 NNTP Service Ready, posting permitted
+      [C] QUIT
+      [S] 205 NNTP Service exits normally
+      [Server closes connection.]
+
+   Example of use of the MODE READER command by an authorized client
+   that is not permitted to post; it also immediately terminates the
+   session:
+
+      [C] MODE READER
+      [S] 201 NNTP Service Ready, posting prohibited
+      [C] QUIT
+      [S] 205 NNTP Service exits normally
+      [Server closes connection.]
+
+   Example of use of MODE READER by a client not authorized to receive
+   service from the server as a news reader:
+
+      [C] MODE READER
+
+
+
+Feather                  Expires April 15, 2004                [Page 23]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 502 NNTP Service permanently unavailable
+      [Server closes connection.]
+
+   Example of a connection from any client where the server is
+   temporarily unable to provide news reader service:
+
+      [C] MODE READER
+      [S] 400 NNTP Service temporarily unavailable
+      [Server closes connection.]
+
+   Example of a facility that requires MODE READER before use, using the
+   preferred response:
+
+      [C] GROUP   misc.test
+      [S] 401 MODE-READER currently in peering mode
+      [C] MODE READER
+      [S] 200 NNTP Service Ready, posting permitted
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+
+   Example of a facility that requires MODE READER before use, using the
+   historical but deprecated response:
+
+      [C] GROUP   misc.test
+      [S] 502 Not available in peering mode
+      [C] MODE READER
+      [S] 200 NNTP Service Ready, posting permitted
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+
+   Example of a facility that cannot be used after MODE READER:
+
+      [C] IHAVE   <i.am.an.article.you.have@example.com>
+      [S] 435 Duplicate
+      [C] MODE READER
+      [S] 200 Reader mode, posting permitted
+      [C] IHAVE   <i.am.an.article.you.have@example.com>
+      [S] 502 Permission denied
+
+
+5.3 LIST EXTENSIONS
+
+5.3.1 Usage
+
+   This command is optional.
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 24]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Syntax
+      LIST EXTENSIONS
+
+   Responses
+      202   Extension list follows (multiline)
+      402   Server has no extensions
+
+
+5.3.2 Description
+
+   The LIST EXTENSIONS command allows a client to determine which
+   extensions are supported by the server at any given time. See Section
+   8 for further discussion of extensions.
+
+   This command MUST be implemented by any server that implements any
+   extensions defined in this document or any other extension in the
+   IANA registry, and is optional otherwise.
+
+   This command MAY be issued at anytime during a session. It is not
+   required that the client issues this command before attempting to
+   make use of any extension. The response generated by this command MAY
+   change during a session because of other state information (which in
+   turn may be changed by the effects of other commands). An NNTP client
+   is only able to get the current and correct information concerning
+   available extensions at any point during a session by issuing a LIST
+   EXTENSIONS command at that point of that session and processing the
+   response, and the server MUST ensure that those extensions currently
+   listed in the returned information are available. Therefore, if an
+   extension (including those in Section 8) is only available before or
+   after a MODE READER command, the LIST EXTENSIONS command MUST only
+   include the extension in that situation. Similarly, if only some of
+   the commands in an extension will be available, or if the behaviour
+   of the extension will change in some other manner, before or after a
+   MODE READER command, this MUST be indicated by different arguments to
+   the extension-label in the results of LIST EXTENSIONS in each
+   situation.
+
+   While some extensions are likely to be always available or never
+   available, others will "appear" and "disappear" depending on server
+   state changes within the session or external events between sessions.
+   An NNTP client may cache the results of this command, but MUST NOT
+   rely on the correctness of any cached results, whether from earlier
+   in this session or from a previous session, MUST cope gracefully with
+   the cached status being out of date, and SHOULD (if caching results)
+   provide a way to force the cached information to be refreshed.
+   Furthermore, a client MUST NOT use cached results in relation to
+   security, privacy, and authentication extensions. See Section 11.6
+   for further discussion of this topic.
+
+
+
+Feather                  Expires April 15, 2004                [Page 25]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   The list of extensions is returned as a multi-line response following
+   the 202 response code. Each extension is listed on a separate line;
+   the line MUST begin with an extension-label and optionally one or
+   more arguments (separated by single spaces). The extension-label and
+   the meaning of the arguments are specified as part of the definition
+   of the extension. The extension-label is a string of 1 to 12 US-ASCII
+   letters and MUST be in uppercase. Arguments are strings of 1 or more
+   printable UTF-8 characters (that is, either printable US-ASCII
+   characters or any UTF-8 sequence outside the US-ASCII range, but not
+   space or TAB).
+
+   The server MUST NOT list the same extension twice in the response,
+   and MUST list all supported extensions. The order in which the
+   extensions are listed is not significant. The server need not even
+   consistently return the same order. If the server does not support
+   any extensions, it MUST return an empty list. The 402 response code
+   is documented for historic reasons only; clients SHOULD handle it
+   gracefully, but servers MUST NOT generate it.
+
+   Following a generic failure response, such as 403, an extension might
+   still be available, and the client MAY attempt to use it.
+
+5.3.3 Examples
+
+   Example of a successful response:
+
+      [C] LIST EXTENSIONS
+      [S] 202 Extensions supported:
+      [S] OVER
+      [S] HDR
+      [S] LISTGROUP
+      [S] .
+
+   The particular extensions shown here are simply examples of what
+   might be defined in other places, and no particular meaning should be
+   attributed to them.
+
+   Example where no extensions are available:
+
+      [C] LIST EXTENSIONS
+      [S] 202 Extensions supported:
+      [S] .
+
+   Example from a non-conforming server which indicates "no extensions
+   available" using the 402 response code:
+
+      [C] LIST EXTENSIONS
+      [S] 402 Server has no extensions
+
+
+
+Feather                  Expires April 15, 2004                [Page 26]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+5.4 QUIT
+
+5.4.1 Usage
+
+   Syntax
+      QUIT
+
+   Responses
+      205   Connection closing
+
+
+5.4.2 Description
+
+   The client uses the QUIT command to terminate the session. The server
+   MUST acknowledge the QUIT command and then close the connection to
+   the client. This is the preferred method for a client to indicate
+   that it has finished all its transactions with the NNTP server.
+
+   If a client simply disconnects (or the connection times out or some
+   other fault occurs), the server MUST gracefully cease its attempts to
+   service the client, disconnecting from its end if necessary.
+
+5.4.3 Examples
+
+      [C] QUIT
+      [S] 205 closing connection
+      [Server closes connection.]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 27]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+6. Article posting and retrieval
+
+   News reading clients have available a variety of mechanisms to
+   retrieve articles via NNTP. The news articles are stored and indexed
+   using three types of keys. One key is the message-id of an article.
+   Another key is composed of the newsgroup name and the article number
+   within that newsgroup. That key MUST be unique to a particular server
+   (there will be only one article with that number within a particular
+   newsgroup), but is not required to be globally unique. Additionally,
+   because the same article can be cross-posted to multiple newsgroups,
+   there may be multiple keys that point to the same article on the same
+   server. The final key is the arrival timestamp, giving the time that
+   the article arrived at the server.
+
+   The server MUST ensure that article numbers are issued in order of
+   arrival timestamp; that is, articles arriving later MUST have higher
+   numbers than those that arrive earlier. The server SHOULD allocate
+   the next sequential unused number to each new article.
+
+   Article numbers MUST lie between 1 and 4,294,967,295 inclusive. The
+   client and server SHOULD NOT use leading zeroes in specifying article
+   numbers, and MUST NOT use more than 16 digits. In some situations,
+   the value zero replaces an article number to show some special
+   situation.
+
+6.1 Group and article selection
+
+   The following commands are used to set the "current selected
+   newsgroup" and the "current article number", which are used by
+   various commands. At the start of an NNTP session, both of these
+   values are set to the special value "invalid".
+
+6.1.1 GROUP
+
+6.1.1.1 Usage
+
+   Syntax
+      GROUP group
+
+   Responses
+      211 number low high group   Group successfully selected
+      411                         No such newsgroup
+
+   Parameters
+      group  = name of newsgroup
+      number = estimated number of articles in the group
+      low    = reported low water mark
+      high   = reported high water mark
+
+
+
+Feather                  Expires April 15, 2004                [Page 28]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+6.1.1.2 Description
+
+   The required argument is the name of the newsgroup to be selected
+   (e.g. "news.software.b"). A list of valid newsgroups may be obtained
+   by using the LIST ACTIVE command (see Section 7.6.1).
+
+   The successful selection response will return the article numbers of
+   the first and last articles in the group at the moment of selection
+   (these numbers are referred to as the "reported low water mark" and
+   the "reported high water mark"), and an estimate of the number of
+   articles in the group currently available.
+
+   If the group is not empty, the estimate MUST be at least the actual
+   number of articles available, and MUST be no greater than one more
+   than the difference between the reported low and high water marks.
+   (Some implementations will actually count the number of articles
+   currently stored. Others will just subtract the low water mark from
+   the high water mark and add one to get an estimate.)
+
+   If the group is empty, one of the following three situations will
+   occur. Clients MUST accept all three cases; servers MUST NOT
+   represent an empty group in any other way.
+
+   o  The high water mark will be one less than the low water mark, and
+      the estimated article count will be zero. Servers SHOULD use this
+      method to show an empty group. This is the only time that the high
+      water mark can be less than the low water mark.
+
+   o  All three numbers will be zero.
+
+   o  The high water mark is greater than or equal to the low water
+      mark. The estimated article count might be zero or non-zero; if
+      non-zero, the same requirements apply as for a non-empty group.
+
+   The set of articles in a group may change after the GROUP command is
+   carried out. That is:
+
+   o  articles may be removed from the group
+
+   o  articles may be reinstated in the group with the same article
+      number, but those articles MUST have numbers no less than the
+      reported low water mark (note that this is a reinstatement of the
+      previous article, not a new article reusing the number)
+
+   o  new articles may be added with article numbers greater than the
+      reported high water mark (if an article that was the one with the
+      highest number has been removed, the next new article will not
+      have the number one greater than the reported high water mark)
+
+
+
+Feather                  Expires April 15, 2004                [Page 29]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Except when the group is empty and all three numbers are zero,
+   whenever a subsequent GROUP command for the same newsgroup is issued,
+   either by the same client or a different client, the reported low
+   water mark in the response MUST be no less than that in any previous
+   response for that newsgroup sent to any client. The client may make
+   use of the low water mark to remove all remembered information about
+   articles with lower numbers, as these will never recur. This includes
+   the situation when the high water mark is one less than the low water
+   mark. No similar assumption can be made about the high water mark, as
+   this can decrease if an article is removed, and then increase again
+   if it is reinstated or if new articles arrive.
+
+   When a valid group is selected by means of this command, the current
+   selected newsgroup MUST be set to that group and the current article
+   number MUST be set to the first article in the group. If an empty
+   newsgroup is selected, the current article pointer is made invalid.
+   If an invalid group is specified, the current selected newsgroup and
+   current article number MUST NOT be changed.
+
+   The GROUP command (or the LISTGROUP command, if implemented) MUST be
+   used by a client and a successful response received before any other
+   command is used that depends on the value of the current selected
+   newsgroup or current article number.
+
+   If the group specified is not available on the server, a 411 response
+   MUST be returned.
+
+6.1.1.3 Examples
+
+   Example for a group known to the server:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+
+   Example for a group unknown to the server:
+
+      [C] GROUP   example.is.sob.bradner.or.barber
+      [S] 411 example.is.sob.bradner.or.barber is unknown
+
+   Example of an empty group using the preferred response:
+
+      [C] GROUP   example.currently.empty.newsgroup
+      [S] 211 0 4000 3999 example.currently.empty.newsgroup
+
+   Example of an empty group using an alternative response:
+
+      [C] GROUP   example.currently.empty.newsgroup
+      [S] 211 0 0 0 example.currently.empty.newsgroup
+
+
+
+Feather                  Expires April 15, 2004                [Page 30]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Example of an empty group using a different alternative response:
+
+      [C] GROUP   example.currently.empty.newsgroup
+      [S] 211 0 4000 4321 example.currently.empty.newsgroup
+
+
+6.1.2 LAST
+
+6.1.2.1 Usage
+
+   Syntax
+      LAST
+
+   Responses
+      223 n message-id   Article found
+      412                No newsgroup selected
+      420                Current article number is invalid
+      422                No previous article in this group
+
+   Parameters
+      n          = article number
+      message-id = article message-id
+
+
+6.1.2.2 Description
+
+   If the current selected newsgroup is valid, the current article
+   number MUST be set to the previous article in that newsgroup (that
+   is, the highest existing article number less than the current article
+   number). If successful, a response indicating the new current article
+   number and the message-id of that article MUST be returned. No
+   article text is sent in response to this command.
+
+   There MAY be no previous article in the group, although the current
+   article number is not the reported low water mark. There MUST NOT be
+   a previous article when the current article number is the reported
+   low water mark.
+
+   Because articles can be removed and added, the results of multiple
+   LAST and NEXT commands MAY not be consistent over the life of a
+   particular NNTP session.
+
+   If the current article number is already the first article of the
+   newsgroup, a 422 response MUST be returned. If the current article
+   number is invalid, a 420 response MUST be returned. If the current
+   selected newsgroup is invalid, a 412 response MUST be returned. In
+   all three cases the current selected newsgroup and current article
+   number MUST NOT be altered.
+
+
+
+Feather                  Expires April 15, 2004                [Page 31]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+6.1.2.3 Examples
+
+   Example of a successful article retrieval using LAST:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] NEXT
+      [S] 223 3000237 <668929@example.org> retrieved
+      [C] LAST
+      [S] 223 3000234 <45223423@example.com> retrieved
+
+   Example of an attempt to retrieve an article without having selected
+   a group (via the GROUP command) first:
+
+      [Assumes current selected newsgroup is invalid.]
+      [C] LAST
+      [S] 412 no newsgroup selected
+
+   Example of an attempt to retrieve an article using the LAST command
+   when the current article number is that of the first article in the
+   group:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] LAST
+      [S] 422 No previous article to retrieve
+
+   Example of an attempt to retrieve an article using the LAST command
+   when the current selected newsgroup is empty:
+
+      [C] GROUP   example.empty.newsgroup
+      [S] 211 0 0 0 example.empty.newsgroup
+      [C] LAST
+      [S] 420 No current article selected
+
+
+6.1.3 NEXT
+
+6.1.3.1 Usage
+
+   Syntax
+      NEXT
+
+   Responses
+      223 n message-id   Article found
+      412                No newsgroup selected
+      420                Current article number is invalid
+      421                No next article in this group
+
+
+
+Feather                  Expires April 15, 2004                [Page 32]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Parameters
+      n          = article number
+      message-id = article message-id
+
+
+6.1.3.2 Description
+
+   If the current selected newsgroup is valid, the current article
+   number MUST be set to the next article in that newsgroup (that is,
+   the lowest existing article number greater than the current article
+   number). If successful, a response indicating the new current article
+   number and the message-id of that article MUST be returned. No
+   article text is sent in response to this command.
+
+   If the current article number is already the last article of the
+   newsgroup, a 421 response MUST be returned. In all other aspects
+   (apart, of course, from the lack of 422 response) this command is
+   identical to the LAST command (Section 6.1.2).
+
+6.1.3.3 Examples
+
+   Example of a successful article retrieval using NEXT:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] NEXT
+      [S] 223 3000237 <668929@example.org> retrieved
+
+   Example of an attempt to retrieve an article without having selected
+   a group (via the GROUP command) first:
+
+      [Assumes current selected newsgroup is invalid.]
+      [C] NEXT
+      [S] 412 no newsgroup selected
+
+   Example of an attempt to retrieve an article using the NEXT command
+   when the current article number is that of the last article in the
+   group:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] STAT   3002322
+      [S] 223 3002322 <411@example.net> retrieved
+      [C] NEXT
+      [S] 421 No next article to retrieve
+
+   Example of an attempt to retrieve an article using the NEXT command
+   when the current selected newsgroup is empty:
+
+
+
+Feather                  Expires April 15, 2004                [Page 33]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [C] GROUP   example.empty.newsgroup
+      [S] 211 0 0 0 example.empty.newsgroup
+      [C] NEXT
+      [S] 420 No current article selected
+
+
+6.2 Retrieval of articles and article sections
+
+   The ARTICLE, BODY, HEAD, and STAT commands are very similar. They
+   differ only in the parts of the article that are presented to the
+   client and in the successful response code. The ARTICLE command is
+   described here in full, while the other commands are described in
+   terms of the differences. As specified in Section 3.4, an article
+   consists of two parts: the article headers and the article body. When
+   responding to one of these commands, the server MUST present the
+   entire article or appropriate part and MUST NOT attempt to alter or
+   translate it in any way.
+
+6.2.1 ARTICLE
+
+6.2.1.1 Usage
+
+   Syntax
+      ARTICLE message-id
+      ARTICLE number
+      ARTICLE
+
+   Responses
+
+      First form (message-id specified)
+         220 0 message-id   Article follows (multiline)
+         430                No article with that message-id
+
+      Second form (article number specified)
+         220 n message-id   Article follows (multiline)
+         412                No newsgroup selected
+         423                No articles in that range
+
+      Third form (current article number used)
+         220 n message-id   Article follows (multiline)
+         412                No newsgroup selected
+         420                Current article number is invalid
+
+   Parameters
+      number     = Requested article number
+      n          = Returned article number
+      message-id = Article message-id
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 34]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+6.2.1.2 Description
+
+   The ARTICLE command selects an article based on the arguments and
+   presents the entire article (that is, the headers, an empty line, and
+   the body in that order). The command has three forms.
+
+   In the first form, a message-id is specified and the server presents
+   the article with that message-id. In this case, the server MUST NOT
+   alter the current selected newsgroup or current article number. This
+   is both to facilitate the presentation of articles that may be
+   referenced within another article being read, and because of the
+   semantic difficulties of determining the proper sequence and
+   membership of an article that may have been crossposted to more than
+   one newsgroup.
+
+   In the response, the article number is replaced with zero (that is,
+   the server is not required to determine whether the article is in the
+   current selected newsgroup or what article number(s) it has).
+
+   In the second form, an article number is specified. If there is an
+   article with that number in the current selected newsgroup, the
+   server MUST set the current article number to that number.
+
+   In the third form, the article indicated by the current article
+   number in the current selected newsgroup is used.
+
+   Note that a previously valid article number MAY become invalid if the
+   article has been removed. A previously invalid article number MAY
+   become valid if the article has been reinstated, but such an article
+   number MUST be no less than the reported low water mark for that
+   group.
+
+   The server MUST NOT change the current selected newsgroup as a result
+   of this command. The server MUST NOT change the current article
+   number except when an article number argument was provided and the
+   article exists; in particular, it MUST NOT change it following an
+   unsuccessful response.
+
+   Since the message-id is unique for each article, it may be used by a
+   client to skip duplicate displays of articles that have been posted
+   more than once, or to more than one newsgroup.
+
+   The article is returned as a multi-line response following the 220
+   response code.
+
+   If the argument is a message-id and no such article exists, a 430
+   response MUST be returned. If the argument is a number or is omitted
+   and the current selected newsgroup is invalid, a 412 response MUST be
+
+
+
+Feather                  Expires April 15, 2004                [Page 35]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   returned. If the argument is a number and that article does not exist
+   in the current selected newsgroup, a 423 response MUST be returned.
+   If the argument is omitted and the current article number is invalid,
+   a 420 response MUST be returned.
+
+6.2.1.3 Examples
+
+   Example of a successful retrieval of an article (using no article
+   number):
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] ARTICLE
+      [S] 220 3000234 <45223423@example.com>
+      [S] Path: pathost!demo!whitehouse!not-for-mail
+      [S] From: "Demo User" <nobody@example.net>
+      [S] Newsgroups: misc.test
+      [S] Subject: I am just a test article
+      [S] Date: 6 Oct 1998 04:38:40 -0500
+      [S] Organization: An Example Net, Uncertain, Texas
+      [S] Message-ID: <411@example.net>
+      [S]
+      [S] This is just a test article.
+      [S] .
+
+   Example of a successful retrieval of an article by message-id:
+
+      [C] ARTICLE   <45223423@example.com>
+      [S] 220 0 <45223423@example.com>
+      [S] Path: pathost!demo!whitehouse!not-for-mail
+      [S] From: "Demo User" <nobody@example.net>
+      [S] Newsgroups: misc.test
+      [S] Subject: I am just a test article
+      [S] Date: 6 Oct 1998 04:38:40 -0500
+      [S] Organization: An Example Net, Uncertain, Texas
+      [S] Message-ID: <411@example.net>
+      [S]
+      [S] This is just a test article.
+      [S] .
+
+   Example of an unsuccessful retrieval of an article by message-id:
+
+      [C] ARTICLE   <i.am.not.there@example.com>
+      [S] 430 No Such Article Found
+
+   Example of an unsuccessful retrieval of an article by number:
+
+      [C] GROUP   misc.test
+
+
+
+Feather                  Expires April 15, 2004                [Page 36]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 211 1234 3000234 3002322 news.groups
+      [C] ARTICLE   300256
+      [S] 423 No such article number in this group
+
+   Example of an unsuccessful retrieval of an article by number because
+   no newsgroup was selected first:
+
+      [Assumes current selected newsgroup is invalid.]
+      [C] ARTICLE   300256
+      [S] 412 No newsgroup selected
+
+   Example of an attempt to retrieve an article when the current
+   selected newsgroup is empty:
+
+      [C] GROUP   example.empty.newsgroup
+      [S] 211 0 0 0 example.empty.newsgroup
+      [C] ARTICLE
+      [S] 420 No current article selected
+
+
+6.2.2 HEAD
+
+6.2.2.1 Usage
+
+   Syntax
+      HEAD message-id
+      HEAD number
+      HEAD
+
+   Responses
+
+      First form (message-id specified)
+         221 0 message-id   Headers follow (multiline)
+         430                No article with that message-id
+
+      Second form (article number specified)
+         221 n message-id   Headers follow (multiline)
+         412                No newsgroup selected
+         423                No articles in that range
+
+      Third form (current article number used)
+         221 n message-id   Headers follow (multiline)
+         412                No newsgroup selected
+         420                Current article number is invalid
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 37]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Parameters
+      number     = Requested article number
+      n          = Returned article number
+      message-id = Article message-id
+
+
+6.2.2.2 Description
+
+   The HEAD command behaves identically to the ARTICLE command except
+   that, if the article exists, the response code is 221 instead of 220
+   and only the headers are presented (the empty line separating the
+   headers and body MUST NOT be included).
+
+6.2.2.3 Examples
+
+   Example of a successful retrieval of the headers of an article (using
+   no article number):
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] HEAD
+      [S] 221 3000234 <45223423@example.com>
+      [S] Path: pathost!demo!whitehouse!not-for-mail
+      [S] From: "Demo User" <nobody@example.net>
+      [S] Newsgroups: misc.test
+      [S] Subject: I am just a test article
+      [S] Date: 6 Oct 1998 04:38:40 -0500
+      [S] Organization: An Example Net, Uncertain, Texas
+      [S] Message-ID: <411@example.net>
+      [S] .
+
+   Example of a successful retrieval of the headers of an article by
+   message-id:
+
+      [C] HEAD   <45223423@example.com>
+      [S] 221 0 <45223423@example.com>
+      [S] Path: pathost!demo!whitehouse!not-for-mail
+      [S] From: "Demo User" <nobody@example.net>
+      [S] Newsgroups: misc.test
+      [S] Subject: I am just a test article
+      [S] Date: 6 Oct 1998 04:38:40 -0500
+      [S] Organization: An Example Net, Uncertain, Texas
+      [S] Message-ID: <411@example.net>
+      [S] .
+
+   Example of an unsuccessful retrieval of the headers of an article by
+   message-id:
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 38]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [C] HEAD   <i.am.not.there@example.com>
+      [S] 430 No Such Article Found
+
+   Example of an unsuccessful retrieval of the headers of an article by
+   number:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] HEAD   300256
+      [S] 423 No such article number in this group
+
+   Example of an unsuccessful retrieval the headers of an article by
+   number because no newsgroup was selected first:
+
+      [Assumes current selected newsgroup is invalid.]
+      [C] HEAD   300256
+      [S] 412 No newsgroup selected
+
+   Example of an attempt to retrieve the headers of an article when the
+   current selected newsgroup is empty:
+
+      [C] GROUP   example.empty.newsgroup
+      [S] 211 0 0 0 example.empty.newsgroup
+      [C] HEAD
+      [S] 420 No current article selected
+
+
+6.2.3 BODY
+
+6.2.3.1 Usage
+
+   Syntax
+      BODY message-id
+      BODY number
+      BODY
+
+   Responses
+
+      First form (message-id specified)
+         222 0 message-id   Body follows (multiline)
+         430                No article with that message-id
+
+      Second form (article number specified)
+         222 n message-id   Body follows (multiline)
+         412                No newsgroup selected
+         423                No articles in that range
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 39]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      Third form (current article number used)
+         222 n message-id   Body follows (multiline)
+         412                No newsgroup selected
+         420                Current article number is invalid
+
+   Parameters
+      number     = Requested article number
+      n          = Returned article number
+      message-id = Article message-id
+
+
+6.2.3.2 Description
+
+   The BODY command behaves identically to the ARTICLE command except
+   that, if the article exists, the response code is 222 instead of 220
+   and only the body is presented (the empty line separating the headers
+   and body MUST NOT be included).
+
+6.2.3.3 Examples
+
+   Example of a successful retrieval of the body of an article (using no
+   article number):
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] BODY
+      [S] 222 3000234 <45223423@example.com>
+      [S] This is just a test article.
+      [S] .
+
+   Example of a successful retrieval of the body of an article by
+   message-id:
+
+      [C] BODY   <45223423@example.com>
+      [S] 222 0 <45223423@example.com>
+      [S] This is just a test article.
+      [S] .
+
+   Example of an unsuccessful retrieval of the body of an article by
+   message-id:
+
+      [C] BODY   <i.am.not.there@example.com>
+      [S] 430 No Such Article Found
+
+   Example of an unsuccessful retrieval of the body of an article by
+   number:
+
+      [C] GROUP   misc.test
+
+
+
+Feather                  Expires April 15, 2004                [Page 40]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] BODY   300256
+      [S] 423 No such article number in this group
+
+   Example of an unsuccessful retrieval of the body of an article by
+   number because no newsgroup was selected first:
+
+      [Assumes current selected newsgroup is invalid.]
+      [C] BODY   300256
+      [S] 412 No newsgroup selected
+
+   Example of an attempt to retrieve the body of an article when the
+   current selected newsgroup is empty:
+
+      [C] GROUP   example.empty.newsgroup
+      [S] 211 0 0 0 example.empty.newsgroup
+      [C] BODY
+      [S] 420 No current article selected
+
+
+6.2.4 STAT
+
+6.2.4.1 Usage
+
+   Syntax
+      STAT message-id
+      STAT number
+      STAT
+
+   Responses
+
+      First form (message-id specified)
+         223 0 message-id   Article exists
+         430                No article with that message-id
+
+      Second form (article number specified)
+         223 n message-id   Article exists
+         412                No newsgroup selected
+         423                No articles in that range
+
+      Third form (current article number used)
+         223 n message-id   Article exists
+         412                No newsgroup selected
+         420                Current article number is invalid
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 41]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Parameters
+      number     = Requested article number
+      n          = Returned article number
+      message-id = Article message-id
+
+
+6.2.4.2 Description
+
+   The STAT command behaves identically to the ARTICLE command except
+   that, if the article exists, it is NOT presented to the client and
+   the response code is 223 instead of 220. Note that the response is
+   NOT multi-line.
+
+   This command allows the client to determine whether an article
+   exists, and in the second and third forms what its message-id is,
+   without having to process an arbitrary amount of text.
+
+6.2.4.3 Examples
+
+   Example of STAT on an existing article (using no article number):
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] STAT
+      [S] 223 3000234 <45223423@example.com>
+
+   Example of a STAT of an existing article by message-id:
+
+      [C] STAT   <45223423@example.com>
+      [S] 223 0 <45223423@example.com>
+
+   Example of an STAT of an article not on the server by message-id:
+
+      [C] STAT   <i.am.not.there@example.com>
+      [S] 430 No Such Article Found
+
+   Example of STAT of an article not in the server by number:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] STAT   300256
+      [S] 423 No such article number in this group
+
+   Example of STAT of an article by number when no newsgroup was
+   selected first:
+
+      [Assumes current selected newsgroup is invalid.]
+      [C] STAT   300256
+
+
+
+Feather                  Expires April 15, 2004                [Page 42]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 412 No newsgroup selected
+
+   Example of STAT of an article when the current selected newsgroup is
+   empty:
+
+      [C] GROUP   example.empty.newsgroup
+      [S] 211 0 0 0 example.empty.newsgroup
+      [C] STAT
+      [S] 420 No current article selected
+
+
+6.3 Article posting
+
+   Article posting is done in one of two modes: individual article
+   posting from news reading clients using POST, and article transfer
+   from other news servers using IHAVE.
+
+6.3.1 POST
+
+6.3.1.1 Usage
+
+   This command MUST NOT be pipelined.
+
+   Syntax
+      POST
+
+   Responses
+
+      Initial responses
+         340   Send article to be posted
+         440   Posting not permitted
+
+      Subsequent responses
+         240   Article received OK
+         441   Posting failed
+
+
+6.3.1.2 Description
+
+   If posting is allowed, a 340 response MUST be returned to indicate
+   that the article to be posted should be sent. If posting is
+   prohibited for some installation-dependent reason, a 440 response
+   MUST be returned.
+
+   If posting is permitted, the article MUST be in the format specified
+   in Section 3.4 and MUST be sent by the client to the server in the
+   manner specified in (Section 3.1) for multi-line responses (except
+   that there is no initial line containing a response code). Thus a
+
+
+
+Feather                  Expires April 15, 2004                [Page 43]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   single dot (".") on a line indicates the end of the text, and lines
+   starting with a dot in the original text have that dot doubled during
+   transmission.
+
+   Following the presentation of the termination sequence by the client,
+   the server MUST return a response indicating success or failure of
+   the article transfer. Note that response codes 340 and 440 are used
+   in direct response to the POST command. Others are returned following
+   the sending of the article.
+
+   A response of 240 SHOULD indicate that, barring unforseen server
+   errors, the posted article will be made available on the server and/
+   or transferred to other servers as appropriate, possibly following
+   further processing. In other words, articles not wanted by the server
+   SHOULD be rejected with a 441 response and not accepted and silently
+   discarded. However, the client SHOULD NOT assume that the article has
+   been successfully transferred unless it receives an affirmative
+   response from the server, and SHOULD NOT assume that it is being made
+   available to other clients without explicitly checking (for example
+   using the STAT command).
+
+   If the session is interrupted before the response is received, it is
+   possible that an affirmative response was sent but has been lost.
+   Therefore, in any subsequent session, the client SHOULD either check
+   whether the article was successfully posted before resending or
+   ensure that the server will allocate the same message-id to the new
+   attempt (see Appendix B.2) - the latter approach is preferred since
+   the article might not have been made available for reading yet (for
+   example, it may have to go through a moderation process).
+
+6.3.1.3 Examples
+
+   Example of a successful posting:
+
+      [C] POST
+      [S] 340 Input article; end with <CR-LF>.<CR-LF>
+      [C] From: "Demo User" <nobody@example.net>
+      [C] Newsgroups: misc.test
+      [C] Subject: I am just a test article
+      [C] Organization: An Example Net
+      [C]
+      [C] This is just a test article.
+      [C] .
+      [S] 240 Article received OK
+
+   Example of an unsuccessful posting:
+
+      [C] POST
+
+
+
+Feather                  Expires April 15, 2004                [Page 44]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 340 Input article; end with <CR-LF>.<CR-LF>
+      [C] From: "Demo User" <nobody@example.net>
+      [C] Newsgroups: misc.test
+      [C] Subject: I am just a test article
+      [C] Organization: An Example Net
+      [C]
+      [C] This is just a test article.
+      [C] .
+      [S] 441 Posting failed
+
+   Example of an attempt to post when posting is not allowed:
+
+      [C] MODE READER
+      [S] 201 NNTP Service Ready, posting prohibited
+      [C] POST
+      [S] 440 Posting not permitted
+
+
+6.3.2 IHAVE
+
+6.3.2.1 Usage
+
+   This command MUST NOT be pipelined.
+
+   Syntax
+      IHAVE message-id
+
+   Responses
+
+      Initial responses
+         335   Send article to be transferred
+         435   Article not wanted
+         436   Transfer not possible; try again later
+
+      Subsequent responses
+         235   Article transferred OK
+         436   Transfer failed; try again later
+         437   Transfer rejected; do not retry
+
+   Parameters
+      message-id = Article message-id
+
+
+6.3.2.2 Description
+
+   The IHAVE command informs the server that the client has an article
+   with the specified message-id. If the server desires a copy of that
+   article a 335 response MUST be returned, instructing the client to
+
+
+
+Feather                  Expires April 15, 2004                [Page 45]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   send the entire article. If the server does not want the article (if,
+   for example, the server already has a copy of it), a 435 response
+   MUST be returned, indicating that the article is not wanted. Finally,
+   if the article isn't wanted immediately but the client should retry
+   later if possible (if, for example, another client is in the process
+   of sending the same article to the server), a 436 response MUST be
+   returned.
+
+   If transmission of the article is requested, the client MUST send the
+   entire article, including headers and body, in the format defined
+   above (Section 3.1) for multi-line responses (except that there is no
+   initial line containing a response code). Thus a single dot (".") on
+   a line indicates the end of the text, and lines starting with a dot
+   in the original text have that dot doubled during transmission. The
+   server MUST return either a 235 response, indicating that the article
+   was successfully transferred, a 436 response, indicating that the
+   transfer failed but should be tried again later, or a 437 response,
+   indicating that the article was rejected.
+
+   This function differs from the POST command in that it is intended
+   for use in transferring already-posted articles between hosts. It
+   SHOULD NOT be used when the client is a personal news reading
+   program, since use of this command indicates that the article has
+   already been posted at another site and is simply being forwarded
+   from another host. However, despite this, the server MAY elect not to
+   post or forward the article if, after further examination of the
+   article, it deems it inappropriate to do so. Reasons for such
+   subsequent rejection of an article may include such problems as
+   inappropriate newsgroups or distributions, disc space limitations,
+   article lengths, garbled headers, and the like. These are typically
+   restrictions enforced by the server host's news software and not
+   necessarily the NNTP server itself.
+
+   The client SHOULD NOT assume that the article has been successfully
+   transferred unless it receives an affirmative response from the
+   server. A lack of response (such as a dropped network connection or a
+   network timeout) SHOULD be treated the same as a 436 response.
+
+   Because some news server software may not be able immediately to
+   determine whether or not an article is suitable for posting or
+   forwarding, an NNTP server MAY acknowledge the successful transfer of
+   the article (with a 235 response) but later silently discard it.
+
+6.3.2.3 Examples
+
+   Example of successfully sending an article to another site:
+
+      [C] IHAVE   <i.am.an.article.you.will.want@example.com>
+
+
+
+Feather                  Expires April 15, 2004                [Page 46]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 335 Send it; end with <CR-LF>.<CR-LF>
+      [C] Path: pathost!demo!somewhere!not-for-mail
+      [C] From: "Demo User" <nobody@example.com>
+      [C] Newsgroups: misc.test
+      [C] Subject: I am just a test article
+      [C] Date: 6 Oct 1998 04:38:40 -0500
+      [C] Organization: An Example Com, San Jose, CA
+      [C] Message-ID: <i.am.an.article.you.will.want@example.com>
+      [C]
+      [C] This is just a test article.
+      [C] .
+      [S] 235 Article transferred OK
+
+   Example of sending an article to another site that rejects it. Note
+   that the message-id in the IHAVE command is not the same as the one
+   in the article headers; while this is bad practice and SHOULD NOT be
+   done, it is not forbidden.
+
+      [C] IHAVE   <i.am.an.article.you.will.want@example.com>
+      [S] 335 Send it; end with <CR-LF>.<CR-LF>
+      [C] Path: pathost!demo!somewhere!not-for-mail
+      [C] From: "Demo User" <nobody@example.com>
+      [C] Newsgroups: misc.test
+      [C] Subject: I am just a test article
+      [C] Date: 6 Oct 1998 04:38:40 -0500
+      [C] Organization: An Example Com, San Jose, CA
+      [C] Message-ID: <i.am.an.article.you.have@example.com>
+      [C]
+      [C] This is just a test article.
+      [C] .
+      [S] 437 Article rejected; don't send again
+
+   Example of sending an article to another site where the transfer
+   fails:
+
+      [C] IHAVE   <i.am.an.article.you.will.want@example.com>
+      [S] 335 Send it; end with <CR-LF>.<CR-LF>
+      [C] Path: pathost!demo!somewhere!not-for-mail
+      [C] From: "Demo User" <nobody@example.com>
+      [C] Newsgroups: misc.test
+      [C] Subject: I am just a test article
+      [C] Date: 6 Oct 1998 04:38:40 -0500
+      [C] Organization: An Example Com, San Jose, CA
+      [C] Message-ID: <i.am.an.article.you.will.want@example.com>
+      [C]
+      [C] This is just a test article.
+      [C] .
+      [S] 436 Transfer failed
+
+
+
+Feather                  Expires April 15, 2004                [Page 47]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Example of sending an article to a site that already has it:
+
+      [C] IHAVE   <i.am.an.article.you.have@example.com>
+      [S] 435 Duplicate
+
+   Example of sending an article to a site that requests the article be
+   tried again later:
+
+      [C] IHAVE   <i.am.an.article.you.defer@example.com>
+      [S] 436 Retry later
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 48]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+7. Information commands
+
+   This section lists other commands that may be used at any time
+   between the beginning of a session and its termination. Using these
+   commands does not alter any state information, but the response
+   generated from their use may provide useful information to clients.
+
+7.1 DATE
+
+7.1.1 Usage
+
+   Syntax
+      DATE
+
+   Responses
+      111 yyyymmddhhmmss   server date and time
+
+   Parameters
+      yyyymmddHHmmss = Current UTC date and time on server
+
+
+7.1.2 Description
+
+   This command exists to help clients find out the current Coordinated
+   Universal Time [TF.686-1] from the server's perspective. This command
+   SHOULD NOT be used as a substitute for NTP [RFC1305] but to provide
+   information that might be useful when using the NEWNEWS command (see
+   Section 7.4). A system providing NNTP service SHOULD keep the system
+   clock as accurate as possible, either with NTP or by some other
+   method.
+
+   The server MUST return a 111 response specifying the date and time on
+   the server in the form yyyymmddhhmmss. This date and time is in
+   Coordinated Universal Time.
+
+7.1.3 Examples
+
+      [C] DATE
+      [S] 111 19990623135624
+
+
+7.2 HELP
+
+7.2.1 Usage
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 49]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Syntax
+      HELP
+
+   Responses
+      100   Help text follows (multiline)
+
+
+7.2.2 Description
+
+   This command provides a short summary of commands that are understood
+   by this implementation of the server. The help text will be presented
+   as a multiline response following the 100 response code.
+
+   This text is not guaranteed to be in any particular format and MUST
+   NOT be used by clients as a replacement for the LIST EXTENSIONS
+   command described in Section 5.3
+
+7.2.3 Examples
+
+      [C] HELP
+      [S] 100 Help text follows
+      [S] This is some help text. There is no specific
+      [S] formatting requirement for this test, though
+      [S] it is customary for it to list the valid commands
+      [S] and give a brief definition of what they do
+      [S] .
+
+
+7.3 NEWGROUPS
+
+7.3.1 Usage
+
+   Syntax
+      NEWGROUPS date time [GMT]
+
+   Responses
+      231   List of new newsgroups follows (multiline)
+
+   Parameters
+      date = Date in yymmdd or yyyymmdd format
+      time = Time in hhmmss format
+
+
+7.3.2 Description
+
+   This command returns a list of newsgroups created on the server since
+   the specified date and time. The results are in the same format as
+   the LIST ACTIVE command (see Section 7.6.1). However, they MAY
+
+
+
+Feather                  Expires April 15, 2004                [Page 50]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   include groups not available on the server (and so not returned by
+   LIST ACTIVE) and MAY omit groups for which the creation date is not
+   available. The results SHOULD be consistent with those of the LIST
+   ACTIVE.TIMES command (Section 7.6.2), except that if the specified
+   date and time is earlier than the oldest entry in the latter then the
+   results of this command may include extra groups.
+
+   The date is specified as 6 or 8 digits in the format [xx]yymmdd,
+   where xx is the first two digits of the year (19-99), yy is the last
+   two digits of the year (00-99), mm is the month (01-12), and dd is
+   the day of the month (01-31). Clients SHOULD specify all four digits
+   of the year. If the first two digits of the year are not specified
+   (this is supported only for backwards compatibility), the year is to
+   be taken from the current century if yy is smaller than or equal to
+   the current year, otherwise the year is from the previous century.
+
+   The time is specified as 6 digits in the format hhmmss, where hh is
+   the hours in the 24-hour clock (00-23), mm is the minutes (00-59),
+   and ss is the seconds (00-60, to allow for leap seconds). The token
+   "GMT" specifies that the date and time are given in Coordinated
+   Universal Time [TF.686-1]; if it is omitted then the date and time
+   are specified in the server's local timezone. Note that there is no
+   way using the protocol specified in this document to establish the
+   server's local timezone.
+
+   Note that an empty list is a possible valid response and indicates
+   that there are no new newsgroups since that date-time.
+
+   Clients SHOULD make all queries using Coordinated Universal Time
+   (i.e. by including the "GMT" argument) when possible.
+
+7.3.3 Examples
+
+   Example where there are new groups:
+
+      [C] NEWGROUPS   19990624 000000 GMT
+      [S] 231 list of new newsgroups follows
+      [S] alt.fc-writers.recovery 4 1 y
+      [S] tx.natives.recovery 89 56 y
+      [S] .
+
+   Example where there are no new groups:
+
+      [C] NEWGROUPS   19990624 000000 GMT
+      [S] 231 list of new newsgroups follows
+      [S] .
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 51]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+7.4 NEWNEWS
+
+7.4.1 Usage
+
+   Syntax
+      NEWNEWS wildmat date time [GMT]
+
+   Responses
+      230   List of new articles follows (multiline)
+
+   Parameters
+      wildmat = Newsgroups of interest
+      date    = Date in yymmdd or yyyymmdd format
+      time    = Time in hhmmss format
+
+
+7.4.2 Description
+
+   This command returns a list of message-ids of articles posted or
+   received on the server, in the newsgroups whose names match the
+   wildmat, since the specified date and time. One message-id is sent on
+   each line; the order of the response has no specific significance and
+   may vary from response to response in the same session. A message-id
+   MAY appear more than once; if it does so, it has the same meaning as
+   if it appeared only once.
+
+   Date and time are in the same format as the NEWGROUPS command (see
+   Section 7.3).
+
+   Note that an empty list is a possible valid response and indicates
+   that there is currently no new news in the relevant groups.
+
+   Clients SHOULD make all queries in Coordinated Universal Time (i.e.
+   by using the "GMT" argument) when possible.
+
+7.4.3 Examples
+
+   Example where there are new articles:
+
+      [C] NEWNEWS   news.*,sci.* 19990624 000000 GMT
+      [S] 230 list of new articles by message-id follows
+      [S] <i.am.a.new.article@example.com>
+      [S] <i.am.another.new.article@example.com>
+      [S] .
+
+   Example where there are no new articles:
+
+      [C] NEWNEWS   alt.* 19990624 000000 GMT
+
+
+
+Feather                  Expires April 15, 2004                [Page 52]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 230 list of new articles by message-id follows
+      [S] .
+
+
+7.5 Time
+
+   As described in Section 6, each article has an arrival timestamp.
+   Each newsgroup also has a creation timestamp. These timestamps are
+   used by the NEWNEWS and NEWGROUP commands to construct their
+   reponses.
+
+   The DATE command MUST return a timestamp from the same clock as is
+   used for determining article arrival and group creation times. This
+   clock SHOULD be monotonic, and adjustments SHOULD be made by running
+   it fast or slow compared to "real" time rather than by making sudden
+   jumps.
+
+   Clients can ensure that they do not have gaps in lists of articles or
+   groups by using the DATE command in the following manner:
+
+   First session:
+      Issue DATE command and record result
+      Issue NEWNEWS command using a previously chosen timestamp
+
+   Subsequent sessions:
+      Issue DATE command and hold result in temporary storage
+      Issue NEWNEWS command using timestamp saved from previous session
+      Overwrite saved timestamp with that currently in temporary storage
+
+   In order to allow for minor errors, clients MAY want to adjust the
+   timestamp back by two or three minutes before using it in NEWNEWS.
+
+7.5.1 Examples
+
+   First session:
+
+      [C] DATE
+      [S] 111 20010203112233
+      [C] NEWNEWS   local.chat 20001231 235959 GMT
+      [S] 230 list follows
+      [S] <article.1@local.service>
+      [S] <article.2@local.service>
+      [S] <article.3@local.service>
+      [S] .
+
+   Second session (the client has subtracted 3 minutes from the
+   timestamp returned previously):
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 53]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [C] DATE
+      [S] 111 20010204003344
+      [C] NEWNEWS   local.chat 20010203 111933 GMT
+      [S] 230 list follows
+      [S] <article.3@local.service>
+      [S] <article.4@local.service>
+      [S] <article.5@local.service>
+      [S] .
+
+   Note how <article.3@local.service> arrived in the 3 minute gap and so
+   is listed in both responses.
+
+7.6 The LIST commands
+
+7.6.1 LIST ACTIVE
+
+7.6.1.1 Usage
+
+   Syntax
+      LIST ACTIVE [wildmat]
+
+   Responses
+      215   Information follows (multiline)
+
+   Parameters
+      wildmat = groups of interest
+
+
+7.6.1.2 Description
+
+   The LIST ACTIVE command with no arguments returns a list of valid
+   newsgroups and associated information. The server MUST include every
+   group that the client is permitted to select with the GROUP (Section
+   6.1.1) command. Each newsgroup is sent as a line of text in the
+   following format:
+
+   group high low status
+
+   where:
+
+   "group" is the name of the newsgroup;
+
+   "high" is the reported high water mark for the group;
+
+   "low" is the reported low water mark for the group;
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 54]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   "status" is the current status of the group on this server.
+
+   Each field in the line is separated from its neighboring fields by
+   one or more spaces. Note that an empty list is a possible valid
+   response, and indicates that there are currently no valid newsgroups.
+
+   The reported high and low water marks are as described in the GROUP
+   command (see Section 6.1.1).
+
+   The status field is typically one of:
+
+   "y" posting is permitted
+
+   "n" posting is not permitted
+
+   "m" postings will be forwarded to the newsgroup moderator
+
+   The server SHOULD use these values when these meanings are required
+   and MUST NOT use them with any other meaning. Other values for the
+   status may exist; the definition of these other values and the
+   circumstances under which they are returned may be specified in an
+   extension or may be private to the server. A client SHOULD treat an
+   unrecognised status as giving no information.
+
+   The status of a newsgroup only indicates how posts to that newsgroup
+   are normally processed and is not necessarily customised to the
+   specific client. For example, if the current client is forbidden from
+   posting, then this will apply equally to groups with status "y".
+   Conversely, a client with special privileges (not defined by this
+   specification) might be able to post to a group with status "n".
+
+   If the optional wildmat argument is specified, the response is
+   limited to only the groups (if any) whose names match the wildmat. If
+   no wildmat is specified, the keyword ACTIVE MAY be omitted without
+   altering the effect of the command.
+
+7.6.1.3 Examples
+
+   Example of LIST ACTIVE returning a list of newsgroups:
+
+      [C] LIST ACTIVE
+      [S] 215 list of newsgroups follows
+      [S] misc.test 3002322 3000234 y
+      [S] comp.risks 442001 441099 m
+      [S] alt.fc-writers.recovery 4 1 y
+      [S] tx.natives.recovery 89 56 y
+      [S] tx.natives.recovery.d 11 9 n
+      [S] .
+
+
+
+Feather                  Expires April 15, 2004                [Page 55]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Example of LIST ACTIVE omitting the second keyword and returning no
+   newsgroups:
+
+      [C] LIST
+      [S] 215 list of newsgroups follows
+      [S] .
+
+   Example of LIST ACTIVE with a wildmat:
+
+      [C] LIST ACTIVE   *.recovery
+      [S] 215 list of newsgroups follows
+      [S] alt.fc-writers.recovery 4 1 y
+      [S] tx.natives.recovery 89 56 y
+      [S] .
+
+
+7.6.2 LIST ACTIVE.TIMES
+
+7.6.2.1 Usage
+
+   This command is optional.
+
+   Syntax
+      LIST ACTIVE.TIMES [wildmat]
+
+   Responses
+      215   Information follows (multiline)
+
+   Parameters
+      wildmat = groups of interest
+
+
+7.6.2.2 Description
+
+   The active.times list is maintained by some news transport systems to
+   contain information about who created a particular newsgroup and
+   when. Each line of this list consists of three fields separated from
+   each other by one or more spaces. The first field is the name of the
+   newsgroup. The second is the time when this group was created on this
+   news server, measured in seconds since the start of January 1, 1970.
+   The third is plain text intended to describe the entity that created
+   the newsgroup; it is often a mailbox as defined in RFC 2822
+   [RFC2822].
+
+   The list MAY omit newsgroups for which the information is unavailable
+   and MAY include groups not available on the server; in particular, it
+   MAY omit all groups created before the date and time of the oldest
+   entry. The client MUST NOT assume that the list is complete or that
+
+
+
+Feather                  Expires April 15, 2004                [Page 56]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   it matches the list returned by LIST ACTIVE. The NEWGROUPS command
+   (Section 7.3) may provide a better way to access this information and
+   the results of the two commands SHOULD be consistent (subject to the
+   caveats in the description of that command).
+
+   If the information is available, it is returned as a multi-line
+   response following the 215 response code.
+
+   If the optional wildmat argument is specified, the response is
+   limited to only the groups (if any) whose names match the wildmat and
+   for which the information is available. Note that an empty list is a
+   possible valid response (whether or not a wildmat is specified) and
+   indicates that there are no such groups.
+
+7.6.2.3 Examples
+
+   Example of LIST ACTIVE.TIMES returning a list of newsgroups:
+
+      [C] LIST ACTIVE.TIMES
+      [S] 215 information follows
+      [S] misc.test 930445408 <creatme@isc.org>
+      [S] alt.rfc-writers.recovery 930562309 <m@example.com>
+      [S] tx.natives.recovery 930678923 <sob@academ.com>
+      [S] .
+
+   Example of LIST ACTIVE.TIMES returning an error where the command is
+   recognised but the software does not maintain this information:
+
+      [C] LIST ACTIVE.TIMES
+      [S] 503 program error, function not performed
+
+   Example of LIST ACTIVE.TIMES sent to a server that does not recognize
+   this command:
+
+      [C] LIST ACTIVE.TIMES
+      [S] 501 Syntax Error
+
+
+7.6.3 LIST DISTRIBUTIONS
+
+7.6.3.1 Usage
+
+   This command is optional.
+
+   Syntax
+      LIST DISTRIBUTIONS
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 57]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Responses
+      215   Information follows (multiline)
+
+
+7.6.3.2 Description
+
+   The distributions list is maintained by some news transport systems
+   to contain information about valid values for the content of the
+   Distribution header in a news article and about what the various
+   values mean. Each line of this list consists of two fields separated
+   from each other by one or more spaces. The first field is a value and
+   the second is a short explanation of the meaning of that value.
+
+   If the information is available, it is returned as a multi-line
+   response following the 215 response code.
+
+7.6.3.3 Examples
+
+   Example of LIST DISTRIBUTIONS returning a list of distributions:
+
+      [C] LIST DISTRIBUTIONS
+      [S] 215 information follows
+      [S] usa United States of America
+      [S] na North America
+      [S] world All over the World
+      [S] .
+
+   Example of LIST DISTRIBUTIONS returning an error where the command is
+   recognised but the software does not maintain this information:
+
+      [C] LIST DISTRIBUTIONS
+      [S] 503 program error, function not performed
+
+   Example of LIST DISTRIBUTIONS sent to a server that does not
+   recognize this command:
+
+      [C] LIST DISTRIBUTIONS
+      [S] 501 Syntax Error
+
+
+7.6.4 LIST DISTRIB.PATS
+
+7.6.4.1 Usage
+
+   This command is optional.
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 58]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Syntax
+      LIST DISTRIB.PATS
+
+   Responses
+      215   Information follows (multiline)
+
+
+7.6.4.2 Description
+
+   The distrib.pats list is maintained by some news transport systems to
+   choose a value for the content of the Distribution header of a news
+   article being posted. Each line of this list consists of three fields
+   separated from each other by a colon (":"). The first field is a
+   weight, the second field is a wildmat (which may be a simple group
+   name), and the third field is a value for the Distribution header
+   content.
+
+   The client MAY use this information to construct an appropriate
+   Distribution header given the name of a newsgroup. To do so, it
+   should determine the lines whose second field matches the newsgroup
+   name, select from among them the line with the highest weight (with 0
+   being the lowest), and use the value of the third field to construct
+   the Distribution header.
+
+   If the information is available, it is returned as a multi-line
+   response following the 215 response code.
+
+7.6.4.3 Examples
+
+   Example of LIST DISTRIB.PATS returning a list of newsgroups:
+
+      [C] LIST DISTRIB.PATS
+      [S] 215 information follows
+      [S] 10:local.*:local
+      [S] 5:*:world
+      [S] 20:local.here.*:thissite
+      [S] .
+
+   Example of LIST DISTRIB.PATS returning an error where the command is
+   recognised but the software does not maintain this information:
+
+      [C] LIST DISTRIB.PATS
+      [S] 503 program error, function not performed
+
+   Example of LIST DISTRIB.PATS sent to a server that does not recognize
+   this command:
+
+      [C] LIST DISTRIB.PATS
+
+
+
+Feather                  Expires April 15, 2004                [Page 59]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 501 Syntax Error
+
+
+7.6.5 LIST NEWSGROUPS
+
+7.6.5.1 Usage
+
+   This command is optional.
+
+   Syntax
+      LIST NEWSGROUPS [wildmat]
+
+   Responses
+      215   Information follows (multiline)
+
+   Parameters
+      wildmat = groups of interest
+
+
+7.6.5.2 Description
+
+   The newsgroups list is maintained by some news transport systems to
+   contain the name of each newsgroup that is available on the server
+   and a short description about the purpose of the group. Each line of
+   this list consists of two fields separated from each other by one or
+   more space or TAB characters (usual practice is a single TAB). The
+   first field is the name of the newsgroup and the second is a short
+   description of the group.
+
+   The list MAY omit newsgroups for which the information is unavailable
+   and MAY include groups not available on the server. The client MUST
+   NOT assume that the list is complete or that it matches the list
+   returned by LIST ACTIVE.
+
+   If the information is available, it is returned as a multi-line
+   response following the 215 response code.
+
+   If the optional wildmat argument is specified, the response is
+   limited to only the groups (if any) whose names match the wildmat and
+   for which the information is available. Note that an empty list is a
+   possible valid response (whether or not a wildmat is specified) and
+   indicates that there are no such groups.
+
+7.6.5.3 Examples
+
+   Example of LIST NEWSGROUPS returning a list of newsgroups:
+
+      [C] LIST NEWSGROUPS
+
+
+
+Feather                  Expires April 15, 2004                [Page 60]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 215 information follows
+      [S] misc.test General Usenet testing
+      [S] alt.rfc-writers.recovery RFC Writers Recovery
+      [S] tx.natives.recovery Texas Natives Recovery
+      [S] .
+
+   Example of LIST NEWSGROUPS returning an error where the command is
+   recognised but the software does not maintain this information:
+
+      [C] LIST NEWSGROUPS
+      [S] 503 program error, function not performed
+
+   Example of LIST NEWSGROUPS sent to a server that does not recognize
+   this command:
+
+      [C] LIST NEWSGROUPS
+      [S] 501 Syntax error
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 61]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+8. Framework for NNTP extensions
+
+   Although NNTP is widely and robustly deployed, some parts of the
+   Internet community might wish to extend the NNTP service. This
+   document defines a means whereby an extended NNTP client can query
+   the server to determine the service extensions that it supports.
+
+   It must be emphasized that any extension to the NNTP service should
+   not be considered lightly. NNTP's strength comes primarily from its
+   simplicity. Experience with many protocols has shown that:
+
+      Protocols with few options tend towards ubiquity, whilst protocols
+      with many options tend towards obscurity.
+
+   This means that each and every extension, regardless of its benefits,
+   must be carefully scrutinized with respect to its implementation,
+   deployment, and interoperability costs. In many cases, the cost of
+   extending the NNTP service will likely outweigh the benefit.
+
+   Given this environment, the framework for extensions described in
+   this document consists of:
+
+   o  a mechanism for clients to determine a server's available
+      extensions
+
+   o  a registry of NNTP service extensions
+
+   The LIST EXTENSIONS command is described in this document (see
+   Section 5.3) and is the mechanism for clients to use to determine
+   what extensions are available. Except where stated otherwise, the
+   commands in this document are understood (even if not supported) by
+   all servers and are not described in the list of features returned by
+   the LIST EXTENSIONS command.
+
+   The IANA shall maintain a registry of NNTP service extensions.
+
+   An extension is identified by a unique extension-label, which is a
+   string of 1 to 12 uppercase US-ASCII letters. The extension-label
+   will often be the name of a new command that the extension adds.
+   However this is not a requirement: an extension might not add any new
+   commands or keywords.
+
+   An extension is either a private extension or else it is included in
+   the IANA registry and is defined in an RFC. Such RFCs either must be
+   on the standards track or must define an IESG-approved experimental
+   protocol.
+
+   The definition of an extension must include:
+
+
+
+Feather                  Expires April 15, 2004                [Page 62]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   o  a descriptive name for the extension;
+
+   o  the extension-label (which is returned by LIST EXTENSIONS to
+      indicate to the client that the server supports this particular
+      extension) - the extension-label of a registered extension MUST
+      NOT begin with "X";
+
+   o  the syntax, values, and meanings of any arguments following the
+      extension-label in the output of LIST EXTENSIONS;
+
+   o  any new NNTP commands associated with the extension - the names of
+      commands associated with registered extensions MUST NOT begin with
+      "X";
+
+   o  the syntax and possible values of arguments associated with the
+      new NNTP commands;
+
+   o  the response codes and possible values of arguments for the
+      responses of the new NNTP commands;
+
+   o  any new arguments the extension associates with any other
+      pre-existing NNTP commands;
+
+   o  how support for the extension affects the behavior of a server and
+      NNTP client;
+
+   o  any increase in the maximum length of commands and initial
+      response lines over the value specified in this document;
+
+   o  a specific statement about the effect on pipelining this extension
+      may have (if any);
+
+   o  a specific statement about the circumstances when use of this
+      extension can alter the output from LIST EXTENSIONS;
+
+   o  the circumstances under which the extension can cause any
+      pre-existing command to produce a 401, 480, or 483 response;
+
+   o  whether the extension can be used before or after the MODE READER
+      command, and what changes (if any) the latter has on the
+      extension.
+
+   A private extension need not be included in the output of LIST
+   EXTENSIONS. A server MAY provide additional keywords - either for new
+   commands or new variants of existing commands - as part of a private
+   extension. To avoid the risk of a clash with a future registered
+   extension, the names of private extensions and commands defined by
+   them SHOULD begin with "X".
+
+
+
+Feather                  Expires April 15, 2004                [Page 63]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   A server MUST NOT send different response codes to basic NNTP
+   commands documented here or commands documented in registered
+   extensions in response to the availability or use of a private
+   extension.
+
+8.1 Initial IANA registry
+
+    The IANA's initial registry of NNTP service extensions consists of
+   these entries:
+
+   +-------------------------+--------------+--------------------------+
+   | Extension               | Label        | Added behaviour          |
+   +-------------------------+--------------+--------------------------+
+   | Specific article        | LISTGROUP    | Defined in this document |
+   | numbers                 |              |                          |
+   |                         |              |                          |
+   | Overview support        | OVER         | Defined in this document |
+   |                         |              |                          |
+   | Batched header          | HDR          | Defined in this document |
+   | retrieval               |              |                          |
+   +-------------------------+--------------+--------------------------+
+
+
+8.2 Standard extensions
+
+   Each of the following sections describes an extension that a server
+   MAY provide. If the server provides the extension, it MUST include
+   the appropriate extension label in the response to LIST EXTENSIONS.
+   If it does not provide it, it MUST NOT include the appropriate
+   extension label. The descriptions of facilities in each section are
+   written as if the extension is provided. If it is not provided, the
+   entire section should be ignored.
+
+   The formal definitions of these extensions are provided in Appendix
+   D.
+
+   If the server provides an extension, it MUST implement all of the
+   commands in the specification of the extension except for those
+   marked as optional. If it does not provide an extension, it MUST NOT
+   implement any of the commands in the specification of that extension.
+
+8.3 The LISTGROUP extension
+
+   This extension provides one command and has the extension label
+   LISTGROUP.
+
+8.3.1 LISTGROUP
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 64]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+8.3.1.1 Usage
+
+   Syntax
+      LISTGROUP [group]
+
+   Responses
+      211 number low high group   Article numbers follow (multiline)
+      411                         No such newsgroup
+      412                         No newsgroup selected [1]
+
+   Parameters
+      group  = name of newsgroup
+      number = estimated number of articles in the group
+      low    = reported low water mark
+      high   = reported high water mark
+
+   [1] The 412 response can only occur if no group has been specified.
+
+
+8.3.1.2 Description
+
+   The LISTGROUP command is used to get a listing of all the article
+   numbers in a particular newsgroup.
+
+   The optional argument is the name of the newsgroup to be selected
+   (e.g. "news.software.misc"). A list of valid newsgroups may be
+   obtained from the LIST ACTIVE command. If no group is specified, the
+   current selected newsgroup is used.
+
+   The list of article numbers is returned as a multi-line response
+   following the 211 response code (the arguments on the initial
+   response line are the same as for the GROUP command (see Section
+   6.1.1). The list contains one number per line, is in numerical order,
+   and lists precisely those articles that exist in the group.
+
+   When a valid group is selected by means of this command, the current
+   selected newsgroup MUST be set to that group and the current article
+   number MUST be set to the first article in the group. If an empty
+   newsgroup is selected, the current article pointer is made invalid.
+   If an invalid group is specified, the current selected newsgroup and
+   current article number MUST NOT be changed.
+
+   The LISTGROUP command MAY be used by a client as a replacement for
+   the GROUP command in establishing a valid current selected newsgroup
+   and current article number.
+
+   If the group specified is not available on the server, a 411 response
+   MUST be returned. If no group is specified and the current selected
+
+
+
+Feather                  Expires April 15, 2004                [Page 65]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   newsgroup is invalid, a 412 response MUST be returned.
+
+8.3.1.3 Examples
+
+   Example of LISTGROUP on an empty group:
+
+      [C] LISTGROUP   example.empty.newsgroup
+      [S] 211 0 0 0 example.empty.newsgroup list follows
+      [S] .
+
+   Example of LISTGROUP on a valid current selected newsgroup:
+
+      [C] GROUP   misc.test
+      [S] 211 2000 3000234 3002322 misc.test
+      [C] LISTGROUP
+      [S] 211 2000 3000234 3002322 misc.test list follows
+      [S] 3000234
+      [S] 3000237
+      [S] 3000238
+      [S] 3000239
+      [S] 3002322
+      [S] .
+
+   Example of LISTGROUP failing because no group has been selected:
+
+      [Assumes current selected newsgroup is invalid.]
+      [C] LISTGROUP
+      [S] 412 no current group
+      [C] GROUP   example.is.sob.bradner.or.barber
+      [S] 411 no such group
+      [C] LISTGROUP
+      [S] 412 no current group
+
+
+8.4 Article metadata
+
+   The OVER and HDR extensions refer to the concept of "article
+   metadata". This is data about articles that does not occur within the
+   article itself. Each metadata item has a name which MUST begin with a
+   colon (and which MUST NOT contain a colon elsewhere within it).
+
+   When generating a metadata item, the server MUST compute it for
+   itself and MUST NOT trust any related value provided in the article.
+   (In particular, a Lines or Bytes header in the article MUST NOT be
+   assumed to specify the correct number of lines or bytes in the
+   article.)
+
+   This specification defines two metadata items: ":bytes" and ":lines".
+
+
+
+Feather                  Expires April 15, 2004                [Page 66]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Other metadata items may be defined by extensions. The names of
+   metadata items defined by registered extensions MUST NOT begin with
+   ":x-". To avoid the risk of a clash with a future registered
+   extension, the names of metadata items defined by private extensions
+   SHOULD begin with ":x-".
+
+8.4.1 The :bytes metadata item
+
+   The :bytes metadata item for an article is a decimal integer. It MUST
+   equal the number of octets in the entire article - headers, body, and
+   separating empty line - except that each CRLF pair MAY (but SHOULD
+   NOT) be counted as a single octet.
+
+8.4.2 The :lines metadata item
+
+   The :lines metadata item for an article is a decimal integer. It MUST
+   equal the number of lines in the article body (excluding the empty
+   line separating headers and body); equivalently, it is two less than
+   the number of CRLF pairs that the BODY command would return for that
+   article (the extra two are those following the response code and the
+   termination octet).
+
+8.5 The OVER extension
+
+   This extension provides two commands, OVER and LIST OVERVIEW.FMT. The
+   label for this extension is OVER.
+
+   The OVER extension provides access to the "overview database", which
+   is a database of headers extracted from incoming articles. Only
+   certain headers are included in the database. The database also
+   includes some article metadata. The information stored in the
+   database may change over time. If the database records the content or
+   absence of a given field (that is, a header or metadata item) for all
+   articles, it is said to be "consistent" for that field. If it records
+   the content of a header for some articles but not for others that
+   nevertheless included that header, or records a metadata item for
+   some articles but not others to which that item applies, it is said
+   to be "inconsistent" for that field.
+
+   The LIST OVERVIEW.FMT command SHOULD list all the fields for which
+   the database is consistent at that moment. It MAY omit such fields
+   (for example if it is not known whether the database is consistent or
+   inconsistent). It MUST NOT include fields for which the database is
+   inconsistent or which are not stored in the database. Therefore if a
+   header appears in the LIST OVERVIEW.FMT output but not the OVER
+   output for a given article, that header does not appear in the
+   article, and similarly for metadata items.
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 67]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   These rules assume the fields being stored in the database remain
+   constant for long periods of time, with the database therefore being
+   consistent. When the set of fields to be stored is changed, it will
+   be inconsistent until either the database is rebuilt or the only
+   articles remaining are those received since the change. Therefore the
+   output from LIST OVERVIEW.FMT needs to be altered twice: before any
+   fields stop being stored, they MUST be removed from the output, then
+   when the database is once more known to be consistent, the new fields
+   SHOULD be added to the output.
+
+   This extension is based on the Overview/NOV database [ROBE1995]
+   developed by Geoff Collyer.
+
+8.5.1 OVER
+
+8.5.1.1 Usage
+
+   Syntax
+      OVER message-id
+      OVER range
+      OVER
+
+   Responses
+
+      First form (message-id specified)
+         224   Overview information follows (multiline)
+         430   No article with that message-id
+
+      Second form (range specified)
+         224   Overview information follows (multiline)
+         412   No newsgroup selected
+         423   No articles in that range
+
+      Third form (current article number used)
+         224   Overview information follows (multiline)
+         412   No newsgroup selected
+         420   Current article number is invalid
+
+   Parameters
+      range      = number(s) of articles
+      message-id = message-id of article
+
+
+8.5.1.2 Description
+
+   The OVER command returns the contents of the headers and metadata in
+   the database for an article specified by message-id, or from a
+   specified article or range of articles in the current selected
+
+
+
+Feather                  Expires April 15, 2004                [Page 68]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   newsgroup.
+
+   The message-id argument indicates a specific article. The range
+   argument may be any of the following:
+
+   o  an article number
+
+   o  an article number followed by a dash to indicate all following
+
+   o  an article number followed by a dash followed by another article
+      number
+
+   If neither is specified, the current article number is used.
+
+   If the information is available, it is returned as a multi-line
+   response following the 224 response code and contains one line per
+   article, sorted in numerical order of article number (note that
+   unless the argument is a range including a dash, there will only be
+   one line but it will still be in multi-line format). Each line
+   consists of a number of fields separated by a TAB. A field may be
+   empty (in which case there will be two adjacent TABs), and a sequence
+   of trailing TABs may be omitted.
+
+   The first 8 fields MUST be the following, in order:
+
+      "0" (first form) or article number (second form)
+      Subject header content
+      From header content
+      Date header content
+      Message-ID header content
+      References header content
+      :bytes metadata item
+      :lines metadata item
+
+   If the article is specified by message-id rather than by article
+   range, the article number is given as "0".
+
+   Any subsequent fields are the contents of the other headers and
+   metadata held in the database.
+
+   For the five mandatory headers, the content of each field MUST be
+   based on the content of the header (that is, with the header name and
+   following colon and space removed). If the article does not contain
+   that header, or if the content is empty, the field MUST be empty. For
+   the two mandatory metadata items, the content of the field MUST be
+   just the value, with no other text.
+
+   For all subsequent fields that contain headers, the content MUST be
+
+
+
+Feather                  Expires April 15, 2004                [Page 69]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   the entire header line other than the trailing CRLF. For all
+   subsequent fields that contain metadata, the field consists of the
+   metadata name, a single space, and then the value.
+
+   For all fields, the value is processed by first removing all CRLF
+   pairs (that is, undoing any folding and removing the terminating
+   CRLF) and then replacing each TAB with a single space. If there is no
+   such header in the article, or no such metadata item, or no header or
+   item stored in the database for that article, the corresponding field
+   MUST be empty.
+
+   Note that, after unfolding, the characters NUL, LF, and CR cannot
+   occur in the header of an article offered by a conformant server.
+   Nevertheless, servers SHOULD check for these characters and replace
+   each one by a single space (so that, for example, CR LF LF TAB will
+   become two spaces, since the CR and first LF will be removed by the
+   unfolding process). This will encourage robustness in the face of
+   non-conforming data; it is also possible that future versions of this
+   specification may permit these characters to appear in articles.
+
+   The server SHOULD NOT produce output for articles that no longer
+   exist.
+
+   If the argument is a message-id and no such article exists, a 430
+   response MUST be returned. If the argument is a range or is omitted
+   and the current selected newsgroup is invalid, a 412 response MUST be
+   returned. If the argument is a range and no articles in that number
+   range exist in the current selected newsgroup, a 423 response MUST be
+   returned. If the argument is omitted and the current article number
+   is invalid, a 420 response MUST be returned.
+
+8.5.1.3 Examples
+
+   In the first three examples, TAB has been replaced by vertical bar
+   and some lines have been folded for readability.
+
+   Example of a successful retrieval of overview information for an
+   article (using no article number):
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] OVER
+      [S] 224 Overview information follows
+      [S] 300234|I am just a test article|"Demo User"
+      <nobody@example.com>|6 Oct 1998 04:38:40 -0500|
+      <45223423@example.com>|<45454@example.net>|1234|
+      17|Xref: news.example.com misc.test:3000363
+      [S] .
+
+
+
+Feather                  Expires April 15, 2004                [Page 70]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Example of a successful retrieval of overview information for an
+   article by message-id:
+
+      [C] OVER   <45223423@example.com>
+      [S] 224 Overview information follows
+      [S] 0|I am just a test article|"Demo User"
+      <nobody@example.com>|6 Oct 1998 04:38:40 -0500|
+      <45223423@example.com>|<45454@example.net>|1234|
+      17|Xref: news.example.com misc.test:3000363
+      [S] .
+
+   Note that the article number has been replaced by "0".
+
+   Example of a successful retrieval of overview information for a range
+   of articles:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] OVER   3000234-3000240
+      [S] 224 Overview information follows
+      [S] 300234|I am just a test article|"Demo User"
+      <nobody@example.com>|6 Oct 1998 04:38:40 -0500|
+      <45223423@example.com>|<45454@example.net>|1234|
+      17|Xref: news.example.com misc.test:3000363
+      [S] 3000235|Another test article|nobody@nowhere.to
+      (Demo User)|6 Oct 1998 04:38:45 -0500|<45223425@to.to>||
+      4818|37||Distribution: fi
+      [S] 3000238|Re: I am just a test article|somebody@elsewhere.to|
+      7 Oct 1998 11:38:40 +1200|<kfwer3v@elsewhere.to>|
+      <45223423@to.to>|9234|51
+      [S] .
+
+   Note the missing "References" and Xref headers in the second line,
+   the missing trailing field(s) in the first and last lines, and that
+   there are only results for those articles that still exist.
+
+   Example of an unsuccessful retrieval of overview information on an
+   article by number:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] OVER   300256
+      [S] 420 No such article in this group
+
+   Example of an unsuccessful retrieval of overview information by
+   number because no newsgroup was selected first:
+
+      [Assumes current selected newsgroup is invalid.]
+
+
+
+Feather                  Expires April 15, 2004                [Page 71]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [C] OVER
+      [S] 412 No newsgroup selected
+
+   Example of an attempt to retrieve information when the current
+   selected newsgroup is empty:
+
+      [C] GROUP   example.empty.newsgroup
+      [S] 211 0 0 0 example.empty.newsgroup
+      [C] OVER
+      [S] 420 No current article selected
+
+
+8.5.2 LIST OVERVIEW.FMT
+
+8.5.2.1 Usage
+
+   This command is optional.
+
+   Syntax
+      LIST OVERVIEW.FMT
+
+   Responses
+      215   Information follows (multiline)
+
+
+8.5.2.2 Description
+
+   The LIST OVERVIEW.FMT command returns a description of the fields in
+   the database for which it is consistent (as described above).
+
+   If the information is available, it is returned as a multi-line
+   response following the 215 response code. The information contains
+   one line per field in the order they are returned by the OVER
+   command; the first 7 lines MUST be exactly:
+
+       Subject:
+       From:
+       Date:
+       Message-ID:
+       References:
+       :bytes
+       :lines
+
+    except that, for compatibility with existing implementations, the
+   last two lines MAY instead be:
+
+       Bytes:
+       Lines:
+
+
+
+Feather                  Expires April 15, 2004                [Page 72]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+    even though they refer to metadata, not headers.
+
+   All subsequent lines MUST consist of either a header name followed by
+   ":full", or the name of a piece of metadata.
+
+   There are no leading or trailing spaces in the output.
+
+   Note that the 7 fixed lines describe the 2nd to 8th fields of the
+   OVER output. The "full" suffix is a reminder that the corresponding
+   fields include the header name.
+
+   This command MAY generate different results if used more than once in
+   a session.
+
+8.5.2.3 Examples
+
+   Example of LIST OVERVIEW.FMT output corresponding to the example OVER
+   output above, using the preferred format:
+
+      [C] LIST OVERVIEW.FMT
+      [S] 215 Order of fields in overview database.
+      [S] Subject:
+      [S] From:
+      [S] Date:
+      [S] Message-ID:
+      [S] References:
+      [S] :bytes
+      [S] :lines
+      [S] Xref:full
+      [S] Distribution:full
+      [S] .
+
+   Example of LIST OVERVIEW.FMT output corresponding to the example OVER
+   output above, using the alternative format:
+
+      [C] LIST OVERVIEW.FMT
+      [S] 215 Order of fields in overview database.
+      [S] Subject:
+      [S] From:
+      [S] Date:
+      [S] Message-ID:
+      [S] References:
+      [S] Bytes:
+      [S] Lines:
+      [S] Xref:full
+      [S] Distribution:full
+      [S] .
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 73]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Example of LIST OVERVIEW.FMT returning an error where the command is
+   recognised but the software does not maintain this information:
+
+      [C] LIST OVERVIEW.FMT
+      [S] 503 overview.fmt not available
+
+
+8.6 The HDR extension
+
+   This extension provides two new commands: HDR and LIST HEADERS. The
+   label for this extension is HDR.
+
+   The HDR extension provides access to specific headers and metadata
+   items (collectively "fields") of articles or groups of articles. In
+   the case of headers, an implementation MAY restrict the use of this
+   extension to a specific list of headers or MAY allow it to be used
+   with any header. In the latter case it MUST use the argument "ALL"
+   following the extension label in the output of LIST EXTENSIONS; in
+   the former case it MUST NOT use any argument.
+
+   The HDR command may take information from a database rather than
+   directly from the articles. If so, the same issues of consistency and
+   inconsistency apply as with the OVER extension (Section 8.5) and the
+   LIST HEADERS command SHOULD take the same approach as the LIST
+   OVERVIEW.FMT command in resolving them.
+
+8.6.1 HDR
+
+8.6.1.1 Usage
+
+   Syntax
+      HDR header message-id
+      HDR header range
+      HDR header
+
+   Responses
+
+      First form (message-id specified)
+         225   Headers follow (multiline)
+         430   No article with that message-id
+
+      Second form (range specified)
+         225   Headers follow (multiline)
+         412   No newsgroup selected
+         423   No articles in that range
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 74]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      Third form (current article number used)
+         225   Headers follow (multiline)
+         412   No newsgroup selected
+         420   Current article number is invalid
+
+   Parameters
+      header     = name of header, without the colon
+      range      = number(s) of articles
+      message-id = message-id of article
+
+
+8.6.1.2 Description
+
+   The HDR command retrieves specific headers from an article specified
+   by message-id, or from a specified article or range of articles in
+   the current selected newsgroup. It can also return certain metadata
+   about the article or articles.
+
+   The required header argument is the name of a header (e.g. "subject")
+   in an article, or the name of a metadata item, and is
+   case-insensitive. Names of metadata items always begin with a colon.
+   Except where stated otherwise, metadata items are treated as if they
+   were header contents, and references to headers in this description
+   apply equally to metadata items.
+
+   The message-id argument indicates a specific article. The range
+   argument may be any of the following:
+
+   o  an article number
+
+   o  an article number followed by a dash to indicate all following
+
+   o  an article number followed by a dash followed by another article
+      number
+
+   If neither is specified, the current article number is used.
+
+   If the information is available, it is returned as a multi-line
+   response following the 225 response code and contains one line for
+   each article where the relevant header line or metadata item exists
+   (note that unless the argument is a range including a dash, there
+   will be at most one line but it will still be in multi-line format).
+   The line consists of the article number, a space, and then the
+   contents of the header (without the header name or the colon and
+   space that follow it) or metadata item. If the article is specified
+   by message-id, the article number is given as "0".
+
+   Header contents are modified as follows: all CRLF pairs are removed,
+
+
+
+Feather                  Expires April 15, 2004                [Page 75]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   and then each TAB is replaced with a single space (note that this is
+   the same transformation as is performed by the OVER extension
+   (Section 8.5.1.2), and the same comment concerning NUL, CR, and LF
+   applies).
+
+   The header content is in all cases taken from the article. This means
+   that, for example, a request for the header "Lines" returns the
+   contents of the "Lines" header of the specified articles, if any, not
+   the line count metadata or any other server-generated value. If the
+   header occurs in a given article multiple times, only the content of
+   the first occurrence is returned by HDR.
+
+   If the requested header is not present in the article or if it is
+   present but empty, a line for that article is included in the output
+   but the header content portion of the line is empty (the space after
+   the article number MAY be retained or omitted). If any article number
+   in the provided range does not exist in the group, no line for that
+   article number is included in the output.
+
+   If the second argument is a message-id and no such article exists, a
+   430 response MUST be returned. If the second argument is a range or
+   is omitted and the current selected newsgroup is invalid, a 412
+   response MUST be returned. If the second argument is a range and no
+   articles in that number range exist in the current selected
+   newsgroup, a 423 response MUST be returned. If the second argument is
+   omitted and the current article number is invalid, a 420 response
+   MUST be returned.
+
+   A server MAY only allow HDR commands for a limited set of headers and
+   metadata items. If so, it MUST respond with the generic 503 response
+   to attempts to request other headers, rather than returning erroneous
+   results such as a successful empty response.
+
+   If HDR uses a separate database and it is inconsistent for the
+   requested header or metadata item, the server MAY return what results
+   it can or it MAY respond with the generic 503 response; in the latter
+   case, the field MUST NOT appear in the output from LIST HEADERS.
+
+8.6.1.3 Examples
+
+   Example of a successful retrieval of subject lines from a range of
+   articles (3000235 has no Subject header, and 3000236 is missing):
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] HDR   Subject 3000234-300238
+      [S] 225 Headers follow
+      [S] 3000234 I am just a test article
+
+
+
+Feather                  Expires April 15, 2004                [Page 76]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] 3000235
+      [S] 3000237 Re: I am just a test article
+      [S] 3000238 Ditto
+      [S] .
+
+   Example of a successful retrieval of line counts from a range of
+   articles:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] HDR   :lines 3000234-300238
+      [S] 225 Headers follow
+      [S] 3000234 42
+      [S] 3000235 5
+      [S] 3000237 11
+      [S] 3000238 2378
+      [S] .
+
+   Example of a successful retrieval of the subject line from an article
+   by message-id:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] HDR   subject <i.am.a.test.article@example.com>
+      [S] 225 Header information follows
+      [S] 0 I am just a test article
+      [S] .
+
+   Example of a successful retrieval of the subject line from the
+   current article:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] HDR   subject
+      [S] 225 Header information follows
+      [S] 3000234 I am just a test article
+      [S] .
+
+   Example of an unsuccessful retrieval of a header from an article by
+   message-id:
+
+      [C] HDR   subject <i.am.not.there@example.com>
+      [S] 430 No Such Article Found
+
+   Example of an unsuccessful retrieval of headers from articles by
+   number because no newsgroup was selected first:
+
+      [Assumes current selected newsgroup is invalid.]
+
+
+
+Feather                  Expires April 15, 2004                [Page 77]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [C] HDR   subject 300256-
+      [S] 412 No newsgroup selected
+
+   Example of an unsuccessful retrieval of headers because the current
+   selected newsgroup is empty:
+
+      [C] GROUP   example.empty.newsgroup
+      [S] 211 0 0 0 example.empty.newsgroup
+      [C] HDR   subject 1-
+      [S] 423 No articles in that range
+
+   Example of an unsuccessful retrieval of headers because the server
+   does not allow HDR commands for that header:
+
+      [C] GROUP   misc.test
+      [S] 211 1234 3000234 3002322 misc.test
+      [C] HDR   Content-Type 3000234-300238
+      [S] 503 HDR not permitted on Content-Type
+
+
+8.6.2 LIST HEADERS
+
+8.6.2.1 Usage
+
+   Syntax
+      LIST HEADERS
+
+   Responses
+      215   Header and metadata list follows (multiline)
+
+
+8.6.2.2 Description
+
+   The LIST HEADERS command returns a list of headers and metadata items
+   that may be retrieved using the HDR command.
+
+   The information is returned as a multi-line response following the
+   215 response code and contains one line for each header or metadata
+   item name (excluding the colon in the former case). If the
+   implementation allows any header to be retrieved (also indicated by
+   the "ALL" argument to the extension label) it MUST NOT include any
+   header names in the list but MUST include the special entry ":" (a
+   single colon on its own); it MUST still list any metadata items that
+   are available. The order of items in the list is not significant; the
+   server need not even consistently return the same order. The list MAY
+   be empty (though in this circumstance there is little point in
+   providing the extension).
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 78]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   An implementation that also supports the OVER extension SHOULD at
+   least permit all the headers and metadata items listed in the output
+   from the LIST OVERVIEW.FMT command.
+
+8.6.2.3 Examples
+
+   Example of an implementation providing access to only a few headers:
+
+      [C] LIST EXTENSIONS
+      [S] 202 extensions supported:
+      [S] HDR
+      [S] .
+      [C] LIST HEADERS
+      [S] 215 headers supported:
+      [S] Subject
+      [S] Message-ID
+      [S] Xref
+      [S] .
+
+   Example of an implementation providing access to the same fields as
+   the first example in Section 8.5.2.3:
+
+      [C] LIST EXTENSIONS
+      [S] 202 extensions supported:
+      [S] OVER
+      [S] HDR
+      [S] .
+      [C] LIST HEADERS
+      [S] 215 headers and metadata items supported:
+      [S] Date
+      [S] Distribution
+      [S] From
+      [S] Message-ID
+      [S] References
+      [S] Subject
+      [S] Xref
+      [S] :bytes
+      [S] :lines
+      [S] .
+
+   Example of an implementation providing access to all headers:
+
+      [C] LIST EXTENSIONS
+      [S] 202 extensions supported:
+      [S] HDR ALL
+      [S] .
+      [C] LIST HEADERS
+      [S] 215 metadata items supported:
+
+
+
+Feather                  Expires April 15, 2004                [Page 79]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [S] :
+      [S] :lines
+      [S] :bytes
+      [S] :x-article-number
+      [S] .
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 80]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+9. Augmented BNF Syntax for NNTP
+
+   Each of the following sections describes the syntax of a major
+   element of NNTP. This syntax extends and refines the descriptions
+   elsewhere in this specification, and should be given precedence when
+   resolving apparent conflicts. Note that ABNF [RFC2234] strings are
+   case insensitive. Non-terminals used in several places are defined in
+   a separate section at the end.
+
+9.1 Commands
+
+    This syntax defines the non-terminal "command-line", which
+   represents what is sent from the client to the server.
+
+     command-line = command EOL
+     command = article-command /
+           body-command /
+           date-command /
+           group-command /
+           hdr-command /
+           head-command /
+           help-command /
+           ihave-command /
+           last-command /
+           list-active-command /
+           list-active-times-command /
+           list-distrib-pats-command /
+           list-distributions-command /
+           list-extensions-command /
+           list-headers-command /
+           list-newsgroups-command /
+           list-overview-fmt-command /
+           listgroup-command /
+           mode-reader-command /
+           newgroups-command /
+           newnews-command /
+           next-command /
+           over-command /
+           post-command /
+           quit-command /
+           stat-command /
+           x-command
+
+     article-command = "ARTICLE" [article-ref]
+     body-command = "BODY" [article-ref]
+     date-command = "DATE"
+     group-command = "GROUP" WS newsgroup-name
+     hdr-command = "HDR" WS header-meta-name [range-ref]
+
+
+
+Feather                  Expires April 15, 2004                [Page 81]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+     head-command = "HEAD" [article-ref]
+     help-command = "HELP"
+     ihave-command = "IHAVE" WS message-id
+     last-command = "LAST"
+     list-active-command = "LIST" [WS "ACTIVE" [WS wildmat]]
+     list-active-times-command = "LIST" WS "ACTIVE.TIMES" [WS wildmat]
+     list-distrib-pats-command = "LIST" WS "DISTRIB.PATS"
+     list-distributions-command = "LIST" WS "DISTRIBUTIONS"
+     list-extensions-command = "LIST" WS "EXTENSIONS"
+     list-headers-command = "LIST" WS "HEADERS"
+     list-newsgroups-command = "LIST" WS "NEWSGROUPS" [WS wildmat]
+     list-overview-fmt-command = "LIST" WS "OVERVIEW.FMT"
+     listgroup-command = "LISTGROUP" [WS newsgroup-name]
+     mode-reader-command = "MODE" WS "READER"
+     newgroups-command = "NEWGROUPS" WS date-time
+     newnews-command = "NEWNEWS" WS wildmat WS date-time
+     next-command = "NEXT"
+     over-command = "OVER" [WS range-ref]
+     post-command = "POST"
+     quit-command = "QUIT"
+     stat-command = "STAT" [article-ref]
+     x-command = x-command-name *(WS x-argument)
+         ; Each extension command is specified fully elsewhere
+
+     article-ref = WS (article-number / message-id)
+     article-number = 1*16DIGIT
+     date = [2DIGIT] 6DIGIT
+     date-time = date WS time [WS "GMT"]
+     header-meta-name = header-name / metadata-name
+     metadata-name = ":" 1*A-NOTCOLON
+     newsgroup-name = 1*wildmat-exact
+     range = article-number ["-" [article-number]]
+     range-ref = WS (range / message-id)
+     time = 6DIGIT
+     x-command-name = 3*12A-CHAR
+     x-argument = 1*P-CHAR
+
+     wildmat = wildmat-pattern *("," ["!"] wildmat-pattern)
+     wildmat-pattern = 1*wildmat-item
+     wildmat-item = wildmat-exact / wildmat-wild
+     wildmat-exact = %x21-29 / %x2B / %x2D-3E / %x40-5A / %x5E-7E /
+          UTF8-non-ascii  ; exclude * , ? [ \ ]
+     wildmat-wild = "*" / "?"
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 82]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+9.2 Responses
+
+    This syntax defines the non-terminal "response", which represents
+   what is sent from the server to the client in response to a command.
+
+     response = simple-response / multiline-response
+     multiline-response = simple-response *content-line termination
+     termination = "." CRLF
+     content-line = [content-text] CRLF
+     content-text = (".." / B-NONDOT) *B-CHAR
+
+     simple-response = 3DIGIT arguments [ SP trailing-comment ] CRLF
+     trailing-comment = *U-CHAR
+     arguments = *( SP argument ) ; How many depends on the response
+     argument = 1*A-CHAR
+
+
+9.3 Articles
+
+    This syntax defines the non-terminal "article", which represents the
+   format of an article as described in Section 3.4.
+
+     article = 1*header CRLF body
+     header = header-name ":" [CRLF] SP header-content CRLF
+     header-content = *( P-CHAR / [CRLF] WS )
+     body = *(*B-CHAR CRLF)
+
+
+9.4 General non-terminals
+
+
+     header-name = 1*A-NOTCOLON
+     message-id = "<" 1*248A-NOTGT ">"
+
+     ; Assorted special character sets
+     ;   A- means based on ASCII, excluding controls and SP
+     ;   P- means based on UTF-8, excluding controls and SP
+     ;   U- means based on UTF-8, excluding NUL CR and LF
+     ;   B- means based on bytes, excluding NUL CR and LF
+     A-CHAR     = %x21-7E
+     A-NOTCOLON = %x21-39 / %x3B-7E  ; exclude ":"
+     A-NOTGT    = %x21-3D / %x3F-7E  ; exclude ">"
+     P-CHAR     = A-CHAR / UTF8-non-ascii
+     U-CHAR     = %x01-09 / %x0B-0C / %x0E-7F / UTF8-non-ascii
+     B-CHAR     = %x01-09 / %x0B-0C / %x0E-FF
+     B-NONDOT   = %x01-09 / %x0B-0C / %x0E-2D / %x2F-FF  ; exclude "."
+
+     CR = %x0D
+
+
+
+Feather                  Expires April 15, 2004                [Page 83]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+     CRLF = CR LF
+     DIGIT = %x30-39
+     EOL = *(SP / HT) CRLF
+     HT = %x09
+     LF = %x0A
+     SP = %x20
+     UTF8-non-ascii = UTF8-2 / UTF8-3 / UTF8-4
+     UTF8-2    = %xC2-DF UTF8-tail
+     UTF8-3    = %xE0 %xA0-BF UTF8-tail / %xE1-EC 2UTF8-tail /
+                 %xED %x80-9F UTF8-tail / %xEE-EF 2UTF8-tail
+     UTF8-4    = %xF0 %x90-BF 2UTF8-tail / %xF1-F3 3UTF8-tail /
+                 %xF4 %x80-8F 2UTF8-tail
+     UTF8-tail = %x80-BF
+     WS = 1*(SP / HT)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 84]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+10. IANA Considerations
+
+   This specification requires IANA to keep a registry of
+   extension-labels. The initial contents of this registry are specified
+   in Section 8.1. As described in Section 8, names beginning with X are
+   reserved for private use while all other names are to be associated
+   with a specification in an RFC on the standards-track or defining an
+   IESG-approved experimental protocol.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 85]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+11. Security Considerations
+
+   This section is meant to inform application developers, information
+   providers, and users of the security limitations in NNTP as described
+   by this document. The discussion does not include definitive
+   solutions to the problems revealed, though it does make some
+   suggestions for reducing security risks.
+
+11.1 Personal and Proprietary Information
+
+   NNTP, because it was created to distribute network news articles,
+   will forward whatever information is stored in those articles.
+   Specification of that information is outside this scope of this
+   document, but it is likely that some personal and/or proprietary
+   information is available in some of those articles. It is very
+   important that designers and implementers provide informative
+   warnings to users so personal and/or proprietary information in
+   material that is added automatically to articles (e.g. in headers) is
+   not disclosed inadvertently. Additionally, effective and easily
+   understood mechanisms to manage the distribution of news articles
+   SHOULD be provided to NNTP Server administrators, so that they are
+   able to report with confidence the likely spread of any particular
+   set of news articles.
+
+11.2 Abuse of Server Log Information
+
+   A server is in the position to save session data about a user's
+   requests that might identify their reading patterns or subjects of
+   interest. This information is clearly confidential in nature and its
+   handling can be constrained by law in certain countries. People using
+   the NNTP protocol to provide data are responsible for ensuring that
+   such material is not distributed without the permission of any
+   individuals that are identifiable by the published results.
+
+11.3 Weak Authentication and Access Control
+
+   There is no user-based or token-based authentication in the basic
+   NNTP specification. Access is normally controlled by server
+   configuration files. Those files specify access by using domain names
+   or IP addresses. However, this specification does permit the creation
+   of extensions to the NNTP protocol itself for such purposes. While
+   including such mechanisms is optional, doing so is strongly
+   encouraged.
+
+   Other mechanisms are also available. For example, a proxy server
+   could be put in place that requires authentication before connecting
+   via the proxy to the NNTP server.
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 86]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+11.4 DNS Spoofing
+
+   Many existing NNTP implementations authorize incoming connections by
+   checking the IP address of that connection against the IP addresses
+   obtained via DNS lookups of lists of domain names given in local
+   configuration files. Servers that use this type of authentication,
+   and clients that find a server by doing a DNS lookup of the server
+   name, rely very heavily on the Domain Name Service, and are thus
+   generally prone to security attacks based on the deliberate
+   misassociation of IP addresses and DNS names. Clients and servers
+   need to be cautious in assuming the continuing validity of an IP
+   number/DNS name association.
+
+   In particular, NNTP clients and servers SHOULD rely on their name
+   resolver for confirmation of an IP number/DNS name association,
+   rather than caching the result of previous host name lookups. Many
+   platforms already can cache host name lookups locally when
+   appropriate, and they SHOULD be configured to do so. It is proper for
+   these lookups to be cached, however, only when the TTL (Time To Live)
+   information reported by the name server makes it likely that the
+   cached information will remain useful.
+
+   If NNTP clients or servers cache the results of host name lookups in
+   order to achieve a performance improvement, they MUST observe the TTL
+   information reported by DNS. If NNTP clients or servers do not
+   observe this rule, they could be spoofed when a previously accessed
+   server's IP address changes. As network renumbering is expected to
+   become increasingly common, the possibility of this form of attack
+   will grow. Observing this requirement thus reduces this potential
+   security vulnerability.
+
+   This requirement also improves the load-balancing behavior of clients
+   for replicated servers using the same DNS name and reduces the
+   likelihood of a user's experiencing failure in accessing sites that
+   use that strategy.
+
+11.5 UTF-8 issues
+
+   UTF-8 [RFC2279] permits only certain sequences of octets and
+   designates others as either malformed or "illegal". The Unicode
+   standard identifies a number of security issues related to illegal
+   sequences and forbids their generation by conforming implementations.
+
+   Implementations of this specification MUST NOT generate malformed or
+   illegal sequences and SHOULD detect them and take some appropriate
+   action. This could include:
+
+   o  generating a 501 response code.
+
+
+
+Feather                  Expires April 15, 2004                [Page 87]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   o  replacing such sequences by the sequence %xEF.BF.BD, which encodes
+      the "replacement character" U+FFFD;
+
+   o  closing the connection;
+
+   o  replacing such sequences by a "guessed" valid sequence (based on
+      properties of the UTF-8 encoding);
+
+   In the last case, the implementation MUST ensure that any replacement
+   cannot be used to bypass validity or security checks. For example,
+   the illegal sequence %xC0.A0 is an over-long encoding for space
+   (%x20). If it is replaced by the latter in a command line, this needs
+   to happen before the command line is parsed into individual
+   arguments. If the replacement came after parsing, it would be
+   possible to generate an argument with an embedded space, which is
+   forbidden. Use of the "replacement character" does not have this
+   problem, since it is permitted wherever non-US-ASCII characters are.
+   Implementations SHOULD use one of the first two solutions where the
+   general structure of the NNTP stream remains intact, and close the
+   connection if it is no longer possible to parse it sensibly.
+
+11.6 Caching of LIST EXTENSIONS results
+
+   The LIST EXTENSIONS command provides information about the extensions
+   currently available from the server. Whenever there is a relevant
+   change to the server state, the results of this command are required
+   to change accordingly.
+
+   In most situations the results from this command in a given server
+   state will not change from session to session; a given extension will
+   be installed permanently on a server. Some clients may therefore wish
+   to remember which extensions a server supports to avoid the delay of
+   an additional command and response, particularly if they open
+   multiple connections in the same session.
+
+   However, information about extensions related to security and privacy
+   MUST NOT be cached, since this could allow a variety of attacks.
+
+   For example, consider a server which permits the use of cleartext
+   passwords on links that are encrypted but not otherwise:
+
+      [Initial TCP connection setup completed.]
+      [S] 200 NNTP Service Ready, posting permitted
+      [C] LIST EXTENSIONS
+      [S] 202 Extensions supported:
+      [S] XENCRYPT
+      [S] .
+      [C] XENCRYPT
+
+
+
+Feather                  Expires April 15, 2004                [Page 88]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      [Client and server negotiate encryption on the link]
+      [S] 283 Encrypted link established
+      [C] LIST EXTENSIONS
+      [S] 202 Extensions supported:
+      [S] XSECRET
+      [S] .
+      [C] XSECRET   fred flintstone
+      [S] 290 Password for fred accepted
+
+   If the client caches the last LIST EXTENSIONS result, then on the
+   next session it will attempt to use XSECRET on an unencrypted link:
+
+      [Initial TCP connection setup completed.]
+      [S] 200 NNTP Service Ready, posting permitted
+      [C] XSECRET   fred flintstone
+      [S] 483 Only permitted on secure links
+
+   exposing the password to any eavesdropper. While the primary cause of
+   this is passing a secret without first checking the security of the
+   link, caching of LIST EXTENSIONS results can increase the risk.
+
+   Any security extension should include requirements to check the
+   security state of the link in a manner appropriate to that extension.
+
+   Caching should normally only be considered for anonymous clients that
+   do not use any security or privacy extensions and for which the time
+   required for an additional command and response is a noticable issue.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 89]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+12. Acknowledgments
+
+   The author acknowledges the original authors of NNTP as documented in
+   RFC 977 [RFC977]: Brian Kantor and Phil Lapsey.
+
+   The author gratefully acknowledges the work of the NNTP committee
+   chaired by Eliot Lear. The organization of this document was
+   influenced by the last available draft from this working group. A
+   special thanks to Eliot for generously providing the original
+   machine-readable sources for that document.
+
+   The author gratefully acknowledges the work of the DRUMS working
+   group, specifically RFC 1869 [RFC1869], which is the basis of the
+   NNTP extensions mechanism detailed in this document.
+
+   The author gratefully acknowledges the authors of RFC 2616 [RFC2616]
+   for providing specific and relevant examples of security issues that
+   should be considered for HTTP. Since many of the same considerations
+   exist for NNTP, those examples that are relevant have been included
+   here with some minor rewrites.
+
+   The author gratefully acknowledges the comments and additional
+   information provided by the following individuals in preparing one or
+   more of the progenitors of this document:
+
+      Russ Allbery <rra@stanford.edu>
+      Wayne Davison <davison@armory.com>
+      Chris Lewis <clewis@bnr.ca>
+      Tom Limoncelli <tal@mars.superlink.net>
+      Eric Schnoebelen <eric@egsner.cirr.com>
+      Rich Salz <rsalz@osf.org>
+
+   This work was motivated by the work of various news reader authors
+   and news server authors, which includes those listed below:
+
+   Rick Adams
+      Original author of the NNTP extensions to the RN news reader and
+      last maintainer of Bnews
+
+   Stan Barber
+      Original author of the NNTP extensions to the news readers that
+      are part of Bnews
+
+   Geoff Collyer
+      Original author of the OVERVIEW database proposal and one of the
+      original authors of CNEWS
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 90]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Dan Curry
+      Original author of the xvnews news reader
+
+   Wayne Davison
+      Author of the first threading extensions to the RN news reader
+      (commonly called TRN)
+
+   Geoff Huston
+      Original author of ANU NEWS
+
+   Phil Lapsey
+      Original author of the UNIX reference implementation for NNTP
+
+   Iain Lea
+      Original maintainer of the TIN news reader
+
+   Chris Lewis
+      First known implementer of the AUTHINFO GENERIC extension
+
+   Rich Salz
+      Original author of INN
+
+   Henry Spencer
+      One of the original authors of CNEWS
+
+   Kim Storm
+      Original author of the NN news reader
+
+   Finally, the present author gratefully acknowledges the vast amount
+   of work put into previous drafts by the previous author:
+
+      Stan Barber <sob@academ.com>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 91]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+Normative References
+
+   [ANSI1986]
+              American National Standards Institute, "Coded Character
+              Set - 7-bit American Standard Code for Information
+              Interchange", ANSI X3.4, 1986.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119, March 1997.
+
+   [RFC2234]  Crocker, D. and P. Overell, "Augmented BNF for Syntax
+              Specifications: ABNF", RFC 2234, November 1997.
+
+   [RFC2279]  Yergeau, F., "UTF-8, a transformation format of ISO
+              10646", RFC 2279, January 1998.
+
+   [RFC977]   Kantor, B. and P. Lapsley, "Network News Transfer
+              Protocol", RFC 977, February 1986.
+
+   [TF.686-1]
+              International Telecommunications Union - Radio, "Glossary,
+              ITU-R Recommendation TF.686-1", ITU-R Recommendation
+              TF.686-1, October 1997.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 92]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+Informative References
+
+   [RFC1036]  Horton, M. and R. Adams, "Standard for interchange of
+              USENET messages", RFC 1036, December 1987.
+
+   [RFC1305]  Mills, D., "Network Time Protocol (Version 3)
+              Specification, Implementation", RFC 1305, March 1992.
+
+   [RFC1869]  Klensin, J., Freed, N., Rose, M., Stefferud, E. and D.
+              Crocker, "SMTP Service Extensions", STD 10, RFC 1869,
+              November 1995.
+
+   [RFC2616]  Fielding, R., Gettys, J., Mogul, J., Nielsen, H.,
+              Masinter, L., Leach, P. and T. Berners-Lee, "Hypertext
+              Transfer Protocol -- HTTP/1.1", RFC 2616, June 1999.
+
+   [RFC2629]  Rose, M., "Writing I-Ds and RFCs using XML", RFC 2629,
+              June 1999.
+
+   [RFC2822]  Resnick, P., "Internet Message Format", RFC 2822, April
+              2001.
+
+   [RFC2980]  Barber, S., "Common NNTP Extensions", RFC 2980, October
+              2000.
+
+   [ROBE1995]
+              Robertson, R., "FAQ: Overview database / NOV General
+              Information", January 1995.
+
+   [SALZ1992]
+              Salz, R., "Manual Page for wildmat(3) from the INN 1.4
+              distribution, Revision 1.10", April 1992.
+
+
+Author's Address
+
+   Clive D.W. Feather
+   Thus plc
+   322 Regents Park Road
+   London  N3 2QQ
+   GB
+
+   Phone: +44 20 8495 6138
+   Fax:   +44 870 051 9937
+   EMail: clive@demon.net
+   URI:   http://www.davros.org/
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 93]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+Appendix A. Future Directions
+
+   It has been proposed that the response code range 6xx is used for
+   multiline responses. While existing commands and extensions do not
+   use this, it would at least limit the problem clients would face in
+   dealing with an unknown response.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 94]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+Appendix B. Interaction with other specifications
+
+   NNTP is most often used for transferring articles that conform to RFC
+   1036 [RFC1036] (such articles are called "Usenet articles" here). It
+   is also sometimes used for transferring email messages that conform
+   to RFC 2822 [RFC2822] (such articles are called "email articles"
+   here). In this situation, articles must conform both to this
+   specification and to that other one; this appendix describes some
+   relevant issues.
+
+B.1 Header folding
+
+   NNTP allows a header line to be folded (by inserting a CRLF pair)
+   before any space or TAB character.
+
+   Both email and Usenet articles are required to have at least one
+   octet other than space or TAB on each header line. Thus folding can
+   only happen at one point in each sequence of consecutive spaces or
+   TABs. Usenet articles are further required to have the header name,
+   colon, and following space all on the first line; folding may only
+   happen beyond that space. Finally, some non-conforming software will
+   remove trailing spaces and TABs from a line. Therefore it might be
+   inadvisable to fold a header after a space or TAB.
+
+   For maximum safety, header lines SHOULD conform to the following
+   syntax rather than that in Section 9.3.
+
+     header = header-name ":" SP [header-content] CRLF
+     header-content = [WS] 1*P-CHAR *( [CRLF] WS 1*P-CHAR )
+
+
+B.2 Message-IDs
+
+   Every article handled by an NNTP server MUST have a unique
+   message-id. For the purposes of this specification, a message-id is
+   an arbitrary opaque string that is merely needs to meet certain
+   syntactic requirements and is just a way to refer to the article.
+
+   Because there is a significant risk of old articles being reinjected
+   into the global Usenet system, RFC 1036 [RFC1036] requires that
+   message-ids are globally unique for all time.
+
+   This specification states that message-ids are the same if and only
+   if they consist of the same sequence of octets. Other specifications
+   may define two different sequences as being equal because they are
+   putting an interpretation on particular characters. RFC 2822
+   [RFC2822] has a concept of "quoted" and "escaped" characters. It
+   therefore considers the three messages-ids:
+
+
+
+Feather                  Expires April 15, 2004                [Page 95]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      <abcd@example.com>
+      <"abcd"@example.com>
+      <"ab\cd"@example.com>
+
+   as being identical. Therefore an NNTP implementation handing email
+   articles must ensure that only one of these three appears in the
+   protocol and the other two are converted to it as and when necessary,
+   such as when a client checks the results of a NEWNEWS command against
+   an internal database of message-ids.
+
+   This specification does not describe how the message-id of an article
+   is determined; it may be deduced from the contents of the article or
+   derived from some external source. If the server is also conforming
+   to another specification that contains a definition of message-id
+   compatible with this one, the server SHOULD use those message-ids. A
+   common approach, and one that SHOULD be used for email and Usenet
+   articles, is to extract the message-id from the contents of a header
+   with name "Message-ID". This may not be as simple as copying the
+   entire header contents; it may be necessary to strip off comments and
+   undo quoting, or to reduce "equivalent" message-ids to a canonical
+   form.
+
+   If an article is obtained though the IHAVE command, there will be a
+   message-id provided with the command. The server MAY either use it or
+   determine one from the article contents. However, whichever it does
+   it SHOULD ensure that, if the IHAVE command is repeated with the same
+   argument and article, it will be recognised as a duplicate.
+
+   If an article does not contain a message-id that the server can
+   identify, it MUST synthesise one. This could, for example, be a
+   simple sequence number or based on the date and time that the article
+   arrived. When handling email or Usenet articles, a Message-ID header
+   SHOULD be added to ensure global consistency and uniqueness.
+
+B.3 Article posting
+
+   As far as NNTP is concerned, the POST and IHAVE commands provide the
+   same basic facilities in a slightly different way. However they have
+   rather different intentions.
+
+   The IHAVE command is intended for transmitting conforming articles
+   between a system of NNTP servers, with all articles perhaps also
+   conforming to another specification (e.g. all articles are Usenet
+   articles). It is expected that the client will have already done any
+   necessary validation (or has in turn obtained the article from a
+   third party which has done so); therefore the contents SHOULD be left
+   unchanged.
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 96]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   In contrast, the POST command is intended for use when an end-user is
+   injecting a newly-created article into a such a system. The article
+   being transferred might not be a conforming email or Usenet article,
+   and the server is expected to validate it and, if necessary, convert
+   it to the right form for onward distribution. It is often the case
+   that this is done by a separate piece of software on the server
+   installation. If so, the NNTP server SHOULD pass the incoming article
+   to that software unaltered, making no attempt to filter characters,
+   fold or limit lines, or otherwise process the incoming text.
+
+   The POST command can fail in various ways and clients should be
+   prepared to re-send an article. When doing so, however, it is often
+   important to ensure - as far as possible - that the same message-id
+   is allocated to both attempts so that the server, or other servers,
+   can recognise the two articles as being duplicates. In the case of
+   email or Usenet articles, therefore, the posted article SHOULD
+   contain a header with name "Message-ID" and the contents of this
+   header SHOULD be identical on each attempt. The server SHOULD ensure
+   that two POSTed articles with the same contents for this header are
+   recognised as identical and the same message-id allocated, whether or
+   not those contents are suitable for use as the message-id.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 97]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+Appendix C. Summary of Response Codes
+
+   This section contains a list of every response code defined in this
+   document, whether it is multi-line, which commands can generate it,
+   what arguments it has, and what its meaning is.
+
+   Response code 100 (multi-line)
+      Generated by: HELP
+      Meaning: help text follows.
+
+   Response code 111
+      Generated by: DATE
+      1 argument: yyyymmddhhmmss
+      Meaning: server date and time.
+
+   Response code 200
+      Generated by: initial connection, MODE READER
+      Meaning: service available, posting allowed.
+
+   Response code 201
+      Generated by: initial connection, MODE READER
+      Meaning: service available, posting prohibited.
+
+   Response code 202 (multi-line)
+      Generated by: LIST EXTENSIONS
+      Meaning: extension list follows.
+
+   Response code 205
+      Generated by: QUIT
+      Meaning: connection closing (the server immediately closes the
+      connection).
+
+   Response code 211
+      The 211 response code has two completely different forms depending
+      on which command generated it:
+
+         Generated by: GROUP
+         4 arguments: number low high group
+         Meaning: group selected.
+
+         (multi-line)
+         Generated by: LISTGROUP
+         Meaning: article numbers follow.
+
+   Response code 215 (multi-line)
+      Generated by: LIST ACTIVE, LIST ACTIVE.TIMES, LIST DISTRIB.PATS,
+      LIST DISTRIBUTIONS, LIST HEADERS, LIST NEWSGROUPS,
+      LIST OVERVIEW.FMT
+
+
+
+Feather                  Expires April 15, 2004                [Page 98]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      Meaning: information follows.
+
+   Response code 220 (multi-line)
+      Generated by: ARTICLE
+      2 arguments: n message-id
+      Meaning: article follows.
+
+   Response code 221 (multi-line)
+      Generated by: HEAD
+      2 arguments: n message-id
+      Meaning: article headers follow.
+
+   Response code 222 (multi-line)
+      Generated by: BODY
+      2 arguments: n message-id
+      Meaning: article body follows.
+
+   Response code 223
+      Generated by: LAST, NEXT, STAT
+      2 arguments: n message-id
+      Meaning: article exists and selected.
+
+   Response code 224 (multi-line)
+      Generated by: OVER
+      Meaning: overview information follows.
+
+   Response code 225 (multi-line)
+      Generated by: HDR
+      Meaning: headers follow.
+
+   Response code 230 (multi-line)
+      Generated by: NEWNEWS
+      Meaning: list of new articles follows.
+
+   Response code 231 (multi-line)
+      Generated by: NEWGROUPS
+      Meaning: list of new newsgroups follows.
+
+   Response code 235
+      Generated by: IHAVE (second stage)
+      Meaning: article transferred OK.
+
+   Response code 240
+      Generated by: POST (second stage)
+      Meaning: article received OK.
+
+
+
+
+
+
+Feather                  Expires April 15, 2004                [Page 99]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Response code 335
+      Generated by: IHAVE (first stage)
+      Meaning: send article to be transferred.
+
+   Response code 340
+      Generated by: POST (first stage)
+      Meaning: send article to be posted.
+
+   Response code 400
+      Generic response and generated by initial connection
+      Meaning: service not available or no longer available (the server
+      immediately closes the connection).
+
+   Response code 401
+      Generic response
+      1 argument: extension-label
+      Meaning: the server is in the wrong mode; the indicated extension
+      should be used to change the mode.
+
+   Response code 402
+      Generated by: LIST EXTENSIONS
+      Meaning: server has no extensions.
+
+   Response code 403
+      Generic response
+      Meaning: internal fault or problem preventing action being taken.
+
+   Response code 411
+      Generated by: GROUP, LISTGROUP
+      Meaning: no such newsgroup.
+
+   Response code 412
+      Generated by: ARTICLE, BODY, HDR, HEAD, LAST, LISTGROUP, NEXT,
+      OVER, STAT
+      Meaning: no newsgroup selected.
+
+   Response code 420
+      Generated by: ARTICLE, BODY, HDR, HEAD, LAST, NEXT, OVER, STAT
+      Meaning: current article number is invalid.
+
+   Response code 421
+      Generated by: NEXT
+      Meaning: no next article in this group.
+
+   Response code 422
+      Generated by: LAST
+      Meaning: no previous article in this group.
+
+
+
+
+Feather                  Expires April 15, 2004               [Page 100]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Response code 423
+      Generated by: ARTICLE, BODY, HDR, HEAD, OVER, STAT
+      Meaning: no articles in that range.
+
+   Response code 430
+      Generated by: ARTICLE, BODY, HDR, HEAD, OVER, STAT
+      Meaning: no article with that message-id.
+
+   Response code 435
+      Generated by: IHAVE (first stage)
+      Meaning: article not wanted.
+
+   Response code 436
+      Generated by: IHAVE (either stage)
+      Meaning: transfer not possible (first stage) or failed (second
+      stage); try again later.
+
+   Response code 437
+      Generated by: IHAVE (second stage)
+      Meaning: transfer rejected; do not retry.
+
+   Response code 440
+      Generated by: POST (first stage)
+      Meaning: posting not permitted.
+
+   Response code 441
+      Generated by: POST (second stage)
+      Meaning: posting failed.
+
+   Response code 480
+      Generic response
+      Meaning: command unavailable until the client has authenticated
+      itself.
+
+   Response code 483
+      Generic response
+      Meaning: command unavailable until suitable privacy has been
+      arranged.
+
+   Response code 500
+      Generic response
+      Meaning: unknown command.
+
+   Response code 501
+      Generic response
+      Meaning: syntax error in command.
+
+
+
+
+
+Feather                  Expires April 15, 2004               [Page 101]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   Response code 502
+      Generic response and generated by initial connection
+      Meaning for the initial connection and the MODE READER command:
+      service permanently unavailable (the server immediately closes the
+      connection).
+      Meaning for all other commands: command not permitted (and there
+      is no way for the client to change this).
+
+   Response code 503
+      Generic response
+      Meaning: feature not supported.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004               [Page 102]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+Appendix D. Formal specification of the standard extensions
+
+   This section gives a formal definition of each of the extensions in
+   Section 8.2 as required by Section 8 for the IANA registry.
+
+D.1 The LISTGROUP extension
+
+   o  This extension provides information about specific article
+      numbers.
+
+   o  The extension-label is "LISTGROUP".
+
+   o  The extension-label has no arguments.
+
+   o  The extension defines one new command: LISTGROUP, whose behaviour,
+      arguments, and responses are defined in Section 8.3.
+
+   o  The extension does not associate any new responses with
+      pre-existing NNTP commands.
+
+   o  The extension does not affect the behaviour of a server or client
+      other than via the new command.
+
+   o  The extension does not affect the maximum length of commands and
+      initial response lines.
+
+   o  The extension does not alter pipelining, and the LISTGROUP command
+      can be pipelined.
+
+   o  Use of this extension does not alter the output from LIST
+      EXTENSIONS.
+
+   o  The extension does not cause any pre-existing command to produce a
+      401, 480, or 483 response.
+
+   o  The LISTGROUP command can only be used after the MODE READER
+      command.
+
+
+D.2 The OVER extension
+
+   o  This extension provides support for an overview of newsgroups.
+
+   o  The extension-label is "OVER".
+
+   o  The extension-label has no arguments.
+
+   o  The extension defines two new commands: OVER and LIST
+
+
+
+Feather                  Expires April 15, 2004               [Page 103]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      OVERVIEW.FMT, whose behaviour, arguments, and responses are
+      defined in Section 8.5.
+
+   o  The extension does not associate any new responses with
+      pre-existing NNTP commands.
+
+   o  The extension requires the server to maintain an overview database
+      and article metadata, as described in Section 8.4.
+
+   o  The extension does not affect the maximum length of commands and
+      initial response lines.
+
+   o  The extension does not alter pipelining, and the OVER and LIST
+      OVERVIEW.FMT commands can be pipelined.
+
+   o  Use of this extension does not alter the output from LIST
+      EXTENSIONS.
+
+   o  The extension does not cause any pre-existing command to produce a
+      401, 480, or 483 response.
+
+   o  The OVER and LIST OVERVIEW.FMT commands can only be used after the
+      MODE READER command.
+
+
+D.3 The HDR extension
+
+   o  This extension provides batched header retrieval.
+
+   o  The extension-label is "HDR".
+
+   o  The extension-label has the optional argument "ALL", indicating it
+      may be used with any header or metadata item.
+
+   o  The extension defines two new commands: HDR and LIST HEADERS,
+      whose behaviour, arguments, and responses are defined in Section
+      8.6.
+
+   o  The extension does not associate any new responses with
+      pre-existing NNTP commands.
+
+   o  The extension requires the server to maintain article metadata, as
+      described in Section 8.4.
+
+   o  The extension does not affect the maximum length of commands and
+      initial response lines.
+
+   o  The extension does not alter pipelining, and the HDR and LIST
+
+
+
+Feather                  Expires April 15, 2004               [Page 104]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+      HEADERS commands can be pipelined.
+
+   o  Use of this extension does not alter the output from LIST
+      EXTENSIONS.
+
+   o  The extension does not cause any pre-existing command to produce a
+      401, 480, or 483 response.
+
+   o  The HDR and LIST HEADERS commands can only be used after the MODE
+      READER command.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004               [Page 105]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+Intellectual Property Statement
+
+   The IETF takes no position regarding the validity or scope of any
+   intellectual property or other rights that might be claimed to
+   pertain to the implementation or use of the technology described in
+   this document or the extent to which any license under such rights
+   might or might not be available; neither does it represent that it
+   has made any effort to identify any such rights. Information on the
+   IETF's procedures with respect to rights in standards-track and
+   standards-related documentation can be found in BCP-11. Copies of
+   claims of rights made available for publication and any assurances of
+   licenses to be made available, or the result of an attempt made to
+   obtain a general license or permission for the use of such
+   proprietary rights by implementors or users of this specification can
+   be obtained from the IETF Secretariat.
+
+   The IETF invites any interested party to bring to its attention any
+   copyrights, patents or patent applications, or other proprietary
+   rights which may cover technology that may be required to practice
+   this standard. Please address the information to the IETF Executive
+   Director.
+
+
+Full Copyright Statement
+
+   Copyright (C) The Internet Society (2003). All Rights Reserved.
+
+   This document and translations of it may be copied and furnished to
+   others, and derivative works that comment on or otherwise explain it
+   or assist in its implementation may be prepared, copied, published
+   and distributed, in whole or in part, without restriction of any
+   kind, provided that the above copyright notice and this paragraph are
+   included on all such copies and derivative works. However, this
+   document itself may not be modified in any way, such as by removing
+   the copyright notice or references to the Internet Society or other
+   Internet organizations, except as needed for the purpose of
+   developing Internet standards in which case the procedures for
+   copyrights defined in the Internet Standards process must be
+   followed, or as required to translate it into languages other than
+   English.
+
+   The limited permissions granted above are perpetual and will not be
+   revoked by the Internet Society or its successors or assignees.
+
+   This document and the information contained herein is provided on an
+   "AS IS" basis and THE INTERNET SOCIETY AND THE INTERNET ENGINEERING
+   TASK FORCE DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING
+   BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE INFORMATION
+
+
+
+Feather                  Expires April 15, 2004               [Page 106]
+
+Internet-Draft      Network News Transport Protocol         October 2003
+
+
+   HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+
+
+Acknowledgment
+
+   Funding for the RFC Editor function is currently provided by the
+   Internet Society.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Feather                  Expires April 15, 2004               [Page 107]
+
