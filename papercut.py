@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.82 2004-01-04 20:33:55 jpm Exp $
+# $Id: papercut.py,v 1.83 2004-01-25 05:01:21 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -14,7 +14,7 @@ import StringIO
 import settings
 import papercut_cache
 
-__VERSION__ = '0.9.10'
+__VERSION__ = '0.9.11'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients (draft 20 of the new NNTP protocol says at least 3 minutes)
@@ -31,7 +31,6 @@ ERR_NOARTICLERETURNED = '420 No article(s) selected'
 ERR_NOPREVIOUSARTICLE = '422 no previous article in this group'
 ERR_NONEXTARTICLE = '421 no next article in this group'
 ERR_NOSUCHARTICLENUM = '423 no such article in this group'
-ERR_NOSLAVESHERE = '202 no slaves here please (this is a standalone server)'
 ERR_NOSUCHARTICLE = '430 no such article'
 ERR_NOIHAVEHERE = '435 article not wanted - do not send it'
 ERR_NOSTREAM = '500 Command not understood'
@@ -40,6 +39,7 @@ ERR_NOTPERFORMED = '503 program error, function not performed'
 ERR_POSTINGFAILED = '441 Posting failed'
 ERR_AUTH_NO_PERMISSION = '502 No permission'
 ERR_NODESCAVAILABLE = '481 Groups and descriptions unavailable'
+STATUS_SLAVE = '202 slave status noted'
 STATUS_POSTMODE = '200 Hello, you can post'
 STATUS_NOPOSTMODE = '201 Hello, you can\'t post'
 STATUS_HELPMSG = '100 help text follows'
@@ -314,7 +314,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOGROUPSELECTED)
             return
         # get the article number if it is the appropriate option
-        if self.tokens[1].find('@') != -1:
+        if self.tokens[1].find('<') != -1:
             self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
             report_article_number = 0
         else:
@@ -322,7 +322,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if not backend.get_STAT(self.selected_group, self.tokens[1]):
             self.send_response(ERR_NOSUCHARTICLENUM)
             return
-        self.selected_article = self.tokens[1]
+        # only set the internally selected article if the article number variation is used
+        if self.tokens[1].find('<') == -1:
+            self.selected_article = self.tokens[1]
         self.send_response(STATUS_STAT % (report_article_number, backend.get_message_id(self.tokens[1], self.selected_group)))
 
     def do_ARTICLE(self):
@@ -348,7 +350,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOGROUPSELECTED)
             return
         # get the article number if it is the appropriate option
-        if self.tokens[1].find('@') != -1:
+        if self.tokens[1].find('<') != -1:
             self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
             report_article_number = 0
         else:
@@ -357,6 +359,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if result == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
+            # only set the internally selected article if the article number variation is used
+            if self.tokens[1].find('<') == -1:
+                self.selected_article = self.tokens[1]
             response = STATUS_ARTICLE % (report_article_number, backend.get_message_id(self.selected_article, self.selected_group))
             self.send_response("%s\r\n%s\r\n\r\n%s\r\n." % (response, result[0], result[1]))
 
@@ -421,7 +426,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOARTICLESELECTED)
             return
         if len(self.tokens) == 2:
-            if self.tokens[1].find('@') != -1:
+            if self.tokens[1].find('<') != -1:
                 self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
             article_number = self.tokens[1]
             body = backend.get_BODY(self.selected_group, self.tokens[1])
@@ -431,6 +436,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if body == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
+            # only set the internally selected article if the article number variation is used
+            if self.tokens[1].find('<') == -1:
+                self.selected_article = self.tokens[1]
             self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (article_number, backend.get_message_id(self.selected_article, self.selected_group)), body))
 
     def do_HEAD(self):
@@ -443,8 +451,11 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
             return
+        if ((len(self.tokens) == 1) and (self.selected_article == 'ggg')):
+            self.send_response(ERR_NOARTICLESELECTED)
+            return
         if len(self.tokens) == 2:
-            if self.tokens[1].find('@') != -1:
+            if self.tokens[1].find('<') != -1:
                 self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
             else:
                 # only set the internal selected article when an article number is used
@@ -452,14 +463,14 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             article_number = self.tokens[1]
             head = backend.get_HEAD(self.selected_group, self.tokens[1])
         else:
-            if self.selected_article == 'ggg':
-                self.send_response(ERR_NOARTICLESELECTED)
-                return
             article_number = self.selected_article
             head = backend.get_HEAD(self.selected_group, self.selected_article)
         if head == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
+            # only set the internally selected article if the article number variation is used
+            if self.tokens[1].find('<') == -1:
+                self.selected_article = self.tokens[1]
             self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (article_number, backend.get_message_id(self.selected_article, self.selected_group)), head))
 
     def do_OVER(self):
@@ -702,6 +713,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             436 transfer failed - try again later
             437 article rejected - do not try again
         """
+        if (len(self.tokens) != 2) or (self.tokens[1].find('<') == -1):
+            self.send_response(ERR_CMDSYNTAXERROR)
+            return
         self.send_response(ERR_NOIHAVEHERE)
 
     def do_SLAVE(self):
@@ -711,7 +725,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         Responses:
             202 slave status noted
         """
-        self.send_response(ERR_NOSLAVESHERE)
+        self.send_response(STATUS_SLAVE)
 
     def do_MODE(self):
         """
