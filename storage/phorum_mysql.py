@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.7 2002-02-01 15:55:33 jpm Exp $
+# $Id: phorum_mysql.py,v 1.8 2002-02-02 22:23:41 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -28,11 +28,7 @@ class Papercut_Backend:
         self.cursor = self.conn.cursor()
 
     def get_message_body(self, headers):
-        # how many lines do we have here..
-        lines = int(lines_regexp.search(headers, 1).groups()[0].strip())
-        # XXX: Need to un-escape the doubled dots
-        raw_headers = headers.split('\r\n')
-        return doubleline_regexp.sub(".", "\r\n".join(raw_headers[:lines]))
+        return get_text_message(headers)
 
     def get_formatted_time(self, time_tuple):
         return time.strftime('%a, %d %B %Y %H:%M:%S %Z', time_tuple)
