@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.87 2004-05-01 23:18:47 jpm Exp $
+# $Id: papercut.py,v 1.88 2004-08-01 01:51:48 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -78,6 +78,7 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # so let's create them just once and re-use as needed
 newsgroups_regexp = re.compile("^Newsgroups:(.*)", re.M)
 contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
+authinfo_regexp = re.compile("AUTHINFO PASS")
 
 if os.name == 'posix':
     class NNTPServer(SocketServer.ForkingTCPServer):
@@ -152,7 +153,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.tokens = line.split(' ')
             # NNTP commands are case-insensitive
             command = self.tokens[0].upper()
-            settings.logEvent('Received request: %s' % (line))
+            # don't save the password in the log file
+            match = authinfo_regexp.search(line)
+            if not match:
+                settings.logEvent('Received request: %s' % (line))
             if command == 'POST':
                 if settings.server_type == 'read-only':
                     settings.logEvent('Error - Read-only server received a post request from \'%s\'' % self.client_address[0])
@@ -296,7 +300,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         elif len(self.tokens) == 2:
             self.send_response(ERR_NOTPERFORMED)
             return
-        result = backend.get_LIST()
+        result = backend.get_LIST(self.auth_username)
         self.send_response("%s\r\n%s\r\n." % (STATUS_LIST, result))
 
     def do_STAT(self):

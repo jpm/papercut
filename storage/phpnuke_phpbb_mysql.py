@@ -168,7 +168,7 @@ class Papercut_Storage:
         result = self.get_forum_stats(forum_id)
         return (result[0], result[2], result[1])
 
-    def get_LIST(self):
+    def get_LIST(self, username=""):
         stmt = """
                 SELECT
                     nntp_group_name,

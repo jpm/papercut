@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mbox.py,v 1.6 2004-02-01 20:13:58 jpm Exp $
+# $Id: mbox.py,v 1.7 2004-08-01 01:51:48 jpm Exp $
 
 import os
 import mailbox
@@ -67,7 +67,7 @@ class Papercut_Storage:
         result = self.get_mbox_stats(group_name.replace('papercut.mbox.', ''))
         return (result[0], result[2], result[1])
 
-    def get_LIST(self):
+    def get_LIST(self, username=""):
         result = self.get_file_list()
         if len(result) == 0:
             return ""

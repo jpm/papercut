@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright (c) 2004 Scott Parish, Joao Prado Maia
 # See the LICENSE file for more information.
-# $Id: maildir.py,v 1.1 2004-08-01 00:50:30 jpm Exp $
+# $Id: maildir.py,v 1.2 2004-08-01 01:51:48 jpm Exp $
 
 #
 # Maildir backend for papercut
@@ -157,7 +157,7 @@ class Papercut_Storage:
         return (result[0], result[2], result[1])
 
 
-    def get_LIST(self):
+    def get_LIST(self, username=""):
         result = self.get_groupname_list()
         
         if len(result) == 0:

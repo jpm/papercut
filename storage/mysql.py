@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.43 2004-02-01 20:13:58 jpm Exp $
+# $Id: mysql.py,v 1.44 2004-08-01 01:51:48 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -144,7 +144,7 @@ class Papercut_Storage:
         result = self.get_table_stats(table_name)
         return (result[0], result[2], result[1])
 
-    def get_LIST(self):
+    def get_LIST(self, username=""):
         stmt = """
                 SELECT
                     name,

@@ -64,7 +64,7 @@ class Papercut_Storage:
         response, count, first, last, name = self.nntp.group(group_name)
         return (count, first, last)
 
-    def get_LIST(self):
+    def get_LIST(self, username=""):
         # Returns: list of (groupname, table)
         log(">get_LIST")
         response, lst= self.nntp.list()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.46 2004-02-01 20:13:58 jpm Exp $
+# $Id: phorum_mysql.py,v 1.47 2004-08-01 01:51:48 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -285,7 +285,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         result = self.get_table_stats(table_name)
         return (result[0], result[2], result[1])
 
-    def get_LIST(self):
+    def get_LIST(self, username=""):
         stmt = """
                 SELECT
                     nntp_group_name,

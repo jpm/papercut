@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002, 2003, 2004 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.19 2004-08-01 00:17:24 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.20 2004-08-01 01:51:48 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -169,17 +169,42 @@ class Papercut_Storage:
         result = self.get_forum_stats(forum_id)
         return (result[0], result[2], result[1])
 
-    def get_LIST(self):
-        stmt = """
-                SELECT
-                    nntp_group_name,
-                    forum_id
-                FROM
-                    %sforums
-                WHERE
-                    LENGTH(nntp_group_name) > 0
-                ORDER BY
-                    nntp_group_name ASC""" % (settings.phpbb_table_prefix)
+    def get_LIST(self, username=""):
+        # If the username is supplied, then find what he is allowed to see
+        if len(username) > 0:
+            stmt = """
+                   SELECT
+                       DISTINCT f.nntp_group_name,
+                       f.forum_id
+                   FROM
+                       %sforums AS f
+                   INNER JOIN
+                       %sauth_access AS aa
+                   ON
+                       f.forum_id=aa.forum_id
+                   INNER JOIN
+                       %suser_group AS ug
+                   ON
+                       aa.group_id=ug.group_id
+                   INNER JOIN
+                       %susers AS u
+                   ON
+                       ug.user_id=u.user_id
+                   WHERE
+                       u.username='%s' AND
+                       LENGTH(f.nntp_group_name) > 0 OR
+                       f.auth_view = 0""" % (settings.phpbb_table_prefix, settings.phpbb_table_prefix, settings.phpbb_table_prefix, settings.phpbb_table_prefix, username)
+        else:
+            stmt = """
+                   SELECT
+                       nntp_group_name,
+                       forum_id
+                   FROM
+                       %sforums
+                   WHERE
+                       LENGTH(nntp_group_name) > 0 AND auth_view=0
+                   ORDER BY
+                       nntp_group_name ASC""" % (settings.phpbb_table_prefix)
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         if len(result) == 0:
