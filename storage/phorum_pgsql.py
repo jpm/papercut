@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_pgsql.py,v 1.3 2003-02-21 18:46:52 jpm Exp $
+# $Id: phorum_pgsql.py,v 1.4 2003-02-21 18:52:08 jpm Exp $
 from pyPgSQL import PgSQL
 import time
 from mimify import mime_encode_header
@@ -147,7 +147,7 @@ class Papercut_Storage:
             self.cursor.execute(stmt)
             result = list(self.cursor.fetchall())
             for row in result:
-                recipients.append(row[0])
+                recipients.append(row[0].strip())
         return recipients
 
     def send_notifications(self, group_name, msg_id, thread_id, parent_id, msg_author, msg_email, msg_subject, msg_body):
@@ -179,6 +179,7 @@ To edit this message use this URL:
                     nntp_group_name='%s'""" % (group_name)
         self.cursor.execute(stmt)
         forum_id, forum_name = self.cursor.fetchone()
+        forum_name.strip()
         # open the main configuration file
         fp = open("%sforums.php" % (settings.phorum_settings_path), "r")
         content = fp.read()
@@ -359,7 +360,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
             return None
         result = list(self.cursor.fetchone())
         if len(result[2]) == 0:
-            author = result[1]
+            author = result[1].strip()
         else:
             author = "%s <%s>" % (result[1].strip(), result[2].strip())
         formatted_time = strutil.get_formatted_time(time.localtime(result[4]))
@@ -431,16 +432,16 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
             return None
         result = list(self.cursor.fetchone())
         if len(result[2]) == 0:
-            author = result[1]
+            author = result[1].strip()
         else:
-            author = "%s <%s>" % (result[1], result[2])
+            author = "%s <%s>" % (result[1].strip(), result[2].strip())
         formatted_time = strutil.get_formatted_time(time.localtime(result[4]))
         headers = []
         headers.append("Path: %s" % (settings.nntp_hostname))
         headers.append("From: %s" % (author))
         headers.append("Newsgroups: %s" % (group_name))
         headers.append("Date: %s" % (formatted_time))
-        headers.append("Subject: %s" % (result[3]))
+        headers.append("Subject: %s" % (result[3].strip()))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
         headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
         if result[5] != 0:
@@ -490,9 +491,9 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         overviews = []
         for row in result:
             if row[3] == '':
-                author = row[2]
+                author = row[2].strip()
             else:
-                author = "%s <%s>" % (row[2], row[3])
+                author = "%s <%s>" % (row[2].strip(), row[3].strip())
             formatted_time = strutil.get_formatted_time(time.localtime(row[5]))
             message_id = "<%s@%s>" % (row[0], group_name)
             line_count = len(row[6].split('\n'))
@@ -535,10 +536,10 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         hdrs = []
         for row in result:
             if header.upper() == 'SUBJECT':
-                hdrs.append('%s %s' % (row[0], row[4]))
+                hdrs.append('%s %s' % (row[0], row[4].strip()))
             elif header.upper() == 'FROM':
                 # XXX: totally broken with empty values for the email address
-                hdrs.append('%s %s <%s>' % (row[0], row[2], row[3]))
+                hdrs.append('%s %s <%s>' % (row[0], row[2].strip(), row[3].strip()))
             elif header.upper() == 'DATE':
                 hdrs.append('%s %s' % (row[0], strutil.get_formatted_time(time.localtime(result[5]))))
             elif header.upper() == 'MESSAGE-ID':
@@ -619,9 +620,9 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         hdrs = []
         for row in result:
             if header.upper() == 'SUBJECT':
-                hdrs.append('%s %s' % (row[0], row[4]))
+                hdrs.append('%s %s' % (row[0], row[4].strip()))
             elif header.upper() == 'FROM':
-                hdrs.append('%s %s <%s>' % (row[0], row[2], row[3]))
+                hdrs.append('%s %s <%s>' % (row[0], row[2].strip(), row[3].strip()))
             elif header.upper() == 'DATE':
                 hdrs.append('%s %s' % (row[0], strutil.get_formatted_time(time.localtime(result[5]))))
             elif header.upper() == 'MESSAGE-ID':
@@ -727,7 +728,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                     0
                 )
                 """
-        if not self.cursor.execute(stmt, (new_id, thread_id, parent_id, author.strip(), subject, email, ip_address, modifystamp,)):
+        if not self.cursor.execute(stmt, (new_id, thread_id, parent_id, author.strip(), subject.strip(), email.strip(), ip_address, modifystamp,)):
             return None
         else:
             # insert into the '*_bodies' table
@@ -754,5 +755,5 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                 return None
             else:
                 # alert forum moderators
-                self.send_notifications(group_name, new_id, thread_id, parent_id, author.strip(), email, subject, body)
+                self.send_notifications(group_name, new_id, thread_id, parent_id, author.strip(), email.strip(), subject.strip(), body)
                 return 1
