@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.3 2002-01-11 06:20:57 jpm Exp $
+# $Id: papercut.py,v 1.4 2002-01-11 06:26:34 jpm Exp $
 import SocketServer
 import sys
 import signal
 import time
 import settings
 
-__VERSION__ = '0.3.0'
+__VERSION__ = '0.3.1'
 
 # some constants to hold the possible responses
 ERR_NOTCAPABLE = '500 command not recognized'
@@ -56,6 +56,8 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # - Implement some sort of timeout mechanism (ERR_TIMEOUT)
 # - Implement really dynamic backend storages (it's mysql only right now)
 # - Add INSTALL and all of the other crap
+# - Implement HEAD <message-id>
+# - Maybe create a get_number_from_message_id() method
 
 class NNTPServer(SocketServer.ThreadingTCPServer):
     allow_reuse_address = 1
@@ -546,7 +548,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if self.tokens[1].upper() == 'READER':
             self.send_response(ERR_NOPOSTMODE)
         elif self.tokens[1].upper() == 'STREAM':
-            self.send_response(ERR_NOPOSTMODE)
+            self.send_response(ERR_NOSTREAM)
 
     def do_POST(self):
         """
