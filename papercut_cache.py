@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut_cache.py,v 1.3 2002-10-03 00:39:57 jpm Exp $
+# $Id: papercut_cache.py,v 1.4 2002-10-04 00:57:13 jpm Exp $
 
 import binascii
 import md5
@@ -37,7 +37,7 @@ class CallableWrapper:
     def _get_cached_result(self, filename):
         inf = open(filename, 'rb')
         # get an exclusive lock on the file
-        portable_locker.lock(inf, portable_locker.LOCK_EX)
+        portable_locker.lock(inf, portable_locker.LOCK_SH)
         expire = cPickle.load(inf)
         result = cPickle.load(inf)
         # release the lock
@@ -50,7 +50,7 @@ class CallableWrapper:
         # save the serialized result in the file
         outf = open(filename, 'w')
         # file write lock
-        portable_locker.lock(outf, portable_locker.LOCK_SH)
+        portable_locker.lock(outf, portable_locker.LOCK_EX)
         cPickle.dump(time.time(), outf)
         cPickle.dump(result, outf)
         # release the lock
