@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.54 2002-05-21 03:13:20 jpm Exp $
+# $Id: papercut.py,v 1.55 2002-05-21 03:17:19 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -10,7 +10,7 @@ import settings
 import traceback
 import StringIO
 
-__VERSION__ = '0.8.0'
+__VERSION__ = '0.8.3'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
@@ -105,7 +105,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
         self.send_response(STATUS_READYNOPOST % (settings.nntp_hostname, __VERSION__))
         while not self.terminated:
-           if self.sending_article == 0:
+            if self.sending_article == 0:
                 self.article_lines = []
             self.inputline = self.rfile.readline()
             if __DEBUG__:
