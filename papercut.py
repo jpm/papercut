@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.89 2004-08-01 20:57:59 jpm Exp $
+# $Id: papercut.py,v 1.90 2004-08-01 21:10:10 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -340,7 +340,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOSUCHARTICLENUM)
             return
         # only set the internally selected article if the article number variation is used
-        if self.tokens[1].find('<') == -1:
+        if len(self.tokens) == 2 and self.tokens[1].find('<') == -1:
             self.selected_article = self.tokens[1]
         self.send_response(STATUS_STAT % (report_article_number, backend.get_message_id(self.tokens[1], self.selected_group)))
 
@@ -377,7 +377,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
             # only set the internally selected article if the article number variation is used
-            if self.tokens[1].find('<') == -1:
+            if len(self.tokens) == 2 and self.tokens[1].find('<') == -1:
                 self.selected_article = self.tokens[1]
             response = STATUS_ARTICLE % (report_article_number, backend.get_message_id(self.selected_article, self.selected_group))
             self.send_response("%s\r\n%s\r\n\r\n%s\r\n." % (response, result[0], result[1]))
@@ -454,7 +454,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
             # only set the internally selected article if the article number variation is used
-            if self.tokens[1].find('<') == -1:
+            if len(self.tokens) == 2 and self.tokens[1].find('<') == -1:
                 self.selected_article = self.tokens[1]
             self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (article_number, backend.get_message_id(self.selected_article, self.selected_group)), body))
 
@@ -474,9 +474,6 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if len(self.tokens) == 2:
             if self.tokens[1].find('<') != -1:
                 self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
-            else:
-                # only set the internal selected article when an article number is used
-                self.selected_article = self.tokens[1]
             article_number = self.tokens[1]
             head = backend.get_HEAD(self.selected_group, self.tokens[1])
         else:
@@ -486,7 +483,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
             # only set the internally selected article if the article number variation is used
-            if self.tokens[1].find('<') == -1:
+            if len(self.tokens) == 2 and self.tokens[1].find('<') == -1:
                 self.selected_article = self.tokens[1]
             self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (article_number, backend.get_message_id(self.selected_article, self.selected_group)), head))
 
