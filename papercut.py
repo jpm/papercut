@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.23 2002-01-22 04:38:21 jpm Exp $
+# $Id: papercut.py,v 1.24 2002-02-01 16:00:22 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -8,7 +8,7 @@ import time
 import re
 import settings
 
-__VERSION__ = '0.6.1'
+__VERSION__ = '0.6.9'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 __TIMEOUT__ = 60
@@ -88,17 +88,16 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
 
     def handle(self):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
-        self.send_response(STATUS_READYNOPOST % (settings.hostname, __VERSION__))
+        self.send_response(STATUS_READYNOPOST % (settings.nntp_hostname, __VERSION__))
         while not self.terminated:
             self.inputline = self.rfile.readline()
             if __DEBUG__:
-                print self.inputline.strip()
+                print "client>", repr(self.inputline)
             line = self.inputline.strip()
             # somehow outlook express sends a lot of newlines (maybe its just my imagination)
             if (not self.sending_article) and (line == ''):
                 self.broken_oe_checker += 1
-                if self.broken_oe_checker >= 10:
-                    self.send_response(STATUS_CLOSING)
+                if self.broken_oe_checker == 10:
                     self.terminated = 1
                 continue
             self.tokens = line.split(' ')
@@ -615,12 +614,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if not backend.group_exists(group_name):
             self.send_response(ERR_POSTINGFAILED)
             return
-        if lines.find('Content-Type') != -1:
+#        if lines.find('Content-Type') != -1:
             # check the 'Content-Type' header
-            content = contenttype_regexp.search(lines, 1).groups()[0].strip()
-            if content != 'text/plain':
-                self.send_response(ERR_POSTINGFAILED)
-                return
+#            content = contenttype_regexp.search(lines, 1).groups()[0].strip()
+#            if content != 'text/plain':
+#                self.send_response()
+#                return
         result = backend.do_POST(group_name, lines, self.client_address[0])
         if result == None:
             self.send_response(ERR_POSTINGFAILED)
