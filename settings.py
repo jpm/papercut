@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.12 2002-04-12 04:41:05 jpm Exp $
+# $Id: settings.py,v 1.13 2002-07-30 03:05:00 jpm Exp $
 import time
 import sys
 import os
@@ -34,6 +34,8 @@ if nntp_ssl == 'yes' and (ssl_cert_path == '' or ssl_key_path == '' or not os.pa
 nntp_auth = 'no'
 # backend that Papercut will use to authenticate the users
 auth_backend = ''
+# needed for phorum_mysql_users auth module
+PHP_CRYPT_SALT_LENGTH = 2
 
 # check for the appropriate options
 if nntp_auth == 'yes' and auth_backend == '':

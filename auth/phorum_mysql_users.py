@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql_users.py,v 1.1 2002-04-05 05:33:51 jpm Exp $
+# $Id: phorum_mysql_users.py,v 1.2 2002-07-30 03:05:00 jpm Exp $
 import MySQLdb
 import settings
 import crypt
@@ -31,7 +31,7 @@ class Papercut_Auth:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))
             return 0
         db_password = self.cursor.fetchone()[0]
-        if db_password != crypt.crypt(password, password[:PHP_CRYPT_SALT_LENGTH]):
+        if db_password != crypt.crypt(password, password[:settings.PHP_CRYPT_SALT_LENGTH]):
             settings.logEvent('Error - Authentication failed for username \'%s\' (incorrect password)' % (username))
             return 0
         else:
