@@ -61,6 +61,16 @@ Step by Step Instructions:
     will need to edit it and enter the name of the newsgroup that you want for
     each forum.
 
+  - After you finish editing the main forum table, you will need to go back to
+    the settings.py file and configure the full path for the Phorum settings
+    folder. That is, the folder where you keep the 'forums.php' configuration
+    file and all other files that setup the options for each forum.
+
+    It will usually have 'forums.php', '1.php', '2.php' and so on. The numbers
+    on the filenames are actually the forum IDs on the main forum table. In any
+    case, you will need to change the 'phorum_settings_path' variable on the
+    settings.py file and put the full path to this folder.
+
 
 If you find any problems on this set of instructions, or if the instructions
 didn't work out for you, please let me know.

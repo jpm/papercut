@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.8 2002-03-24 18:48:50 jpm Exp $
+# $Id: settings.py,v 1.9 2002-03-24 22:00:58 jpm Exp $
 import time
 
 #
@@ -25,7 +25,11 @@ server_type = 'read-write'
 backend_type = "phorum_mysql"
 
 # full path to the directory where the Phorum configuration files are stored
-phorum_settings_path = "/home/jpm/www/phpbrasil.com/phorum_settings/"
+phorum_settings_path = "/home/jpm/www/domain.com/phorum_settings/"
+
+# check for the trailing slash
+if phorum_settings_path[-1] != '/':
+    phorum_settings_path = phorum_settings_path + '/'
 
 # configuration values for 'backends/phorum_mysql.py'
 # database connection variables
