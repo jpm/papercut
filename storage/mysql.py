@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.14 2002-01-12 22:23:10 jpm Exp $
+# $Id: mysql.py,v 1.15 2002-01-13 06:17:24 jpm Exp $
 import MySQLdb
 import time
-from mimify import mime_encode_header
-import settings
+from mimify import mime_encode_header, mime_decode_header
 import re
+import rfc822
+import settings
 
 class Papercut_Backend:
 
@@ -373,8 +374,11 @@ class Papercut_Backend:
                 hdrs.append('%s %s <%s>' % (row[0], row[1], row[2]))
         return "\r\n".join(["%s" % k for k in hdrs])
 
-    def do_POST(self, group_name, lines, ip_address):
+    def do_POST(self, group_name, raw_post, ip_address):
         table_name = self.get_table_name(group_name)
+        m = rfc822.Message(raw_post)
+        body = mime_decode_header(m.fp.read().replace("'", "\\'"))
+        lines = "".join(m.headers)
         author, email = re.compile("^From:(.*)<(.*)>", re.M).search(lines, 1).groups()
         subject = re.compile("^Subject:(.*)", re.M).search(lines, 1).groups()[0].strip()
         if lines.find('References') != -1:
@@ -464,7 +468,7 @@ class Papercut_Backend:
                         %s,
                         '%s',
                         %s
-                    )""" % (table_name, new_id, lines, thread_id)
+                    )""" % (table_name, new_id, body, thread_id)
             if not self.cursor.execute(stmt):
                 # delete from 'table_name' before returning..
                 stmt = """
