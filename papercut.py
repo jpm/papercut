@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.32 2002-02-12 17:07:07 jpm Exp $
+# $Id: papercut.py,v 1.33 2002-03-06 16:28:27 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -116,6 +116,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                         try:
                             self.do_POST()
                         except:
+                            settings.logEvent('Error - Posting failed for user from \'%s\' (exception triggered)' % self.client_address[0])
                             self.send_response(ERR_POSTINGFAILED)
                         continue
                     self.article_lines.append(line)
