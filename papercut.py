@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.64 2002-10-04 02:41:35 jpm Exp $
+# $Id: papercut.py,v 1.65 2002-10-04 03:26:05 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -754,7 +754,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
 
     def send_response(self, message):
         if __DEBUG__:
-            print "Replying:", message
+            print "server>", message
         self.wfile.write(message + "\r\n")
         self.wfile.flush()
 
