@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_pgsql.py,v 1.2 2003-02-21 18:25:54 jpm Exp $
+# $Id: phorum_pgsql.py,v 1.3 2003-02-21 18:46:52 jpm Exp $
 from pyPgSQL import PgSQL
 import time
 from mimify import mime_encode_header
@@ -361,14 +361,14 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         if len(result[2]) == 0:
             author = result[1]
         else:
-            author = "%s <%s>" % (result[1], result[2])
+            author = "%s <%s>" % (result[1].strip(), result[2].strip())
         formatted_time = strutil.get_formatted_time(time.localtime(result[4]))
         headers = []
         headers.append("Path: %s" % (settings.nntp_hostname))
         headers.append("From: %s" % (author))
         headers.append("Newsgroups: %s" % (group_name))
         headers.append("Date: %s" % (formatted_time))
-        headers.append("Subject: %s" % (result[3]))
+        headers.append("Subject: %s" % (result[3].strip()))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
         headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
         if result[6] != 0:
