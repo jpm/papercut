@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql_users.py,v 1.1 2002-09-12 01:09:35 jpm Exp $
+# $Id: phpbb_mysql_users.py,v 1.2 2003-04-17 01:45:28 jpm Exp $
 import MySQLdb
 import settings
 import md5
@@ -24,10 +24,10 @@ class Papercut_Auth:
                 SELECT
                     user_password
                 FROM
-                    phpbb_users
+                    %susers
                 WHERE
                     username='%s'
-                """ % (username)
+                """ % (settings.phpbb_table_prefix, username)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))

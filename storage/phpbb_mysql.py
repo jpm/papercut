@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.9 2003-03-31 15:31:47 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.10 2003-04-17 01:45:28 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -162,7 +162,7 @@ class Papercut_Storage:
                         %sposts
                     WHERE
                         forum_id=%s AND
-                        post_time >= %s""" % (forum_id, ts)
+                        post_time >= %s""" % (settings.phpbb_table_prefix, forum_id, ts)
             num_rows = self.cursor.execute(stmt)
             if num_rows == 0:
                 continue
@@ -710,24 +710,26 @@ class Papercut_Storage:
                     # update the total number of posts in the forum
                     stmt = """
                             UPDATE
-                                forums
+                                %sforums
                             SET
-                                forum_posts=forum_posts+1
+                                forum_posts=forum_posts+1,
+                                forum_last_post_id=%s
                             WHERE
                                 forum_id=%s
-                            """ % (forum_id)
+                            """ % (settings.phpbb_table_prefix, new_id, forum_id)
                     self.cursor.execute(stmt)
                 else:
                     # update the total number of topics and posts in the forum
                     stmt = """
                             UPDATE
-                                forums
+                                %sforums
                             SET
                                 forum_topics=forum_topics+1,
-                                forum_posts=forum_posts+1
+                                forum_posts=forum_posts+1,
+                                forum_last_post_id=%s
                             WHERE
                                 forum_id=%s
-                            """ % (forum_id)
+                            """ % (settings.phpbb_table_prefix, new_id, forum_id)
                     self.cursor.execute(stmt)
                 # setup last post on the topic thread (Patricio Anguita <pda@ing.puc.cl>)
                 stmt = """
