@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.67 2002-12-11 05:30:38 jpm Exp $
-import timeoutsocket
+# $Id: papercut.py,v 1.68 2002-12-12 01:46:35 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -14,7 +13,7 @@ import StringIO
 import settings
 import papercut_cache
 
-__VERSION__ = '0.9.4'
+__VERSION__ = '0.9.5'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
@@ -76,10 +75,8 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 newsgroups_regexp = re.compile("^Newsgroups:(.*)", re.M)
 contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
 
-# set all of the TCP connections to die after the provided timeout
-timeoutsocket.setDefaultSocketTimeout(__TIMEOUT__)
 
-class NNTPServer(SocketServer.ThreadingTCPServer):
+class NNTPServer(SocketServer.ForkingTCPServer):
     allow_reuse_address = 1
 
 class NNTPRequestHandler(SocketServer.StreamRequestHandler):
@@ -115,7 +112,13 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         while not self.terminated:
             if self.sending_article == 0:
                 self.article_lines = []
-            self.inputline = self.rfile.readline()
+            signal.signal(signal.SIGALRM, self.handle_timeout)
+            signal.alarm(__TIMEOUT__)
+            try:
+                self.inputline = self.rfile.readline()
+            except IOError:
+                continue
+            signal.alarm(0)
             if __DEBUG__:
                 print "client>", repr(self.inputline)
             line = self.inputline.strip()
@@ -782,7 +785,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
 if __name__ == '__main__':
     # set up signal handler
     def sighandler(signum, frame):
-        if __DEBUG__: print "\nClosing the socket..."
+        if __DEBUG__: print "\nShutting down papercut..."
         server.socket.close()
         time.sleep(1)
         sys.exit(0)
