@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.70 2002-12-12 05:55:13 jpm Exp $
+# $Id: papercut.py,v 1.71 2003-01-02 03:11:45 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -75,6 +75,8 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 newsgroups_regexp = re.compile("^Newsgroups:(.*)", re.M)
 contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
 
+def is_empty(str):
+    return len(str) > 0
 
 class NNTPServer(SocketServer.ForkingTCPServer):
     allow_reuse_address = 1
@@ -131,6 +133,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                     self.terminated = 1
                 continue
             self.tokens = line.split(' ')
+            # remove empty items in list
+            #self.tokens = filter(is_empty, self.tokens) [XXX: isn't this going to break a lot of commands ?]
             # NNTP commands are case-insensitive
             command = self.tokens[0].upper()
             settings.logEvent('Received request: %s' % (line))

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: strutil.py,v 1.1 2002-05-07 15:20:32 jpm Exp $
+# $Id: strutil.py,v 1.2 2003-01-02 03:07:46 jpm Exp $
 import time
 import re
 
@@ -55,6 +55,4 @@ def format_body(text):
     return singleline_regexp.sub("..", text)
 
 def format_wildcards(pattern):
-    pattern.replace('*', '.*')
-    pattern.replace('?', '.*')
-    return pattern
+    return pattern.replace('*', '.*').replace('?', '.*')
