@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.49 2002-04-04 23:10:20 jpm Exp $
+# $Id: papercut.py,v 1.50 2002-04-05 05:35:14 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -94,6 +94,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     sending_article = 0
     article_lines = []
     broken_oe_checker = 0
+    auth_username = ''
 
     def handle(self):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
@@ -710,13 +711,14 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(STATUS_AUTH_ACCEPTED)
             return
         if self.tokens[1].upper() == 'USER':
+            self.auth_username = self.tokens[2]
             self.send_response(STATUS_AUTH_CONTINUE)
         elif self.tokens[1].upper() == 'PASS' and settings.nntp_auth == 'yes':
-            # XXX: we don't have the 'auth' package or the self.auth variable yet
             auth.is_valid_user(self.auth['username'], self.tokens[2]):
                 self.send_response(STATUS_AUTH_ACCEPTED)
             else:
                 self.send_response(ERR_AUTH_NO_PERMISSION)
+            self.auth_username = ''
 
     def get_number_from_msg_id(self, msg_id):
         return msg_id[1:msg_id.find('@')]
@@ -751,6 +753,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.selected_group = 'ggg'
         self.tokens = []
         self.sending_article = 0
+        self.auth_username = ''
         self.article_lines = []
         self.wfile.flush()
         self.wfile.close()
@@ -770,6 +773,7 @@ if __name__ == '__main__':
     temp = __import__('storage.%s' % (settings.storage_backend), globals(), locals(), ['Papercut_Storage'])
     backend = temp.Papercut_Storage()
 
+    # now for the authentication module, if needed
     if settings.nntp_auth == 'yes':
         temp = __import__('auth.%s' % (settings.auth_backend), globals(), locals(), ['Papercut_Auth'])
         auth = temp.Papercut_Auth()
