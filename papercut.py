@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.60 2002-09-09 23:54:05 jpm Exp $
+# $Id: papercut.py,v 1.61 2002-10-02 04:31:01 jpm Exp $
+import binascii
+import md5
+import Cpickle
 import SocketServer
 import sys
 import signal
@@ -9,8 +12,9 @@ import re
 import settings
 import traceback
 import StringIO
+import os
 
-__VERSION__ = '0.9.0'
+__VERSION__ = '0.9.3'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
@@ -771,6 +775,47 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             print 'Closing the request'
 
 
+class CallableWrapper:
+    name = None
+    thecallable = None
+
+    def __init__(self, name, thecallable):
+        self.name = name
+        self.thecallable = thecallable
+
+    def __call__(self, *args, **kwds):
+        filename = self._get_cache_file(*args, **kwds)
+        if os.path.exists(filename):
+            # XXX: add logic to check the expiration 
+            # and re-create the cached file if necessary
+            pass
+        else:
+            return self._cache_results(filename, *args, **kwds)
+        return 
+
+    def _cache_results(self, filename, *args, **kwds)
+        result = self.thecallable(*args, **kwds)
+        # save the serialized result in the file
+        Cpickle.dump(result, open(filename, 'w'))
+        return result
+
+    def _get_cache_file(self, *args, **kwds):
+        arguments = '%s%s%s' % (self.name, args, kwds)
+        return '%s%s' % (settings.nntp_cache_path, binascii.hexlify(md5.new(arguments).digest()))
+
+class Cache:
+    backend = None
+
+    def __init__(self, storage_handle):
+        self.backend = storage_handle.Papercut_Storage()
+
+    def __getattr__(self, name):
+        result = getattr(self.backend, name)
+        if callable(result):
+            result = CallableWrapper(name, result)
+        return result
+
+
 if __name__ == '__main__':
     # set up signal handler
     def sighandler(signum, frame):
@@ -781,7 +826,10 @@ if __name__ == '__main__':
 
     # dynamic loading of the appropriate storage backend module
     temp = __import__('storage.%s' % (settings.storage_backend), globals(), locals(), ['Papercut_Storage'])
-    backend = temp.Papercut_Storage()
+    if settings.nntp_cache == 'yes':
+        backend = Cache(temp)
+    else:
+        backend = temp.Papercut_Storage()
 
     # now for the authentication module, if needed
     if settings.nntp_auth == 'yes':
