@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.25 2002-02-02 22:22:44 jpm Exp $
+# $Id: papercut.py,v 1.26 2002-02-04 16:19:00 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -340,7 +340,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
             return
-        if self.selected_article == 'ggg':
+        if ((len(self.tokens) == 1) and (self.selected_article == 'ggg')):
             self.send_response(ERR_NOARTICLESELECTED)
             return
         if len(self.tokens) == 2:
