@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.1 2002-04-25 04:33:18 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.2 2002-05-05 16:40:59 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
 import re
 import settings
+import md5
 import mime
 
 # we don't need to compile the regexps everytime..
@@ -66,6 +67,13 @@ class Papercut_Storage:
         pattern.replace('*', '.*')
         pattern.replace('?', '.*')
         return pattern
+
+    def make_bbcode_uid(self):
+        return md5.new(str(time.clock())).digest()
+
+    def encode_ip(self, dotquad_ip):
+        t = dotquad_ip.split('.')
+        return '%02x%02x%02x%02x' % (int(t[0]), int(t[1]), int(t[2]), int(t[3]))
 
     def group_exists(self, group_name):
         stmt = """
@@ -572,112 +580,133 @@ class Papercut_Storage:
         else:
             return "\r\n".join(hdrs)
 
-    def do_POST(self, group_name, lines, ip_address):
-        # XXX: need to implement this...
-        table_name = self.get_table_name(group_name)
+    def do_POST(self, group_name, lines, ip_address, username=''):
+        forum_id = self.get_forum(group_name)
+        prefix = settings.phpbb_table_prefix
         body = self.get_message_body(lines)
         author, email = from_regexp.search(lines, 0).groups()
         subject = subject_regexp.search(lines, 0).groups()[0].strip()
+        # get the authentication information now
+        if username != '':
+            stmt = """
+                    SELECT
+                        user_id
+                    FROM
+                        %susers
+                    WHERE
+                        username='%s'""" % (prefix, username)
+            num_rows = self.cursor.execute(stmt)
+            if num_rows == 0:
+                poster_id = -1
+            else:
+                poster_id = self.cursor.fetchone()[0]
+            post_username = ''
+        else:
+            poster_id = -1
+            post_username = author
         if lines.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
             references = references_regexp.search(lines, 1).groups()
             parent_id, void = references[-1].strip().split('@')
             stmt = """
                     SELECT
-                        IF(MAX(id) IS NULL, 1, MAX(id)+1) AS next_id
+                        topic_id
                     FROM
-                        %s""" % (table_name)
-            num_rows = self.cursor.execute(stmt)
-            if num_rows == 0:
-                new_id = 1
-            else:
-                new_id = self.cursor.fetchone()[0]
-            stmt = """
-                    SELECT
-                        id,
-                        thread,
-                        modifystamp
-                    FROM
-                        %s
+                        %sposts
                     WHERE
-                        approved='Y' AND
-                        id=%s
+                        post_id=%s
                     GROUP BY
-                        id""" % (table_name, parent_id)
+                        post_id""" % (table_name, parent_id)
             num_rows = self.cursor.execute(stmt)
             if num_rows == 0:
                 return None
-            parent_id, thread_id, modifystamp = self.cursor.fetchone()
+            thread_id = self.cursor.fetchone()[0]
         else:
-            stmt = """
-                    SELECT
-                        IF(MAX(id) IS NULL, 1, MAX(id)+1) AS next_id,
-                        UNIX_TIMESTAMP()
-                    FROM
-                        %s""" % (table_name)
-            self.cursor.execute(stmt)
-            new_id, modifystamp = self.cursor.fetchone()
-            parent_id = 0
-            thread_id = new_id
-        stmt = """
-                INSERT INTO
-                    %s
-                (
-                    id,
-                    datestamp,
-                    thread,
-                    parent,
-                    author,
-                    subject,
-                    email,
-                    host,
-                    email_reply,
-                    approved,
-                    msgid,
-                    modifystamp,
-                    userid
-                ) VALUES (
-                    %s,
-                    NOW(),
-                    %s,
-                    %s,
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%s',
-                    'N',
-                    'Y',
-                    '',
-                    %s,
-                    0
-                )
-                """ % (table_name, new_id, thread_id, parent_id, self.quote_string(author.strip()), self.quote_string(subject), self.quote_string(email), ip_address, modifystamp)
-        if not self.cursor.execute(stmt):
-            return None
-        else:
-            # insert into the '*_bodies' table
+            # create a new topic
             stmt = """
                     INSERT INTO
-                        %s_bodies
+                        %stopics
                     (
-                        id,
-                        body,
-                        thread
+                        topic_id,
+                        forum_id,
+                        topic_title,
+                        topic_poster,
+                        topic_time,
+                        topic_status,
+                        topic_vote,
+                        topic_type
+                    ) VALUES (
+                        %s,
+                        %s,
+                        '%s',
+                        %s,
+                        UNIX_TIMESTAMP(),
+                        0,
+                        0,
+                        0
+                    )""" % (prefix, thread_id, forum_id, self.quote_string(subject), poster_id)
+            self.cursor.execute(stmt)
+            thread_id = self.cursor.insert_id()
+        stmt = """
+                INSERT INTO
+                    %sposts
+                (
+                    topic_id,
+                    forum_id,
+                    poster_id,
+                    post_time,
+                    poster_ip,
+                    post_username,
+                    enable_bbcode,
+                    enable_html,
+                    enable_smilies,
+                    enable_sig
+                ) VALUES (
+                    %s,
+                    %s,
+                    %s,
+                    UNIX_TIMESTAMP(),
+                    '%s',
+                    '%s',
+                    1,
+                    0,
+                    1,
+                    0
+                )""" % (prefix, thread_id, forum_id, poster_id, self.encode_ip(ip_address), post_username)
+        self.cursor.execute(stmt)
+        new_id = self.cursor.insert_id()
+        if not new_id:
+            return None
+        else:
+            # insert into the '*posts_text' table
+            stmt = """
+                    INSERT INTO
+                        %sposts_text
+                    (
+                        post_id,
+                        bbcode_uid,
+                        post_subject,
+                        post_text
                     ) VALUES (
                         %s,
                         '%s',
-                        %s
-                    )""" % (table_name, new_id, self.quote_string(body), thread_id)
+                        '%s',
+                        '%s'
+                    )""" % (prefix, new_id, self.make_bbcode_uid(), self.quote_string(subject), self.quote_string(body))
             if not self.cursor.execute(stmt):
-                # delete from 'table_name' before returning..
+                # delete from 'topics' and 'posts' tables before returning...
                 stmt = """
                         DELETE FROM
-                            %s
+                            %stopics
                         WHERE
-                            id=%s""" % (table_name, new_id)
+                            topic_id=%s""" % (prefix, thread_id)
+                self.cursor.execute(stmt)
+                stmt = """
+                        DELETE FROM
+                            %sposts
+                        WHERE
+                            post_id=%s""" % (prefix, new_id)
                 self.cursor.execute(stmt)
                 return None
             else:
-                # alert forum moderators
-                self.send_notifications(group_name, new_id, thread_id, parent_id, author.strip(), email, subject, body)
                 return 1

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more informationB
-# $Id: mysql.py,v 1.30 2002-04-25 04:33:18 jpm Exp $
+# $Id: mysql.py,v 1.31 2002-05-05 16:40:59 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -376,8 +376,13 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    %s REGEXP '%s' AND
-                    id >= %s""" % (table_name, header, self.format_wildcards(pattern), start_id)
+                    id >= %s AND""" % (table_name, header, self.format_wildcards(pattern), start_id)
+        if header.upper() == 'SUBJECT':
+            stmt = "%s AND subject REGEXP '%s'" % (stmt, self.format_wildcards(pattern))
+        elif header.upper() == 'FROM':
+            stmt = "%s AND (author REGEXP '%s' OR email REGEXP '%s')" % (stmt, self.format_wildcards(pattern), self.format_wildcards(pattern))
+        elif header.upper() == 'DATE':
+            stmt = "%s AND %s" % (stmt, pattern)
         if end_id != 'ggg':
             stmt = "%s AND id <= %s" % (stmt, end_id)
         num_rows = self.cursor.execute(stmt)
