@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.6 2002-12-12 05:49:39 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.7 2002-12-13 07:34:38 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -700,5 +700,24 @@ class Papercut_Storage:
                 self.cursor.execute(stmt)
                 return None
             else:
+                # setup last post on the topic thread (Patricio Anguita <pda@ing.puc.cl>)
+                stmt = """
+                        UPDATE
+                            %stopics
+                        SET
+                            topic_last_post_id = %s
+                        WHERE
+                            topic_id=%s""" % (prefix, new_id, thread_id)
+                self.cursor.execute(stmt)
+                # if this is the first post on the thread.. (Patricio Anguita <pda@ing.puc.cl>)
+                if lines.find('References') == -1:
+                    stmt = """
+                            UPDATE
+                                %stopics
+                            SET
+                                topic_first_post_id=%s
+                            WHERE
+                                topic_id=%s AND
+                                topic_first_post_id=0""" % (prefix, new_id, thread_id)
+                    self.cursor.execute(stmt)
                 return 1
-
