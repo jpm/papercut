@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.58 2002-09-09 21:32:36 jpm Exp $
+# $Id: papercut.py,v 1.59 2002-09-09 22:36:11 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -726,7 +726,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 self.send_response(STATUS_AUTH_ACCEPTED)
             else:
                 self.send_response(ERR_AUTH_NO_PERMISSION)
-            self.auth_username = ''
+                self.auth_username = ''
 
     def get_number_from_msg_id(self, msg_id):
         return msg_id[1:msg_id.find('@')]
