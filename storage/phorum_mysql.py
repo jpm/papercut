@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.11 2002-02-05 18:45:58 jpm Exp $
+# $Id: phorum_mysql.py,v 1.12 2002-02-06 18:52:19 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -317,7 +317,7 @@ class Papercut_Backend:
             formatted_time = self.get_formatted_time(time.localtime(row[5]))
             message_id = "<%s@%s>" % (row[0], group_name)
             line_count = len(row[6].split('\n'))
-            xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, row[1])
+            xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, row[0])
             overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, row[1], len(self.format_body(row[6])), line_count, xref))
         return "\r\n".join(overviews)
 
@@ -441,8 +441,8 @@ class Papercut_Backend:
     def do_POST(self, group_name, lines, ip_address):
         table_name = self.get_table_name(group_name)
         body = self.get_message_body(lines)
-        author, email = from_regexp.search(lines, 1).groups()
-        subject = subject_regexp.search(lines, 1).groups()[0].strip()
+        author, email = from_regexp.search(lines, 0).groups()
+        subject = subject_regexp.search(lines, 0).groups()[0].strip()
         if lines.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
             references = references_regexp.search(lines, 1).groups()
@@ -475,9 +475,7 @@ class Papercut_Backend:
                         MAX(id)+1,
                         UNIX_TIMESTAMP()
                     FROM
-                        forum.%s
-                    GROUP BY
-                        id""" % (table_name)
+                        forum.%s""" % (table_name)
             self.cursor.execute(stmt)
             new_id, modifystamp = self.cursor.fetchone()
             parent_id = 0
