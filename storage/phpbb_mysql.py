@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002, 2003, 2004 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.18 2004-02-01 20:13:58 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.19 2004-08-01 00:17:24 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -198,12 +198,12 @@ class Papercut_Storage:
         forum_id = self.get_forum(group_name)
         stmt = """
                 SELECT
-                    id
+                    post_id
                 FROM
                     %sposts
                 WHERE
                     forum_id=%s AND
-                    id=%s""" % (settings.phpbb_table_prefix, forum_id, id)
+                    post_id=%s""" % (settings.phpbb_table_prefix, forum_id, id)
         return self.cursor.execute(stmt)
 
     def get_ARTICLE(self, group_name, id):
