@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.10 2002-01-12 05:33:41 jpm Exp $
+# $Id: mysql.py,v 1.11 2002-01-12 17:49:43 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -378,9 +378,21 @@ class Papercut_Backend:
         author, email = re.compile("^From:(.*)<(.*)>", re.M).search(lines, 1).groups()
         subject = re.compile("^Subject:(.*)", re.M).search(lines, 1).groups()[0].strip()
         # get the 'modifystamp' value from the parent (if any)
-        thread = None
-        parent = None
-        modifystamp = None
+        references = re.compile("^References: <(.*)>", re.M).search(lines, 1).groups()[0].strip()
+        (id,) = references.split('@')
+        stmt = """
+                SELECT
+                    parent,
+                    thread,
+                    modifystamp
+                FROM
+                    forum.%s
+                WHERE
+                    id=%s""" % (table_name, id)
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 0:
+            return None
+        result = self.cursor.fetchone()
         stmt = """
                 INSERT INTO
                     forum.%s
@@ -411,7 +423,7 @@ class Papercut_Backend:
                     %s,
                     0
                 )
-                """ % (table_name, thread, parent, author.strip(), subject, email, ip_address, modifystamp)
+                """ % (table_name, result[1], id, author.strip(), subject, email, ip_address, result[2])
         if not self.cursor.execute(stmt):
             return None
         else:
