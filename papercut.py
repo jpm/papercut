@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.52 2002-04-25 04:32:51 jpm Exp $
+# $Id: papercut.py,v 1.53 2002-05-05 16:38:55 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -13,6 +13,7 @@ import StringIO
 __VERSION__ = '0.8.0'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
+# how many seconds to wait for data from the clients
 __TIMEOUT__ = 60
 
 # some constants to hold the possible responses
@@ -96,17 +97,26 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     broken_oe_checker = 0
     auth_username = ''
 
+    def handle_timeout(self, signum, frame):
+        self.terminated = 1
+        settings.logEvent('Connection timed out from %s' % (self.client_address[0]))
+
     def handle(self):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
         self.send_response(STATUS_READYNOPOST % (settings.nntp_hostname, __VERSION__))
         while not self.terminated:
+            # setup the signal handler for the timeout mechanism
+            signal.signal(signal.SIGALRM, self.handle_timeout)
+            signal.alarm(__TIMEOUT__)
             if self.sending_article == 0:
                 self.article_lines = []
             self.inputline = self.rfile.readline()
+            # turn off the alarm
+            signal.alarm(0)
             if __DEBUG__:
                 print "client>", repr(self.inputline)
             line = self.inputline.strip()
-            # somehow outlook express sends a lot of newlines (maybe its just my imagination)
+            # somehow outlook express sends a lot of newlines (so we need to kill those users when this happens)
             if (not self.sending_article) and (line == ''):
                 self.broken_oe_checker += 1
                 if self.broken_oe_checker == 10:
@@ -711,7 +721,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.auth_username = self.tokens[2]
             self.send_response(STATUS_AUTH_CONTINUE)
         elif self.tokens[1].upper() == 'PASS' and settings.nntp_auth == 'yes':
-            auth.is_valid_user(self.auth['username'], self.tokens[2]):
+            if auth.is_valid_user(self.auth['username'], self.tokens[2]):
                 self.send_response(STATUS_AUTH_ACCEPTED)
             else:
                 self.send_response(ERR_AUTH_NO_PERMISSION)
@@ -739,7 +749,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             return time.localtime(ts)
 
     def send_response(self, message):
-        if __DEBUG__: print "Replying:", message
+        if __DEBUG__:
+            print "Replying:", message
         self.wfile.write(message + "\r\n")
         self.wfile.flush()
 
@@ -755,7 +766,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.wfile.flush()
         self.wfile.close()
         self.rfile.close()
-        if __DEBUG__: print 'Closing the request'
+        if __DEBUG__:
+            print 'Closing the request'
 
 
 if __name__ == '__main__':
