@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.26 2002-02-04 16:19:00 jpm Exp $
+# $Id: papercut.py,v 1.27 2002-02-05 18:45:13 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -90,6 +90,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
         self.send_response(STATUS_READYNOPOST % (settings.nntp_hostname, __VERSION__))
         while not self.terminated:
+            if self.sending_article == 0:
+                self.article_lines = []
             self.inputline = self.rfile.readline()
             if __DEBUG__:
                 print "client>", repr(self.inputline)
@@ -111,8 +113,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 if self.sending_article:
                     if self.inputline == '.\r\n':
                         self.sending_article = 0
-                        self.do_POST()
-                        self.article_lines = []
+                        try:
+                            self.do_POST()
+                        except:
+                            self.send_response(ERR_POSTINGFAILED)
                         continue
                     self.article_lines.append(line)
                 else:
