@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.21 2002-03-24 19:17:25 jpm Exp $
+# $Id: phorum_mysql.py,v 1.22 2002-03-24 21:51:14 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -104,7 +104,7 @@ class Papercut_Backend:
         return self.cursor.fetchone()[0]
 
     def get_notification_emails(self, forum_id):
-        # abrindo arquivo para pegar a configuracao de email
+        # open the configuration file
         fp = open("%s%s.php" % (settings.phorum_settings_path, forum_id), "r")
         content = fp.read()
         fp.close()
@@ -118,8 +118,8 @@ class Papercut_Backend:
                     SELECT
                         email
                     FROM
-                        forum_auth,
-                        forum_moderators
+                        forums_auth,
+                        forums_moderators
                     WHERE
                         user_id=id AND
                         forum_id=%s""" % (forum_id)
@@ -134,9 +134,8 @@ class Papercut_Backend:
             recipients.append(mail_recipient)
         return recipients
 
-    def send_notification(self, group_name, msg_id, thread_id, msg_author, msg_subject, msg_body):
-        msg_tpl = """
-From: Phorum <%(recipient)s>
+    def send_notifications(self, group_name, msg_id, thread_id, msg_author, msg_subject, msg_body):
+        msg_tpl = """From: Phorum <%(recipient)s>
 To: %(recipient)s
 Subject: Moderate for %(forum_name)s at %(phorum_server_hostname)s Message: %(msg_id)s.
 
@@ -164,8 +163,8 @@ To edit this message use this URL:
                     nntp_group_name='%s'""" % (group_name)
         self.cursor.execute(stmt)
         forum_id, forum_name = self.cursor.fetchone()
-        # abrindo arquivo para pegar a configuracao de email
-        fp = open("%sforums.php" % (settings.phorum_settings_path, forum_id), "r")
+        # open the main configuration file
+        fp = open("%sforums.php" % (settings.phorum_settings_path), "r")
         content = fp.read()
         fp.close()
         # regexps to get the content from the phorum configuration files
@@ -179,6 +178,7 @@ To edit this message use this URL:
         smtp = smtplib.SMTP('localhost')
         emails = self.get_notification_emails(forum_id)
         for recipient in emails:
+            recipient = recipient[0]
             current_msg = msg_tpl % vars()
             smtp.sendmail("Phorum <%s>" % (recipient), recipient, current_msg)
         smtp.quit()
