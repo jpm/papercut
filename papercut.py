@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.11 2002-01-14 06:05:29 jpm Exp $
+# $Id: papercut.py,v 1.12 2002-01-14 06:15:27 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -63,6 +63,14 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # - Implement some sort of timeout mechanism (According to the new NNTP protocol timeouts should not be explained [i.e. no responses])
 # - Implement really dynamic backend storages (it's mysql only right now)
 # - Add INSTALL and all of the other crap
+#
+# Known Problems:
+# - XOVER 999999-0 gives me a blank line and then the 'dot'
+# - Broken SQL query on 'XPAT subject 1-10 tes'
+# - Broken SQL query on 'Out of bounds' NEXT command
+# - Broken SQL query on 'Out of bounds' LAST command
+# - Broken LISTGROUP
+# - GROUP phpbrasil.windows; STAT 2; HDR breaks
 
 class NNTPServer(SocketServer.ThreadingTCPServer):
     allow_reuse_address = 1
