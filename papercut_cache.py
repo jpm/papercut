@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut_cache.py,v 1.1 2002-10-03 00:30:54 jpm Exp $
+# $Id: papercut_cache.py,v 1.2 2002-10-03 00:38:08 jpm Exp $
 
 import binascii
 import md5
 import time
 import os
-import Cpickle
+import cPickle
 import portable_locker
 # papercut settings file
 import settings
@@ -38,8 +38,8 @@ class CallableWrapper:
         inf = open(filename, 'rb')
         # get an exclusive lock on the file
         portable_locker.lock(inf, portable_locker.LOCK_EX)
-        expire = Cpickle.load(inf)
-        result = Cpickle.load(inf)
+        expire = cPickle.load(inf)
+        result = cPickle.load(inf)
         # release the lock
         portable_locker.unlock(inf)
         inf.close()
@@ -51,8 +51,8 @@ class CallableWrapper:
         outf = open(filename, 'w')
         # file write lock
         portable_locker.lock(outf, portable_locker.LOCK_SH)
-        Cpickle.dump(time.time(), outf)
-        Cpickle.dump(result, outf)
+        cPickle.dump(time.time(), outf)
+        cPickle.dump(result, outf)
         # release the lock
         portable_locker.unlock(outf)
         outf.close()
