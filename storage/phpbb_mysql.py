@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.14 2003-12-14 18:59:03 jpm Exp $
+# Copyright (c) 2002, 2003, 2004 Joao Prado Maia. See the LICENSE file for more information.
+# $Id: phpbb_mysql.py,v 1.15 2004-01-04 19:17:51 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -223,7 +223,7 @@ class Papercut_Storage:
                     A.post_id,
                     C.username,
                     C.user_email,
-                    B.post_subject,
+                    CASE WHEN B.post_subject = '' THEN CONCAT('Re: ', E.topic_title) ELSE B.post_subject END,
                     A.post_time,
                     B.post_text,
                     A.topic_id,
@@ -236,6 +236,10 @@ class Papercut_Storage:
                     %sposts D
                 ON
                     D.topic_id=A.topic_id
+                INNER JOIN
+                    %stopics E
+                ON
+                    A.topic_id = E.topic_id
                 LEFT JOIN
                     %susers C
                 ON
@@ -245,7 +249,7 @@ class Papercut_Storage:
                     A.post_id=B.post_id AND
                     A.post_id=%s
                 GROUP BY
-                    D.topic_id""" % (prefix, prefix, prefix, prefix, forum_id, id)
+                    D.topic_id""" % (prefix, prefix, prefix, prefix, prefix, forum_id, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -315,7 +319,7 @@ class Papercut_Storage:
                     A.post_id,
                     C.username,
                     C.user_email,
-                    B.post_subject,
+                    CASE WHEN B.post_subject = '' THEN CONCAT('Re: ', E.topic_title) ELSE B.post_subject END,
                     A.post_time,
                     A.topic_id,
                     A.post_username,
@@ -323,6 +327,10 @@ class Papercut_Storage:
                 FROM
                     %sposts A,
                     %sposts_text B
+                INNER JOIN
+                    %stopics E
+                ON
+                    A.topic_id = E.topic_id
                 INNER JOIN
                     %sposts D
                 ON
@@ -336,7 +344,7 @@ class Papercut_Storage:
                     A.post_id=B.post_id AND
                     A.post_id=%s
                 GROUP BY
-                    D.topic_id""" % (prefix, prefix, prefix, prefix, forum_id, id)
+                    D.topic_id""" % (prefix, prefix, prefix, prefix, prefix, forum_id, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -390,7 +398,7 @@ class Papercut_Storage:
                     A.topic_id,
                     C.username,
                     C.user_email,
-                    B.post_subject,
+                    CASE WHEN B.post_subject = '' THEN CONCAT('Re: ', D.topic_title) ELSE B.post_subject END,
                     A.post_time,
                     B.post_text,
                     A.post_username
@@ -401,10 +409,14 @@ class Papercut_Storage:
                     %susers C
                 ON
                     A.poster_id=C.user_id
+                LEFT JOIN
+                    %stopics D
+                ON
+                    A.topic_id = D.topic_id
                 WHERE
                     A.post_id=B.post_id AND
                     A.forum_id=%s AND
-                    A.post_id >= %s""" % (prefix, prefix, prefix, forum_id, start_id)
+                    A.post_id >= %s""" % (prefix, prefix, prefix, prefix, forum_id, start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.post_id <= %s" % (stmt, end_id)
         self.cursor.execute(stmt)
@@ -441,7 +453,7 @@ class Papercut_Storage:
                     A.topic_id,
                     C.username,
                     C.user_email,
-                    B.post_subject,
+                    CASE WHEN B.post_subject = '' THEN CONCAT('Re: ', D.topic_title) ELSE B.post_subject END,
                     A.post_time,
                     B.post_text,
                     A.post_username
@@ -452,11 +464,15 @@ class Papercut_Storage:
                     %susers C
                 ON
                     A.poster_id=C.user_id
+                LEFT JOIN
+                    %stopics D
+                ON
+                    A.topic_id = D.topic_id
                 WHERE
                     A.forum_id=%s AND
                     %s REGEXP '%s' AND
                     A.post_id = B.post_id AND
-                    A.post_id >= %s""" % (prefix, prefix, prefix, forum_id, header, strutil.format_wildcards(pattern), start_id)
+                    A.post_id >= %s""" % (prefix, prefix, prefix, prefix, forum_id, header, strutil.format_wildcards(pattern), start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.post_id <= %s" % (stmt, end_id)
         num_rows = self.cursor.execute(stmt)
@@ -528,9 +544,9 @@ class Papercut_Storage:
                 SELECT
                     A.post_id,
                     A.topic_id,
-                    C.username,
-                    C.user_email,
-                    B.post_subject,
+                    D.username,
+                    D.user_email,
+                    CASE WHEN B.post_subject = '' THEN CONCAT('Re: ', C.topic_title) ELSE B.post_subject END,
                     A.post_time,
                     B.post_text,
                     A.post_username
@@ -538,18 +554,22 @@ class Papercut_Storage:
                     %sposts A,
                     %sposts_text B
                 LEFT JOIN
-                    %susers C
+                    %stopics C
                 ON
-                    A.poster_id=C.user_id
+                    A.topic_id = C.topic_id
+                LEFT JOIN
+                    %susers D
+                ON
+                    A.poster_id=D.user_id
                 WHERE
                     A.forum_id=%s AND
-                    A.post_id = B.post_id AND """ % (prefix, prefix, prefix, forum_id)
+                    A.post_id = B.post_id AND """ % (prefix, prefix, prefix, prefix, forum_id)
         if style == 'range':
             stmt = '%s A.post_id >= %s' % (stmt, range[0])
             if len(range) == 2:
                 stmt = '%s AND A.post_id <= %s' % (stmt, range[1])
         else:
-            stmt = '%s A.id = %s' % (stmt, range[0])
+            stmt = '%s A.post_id = %s' % (stmt, range[0])
         if self.cursor.execute(stmt) == 0:
             return None
         result = self.cursor.fetchall()
