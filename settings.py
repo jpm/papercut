@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.17 2002-12-13 07:32:10 jpm Exp $
+# $Id: settings.py,v 1.18 2004-08-01 01:03:22 jpm Exp $
 import time
 import sys
 import os
@@ -97,6 +97,18 @@ dbpass = "anonymous"
 
 # the prefix for the phpBB tables
 phpbb_table_prefix = "phpbb_"
+
+
+#
+# PHPNUKE PHPBB STORAGE MODULE OPTIONS
+#
+
+# if you're running PHPNuke, set this for the nuke tables and phpbb_table_prefix
+# for the bb tables.
+nuke_table_prefix = "nuke_"
+
+# the prefix for the phpBB tables
+phpbb_table_prefix = "nuke_bb"
 
 
 #
