@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut_cache.py,v 1.6 2002-10-04 03:04:12 jpm Exp $
+# $Id: papercut_cache.py,v 1.7 2002-10-04 03:14:38 jpm Exp $
 
 import binascii
 import md5
@@ -48,7 +48,7 @@ class CallableWrapper:
 
     def _get_cached_result(self, filename):
         inf = open(filename, 'rb')
-        # get an exclusive lock on the file
+        # get a lock on the file
         portable_locker.lock(inf, portable_locker.LOCK_SH)
         expire = cPickle.load(inf)
         result = cPickle.load(inf)
