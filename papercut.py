@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.79 2003-12-14 19:02:54 jpm Exp $
+# $Id: papercut.py,v 1.80 2004-01-04 19:37:36 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -17,8 +17,8 @@ import papercut_cache
 __VERSION__ = '0.9.10'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
-# how many seconds to wait for data from the clients
-__TIMEOUT__ = 60
+# how many seconds to wait for data from the clients (draft 20 of the new NNTP protocol says at least 3 minutes)
+__TIMEOUT__ = 180
 
 
 # some constants to hold the possible responses
@@ -727,7 +727,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         """
         lines = "\r\n".join(self.article_lines)
         # check the 'Newsgroups' header
-        group_name = newsgroups_regexp.search(lines, 1).groups()[0].strip()
+        group_name = newsgroups_regexp.search(lines, 0).groups()[0].strip()
         if not backend.group_exists(group_name):
             self.send_response(ERR_POSTINGFAILED)
             return
