@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.42 2003-09-19 03:13:03 jpm Exp $
+# $Id: phorum_mysql.py,v 1.43 2003-12-14 18:59:03 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -59,7 +59,7 @@ class Papercut_Storage:
                 FROM
                     forums
                 WHERE
-                    nntp_group_name='%s'""" % (group_name)
+                    LOWER(nntp_group_name)=LOWER('%s')""" % (group_name)
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 

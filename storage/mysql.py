@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.39 2002-12-12 05:55:13 jpm Exp $
+# $Id: mysql.py,v 1.40 2003-12-14 18:59:03 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -42,7 +42,7 @@ class Papercut_Storage:
                 FROM
                     papercut_groups
                 WHERE
-                    name='%s'""" % (group_name)
+                    LOWER(name)=LOWER('%s')""" % (group_name)
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.13 2003-09-19 03:13:03 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.14 2003-12-14 18:59:03 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -61,7 +61,7 @@ class Papercut_Storage:
                 FROM
                     %sforums
                 WHERE
-                    nntp_group_name='%s'""" % (settings.phpbb_table_prefix, group_name)
+                    LOWER(nntp_group_name)=LOWER('%s')""" % (settings.phpbb_table_prefix, group_name)
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
