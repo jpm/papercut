@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.74 2003-02-07 19:52:11 jpm Exp $
+# $Id: papercut.py,v 1.75 2003-02-19 22:29:08 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -758,11 +758,15 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         return 0
 
     def get_timestamp(self, date, times, gmt='yes'):
-        local_year = str(time.localtime()[0])
-        if date[:2] >= local_year[2:4]:
-            year = "19%s" % (date[:2])
+        # like the new NNTP draft explains...
+        if len(date) == 8:
+            year = date[:4]
         else:
-            year = "20%s" % (date[:2])
+            local_year = str(time.localtime()[0])
+            if date[:2] > local_year[2:4]:
+                year = "19%s" % (date[:2])
+            else:
+                year = "20%s" % (date[:2])
         ts = time.mktime((int(year), int(date[2:4]), int(date[4:6]), int(times[:2]), int(times[2:4]), int(times[4:6]), 0, 0, 0))
         if gmt == 'yes':
             return time.gmtime(ts)
