@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.41 2002-03-25 01:03:24 jpm Exp $
+# $Id: papercut.py,v 1.42 2002-03-25 04:43:18 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -487,6 +487,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             LISTGROUP [ggg]
         Responses:
             211 list of article numbers follow
+            411 No such group
             412 Not currently in newsgroup
             502 no permission
         """
@@ -496,7 +497,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if len(self.tokens) == 2:
             # check if the group exists
             if not backend.group_exists(self.tokens[1]):
-                self.send_response("%s\r\n." % (STATUS_LISTGROUP))
+                # the draft of the new NNTP protocol tell us to reply this instead of an empty list
+                self.send_response(ERR_NOSUCHGROUP)
                 return
             numbers = backend.get_LISTGROUP(self.tokens[1])
         else:
@@ -504,6 +506,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 self.send_response(ERR_NOGROUPSELECTED)
                 return
             numbers = backend.get_LISTGROUP(self.selected_group)
+        check = numbers.split('\r\n') 
+        if len(check) > 0:
+            self.selected_article = check[0]
+            self.selected_group = self.tokens[1]
         self.send_response("%s\r\n%s\r\n." % (STATUS_LISTGROUP, numbers))
 
     def do_XGTITLE(self):
