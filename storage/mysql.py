@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.7 2002-01-11 22:29:35 jpm Exp $
+# $Id: mysql.py,v 1.8 2002-01-12 04:20:08 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -176,7 +176,7 @@ class Papercut_Backend:
         else:
             author = "%s <%s>" % (result[1], result[2])
         formatted_time = self.get_formatted_time(time.localtime(result[4]))
-        head = "From: %s\r\nTo: %s\r\nDate: %s\r\nSubject: %s" % (author, group_name, formatted_time, result[3])
+        head = "From: %s\r\nTo: %s\r\nDate: %s\r\nSubject: %s\r\nMessage-ID: <%s@%s>" % (author, group_name, formatted_time, result[3], result[0], group_name)
         return (head, self.format_body(result[5]))
 
     def get_LAST(self, group_name, current_id):
@@ -229,7 +229,7 @@ class Papercut_Backend:
         else:
             author = "%s <%s>" % (result[1], result[2])
         formatted_time = self.get_formatted_time(time.localtime(result[4]))
-        head = "From: %s\r\nTo: %s\r\nDate: %s\r\nSubject: %s" % (author, group_name, formatted_time, result[3])
+        head = "From: %s\r\nTo: %s\r\nDate: %s\r\nSubject: %s\r\nMessage-ID: <%s@%s>" % (author, group_name, formatted_time, result[3], result[0], group_name)
         return head
 
     def get_BODY(self, group_name, id):
@@ -379,7 +379,7 @@ class Papercut_Backend:
         parent = None
         author = None
         email = None
-        subject = None
+        subject = re.compile("^Subject:(.*)", re.M).search(str, 1).groups()[0].strip()
         host = None
         # get the 'modifystamp' value from the parent (if any)
         modifystamp = None
