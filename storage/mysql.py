@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.17 2002-01-13 07:19:23 jpm Exp $
+# $Id: mysql.py,v 1.18 2002-01-13 07:31:26 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -16,16 +16,17 @@ class Papercut_Backend:
         self.conn = MySQLdb.connect(db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
         self.cursor = self.conn.cursor()
 
-    def get_message_body(self, raw_headers):
+    def get_message_body(self, headers):
         body = []
         found = 0
+        raw_headers = headers.split('\r\n')
         for line in raw_headers:
-            if (line == "\n") or (line == "\r\n"):
+            if line == '':
                 found = 1
                 continue
             if found:
                 body.append(line)
-        return "".join(body)
+        return "\r\n".join(body)
 
     def get_formatted_time(self, time_tuple):
         return time.strftime('%a, %d %B %Y %H:%M:%S %Z', time_tuple)
