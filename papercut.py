@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.66 2002-11-12 03:25:48 jpm Exp $
+# $Id: papercut.py,v 1.67 2002-12-11 05:30:38 jpm Exp $
+import timeoutsocket
 import SocketServer
 import sys
 import signal
@@ -18,6 +19,7 @@ __VERSION__ = '0.9.4'
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
 __TIMEOUT__ = 60
+
 
 # some constants to hold the possible responses
 ERR_NOTCAPABLE = '500 command not recognized'
@@ -73,6 +75,9 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # so let's create them just once and re-use as needed
 newsgroups_regexp = re.compile("^Newsgroups:(.*)", re.M)
 contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
+
+# set all of the TCP connections to die after the provided timeout
+timeoutsocket.setDefaultSocketTimeout(__TIMEOUT__)
 
 class NNTPServer(SocketServer.ThreadingTCPServer):
     allow_reuse_address = 1
