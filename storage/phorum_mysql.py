@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.34 2002-04-12 04:41:05 jpm Exp $
+# $Id: phorum_mysql.py,v 1.35 2002-04-24 04:22:44 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -136,32 +136,26 @@ class Papercut_Storage:
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
-                    MIN(id) AS first_article
+                    IF(MIN(id) IS NULL, 0, MIN(id)) AS first_article
                 FROM
                     %s
                 WHERE
                     approved='Y'""" % (table_name)
         num_rows = self.cursor.execute(stmt)
-        if num_rows == 0:
-            return None
-        else:
-            return self.cursor.fetchone()[0]
+        return self.cursor.fetchone()[0]
 
     def get_group_stats(self, table_name):
         stmt = """
                 SELECT
                    COUNT(id) AS total,
-                   MAX(id) AS maximum,
-                   MIN(id) AS minimum
+                   IF(MAX(id) IS NULL, 0, MAX(id)) AS maximum,
+                   IF(MIN(id) IS NULL, 0, MIN(id)) AS minimum
                 FROM
                     %s
                 WHERE
                     approved='Y'""" % (table_name)
         num_rows = self.cursor.execute(stmt)
-        if num_rows == 0:
-            return (0, 0, 0)
-        else:
-            return self.cursor.fetchone()
+        return self.cursor.fetchone()
 
     def get_table_name(self, group_name):
         stmt = """

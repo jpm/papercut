@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more informationB
-# $Id: mysql.py,v 1.27 2002-04-24 04:22:44 jpm Exp $
+# $Id: mysql.py,v 1.28 2002-04-24 04:26:22 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -527,7 +527,7 @@ class Papercut_Storage:
                     FROM
                         %s""" % (table_name)
             self.cursor.execute(stmt)
-            new_id = self.cursor.fetchone()
+            new_id = self.cursor.fetchone()[0]
             parent_id = 0
             thread_id = new_id
         stmt = """
