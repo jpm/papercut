@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more informationB
-# $Id: mysql.py,v 1.26 2002-04-24 04:16:17 jpm Exp $
+# $Id: mysql.py,v 1.27 2002-04-24 04:22:44 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -523,7 +523,7 @@ class Papercut_Storage:
         else:
             stmt = """
                     SELECT
-                        IF(MAX(id) IS NULL, 1, MAX(id)+1) AS next_id,
+                        IF(MAX(id) IS NULL, 1, MAX(id)+1) AS next_id
                     FROM
                         %s""" % (table_name)
             self.cursor.execute(stmt)
