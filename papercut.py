@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.76 2003-02-21 18:58:43 jpm Exp $
+# $Id: papercut.py,v 1.77 2003-02-21 22:12:31 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -67,6 +67,7 @@ STATUS_POSTSUCCESSFULL = '240 Article received ok'
 STATUS_AUTH_REQUIRED = '480 Authentication required'
 STATUS_AUTH_ACCEPTED = '281 Authentication accepted'
 STATUS_AUTH_CONTINUE = '381 More authentication information required'
+STATUS_SERVER_VERSION = '200 Papercut %s' % (__VERSION__)
 
 # the currently supported overview headers
 overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Bytes', 'Lines', 'Xref')
@@ -95,11 +96,13 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 'MODE', 'XOVER', 'XPAT',
                 'LISTGROUP', 'XGTITLE', 'XHDR',
                 'SLAVE', 'DATE', 'IHAVE',
-                'OVER', 'HDR', 'AUTHINFO')
+                'OVER', 'HDR', 'AUTHINFO',
+                'XROVER', 'XVERSION')
     # this is the list of list of extensions supported that are obviously not in the official NNTP document
     extensions = ('XOVER', 'XPAT', 'LISTGROUP',
                   'XGTITLE', 'XHDR', 'MODE',
-                  'OVER', 'HDR', 'AUTHINFO')
+                  'OVER', 'HDR', 'AUTHINFO',
+                  'XROVER', 'XVERSION')
     terminated = 0
     selected_article = 'ggg'
     selected_group = 'ggg'
@@ -589,6 +592,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     def do_HDR(self):
         self.do_XHDR()
 
+    def do_XROVER(self):
+        self.tokens[1] = 'REFERENCES'
+        self.do_XHDR()
+
     def do_XHDR(self):
         """
         Syntax:
@@ -747,6 +754,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             else:
                 self.send_response(ERR_AUTH_NO_PERMISSION)
                 self.auth_username = ''
+
+    def do_XVERSION(self):
+        self.send_response(STATUS_SERVER_VERSION)
 
     def get_number_from_msg_id(self, msg_id):
         return msg_id[1:msg_id.find('@')]
