@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.19 2002-01-13 07:35:39 jpm Exp $
+# $Id: mysql.py,v 1.20 2002-01-13 07:39:08 jpm Exp $
 import MySQLdb
 import time
-from mimify import mime_encode_header, mime_decode_header
+from mimify import mime_encode_header
 import re
-import rfc822
-import sys
 import settings
 
 class Papercut_Backend:
