@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.32 2002-03-28 22:01:45 jpm Exp $
+# $Id: phorum_mysql.py,v 1.33 2002-04-03 23:07:22 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -25,13 +25,13 @@ admin_regexp = re.compile("(.*)PHORUM\['admin_url'\](.*)='(.*)';", re.M)
 server_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)http://(.*)/(.*)';", re.M)
 mail_code_regexp = re.compile("(.*)PHORUM\['PhorumMailCode'\](.*)=(.*)'(.*)';", re.M)
 
-class Papercut_Backend:
+class Papercut_Storage:
     """
-    Backend interface for the Phorum web message board software (http://phorum.org)
+    Storage Backend interface for the Phorum web message board software (http://phorum.org)
     
     This is the interface for Phorum running on a MySQL database. For more information
-    on the structure of the 'backends' package, please refer to the __init__.py
-    available on the 'backends' sub-directory.
+    on the structure of the 'storage' package, please refer to the __init__.py
+    available on the 'storage' sub-directory.
     """
 
     def __init__(self):

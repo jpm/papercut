@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.46 2002-03-28 22:01:45 jpm Exp $
+# $Id: papercut.py,v 1.47 2002-04-03 23:07:22 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -735,9 +735,9 @@ if __name__ == '__main__':
         time.sleep(1)
         sys.exit(0)
 
-    # dynamic loading of the appropriate backend module
-    temp = __import__('backends.%s' % (settings.backend_type), globals(), locals(), ['Papercut_Backend'])
-    backend = temp.Papercut_Backend()
+    # dynamic loading of the appropriate storage backend module
+    temp = __import__('storage.%s' % (settings.storage_backend), globals(), locals(), ['Papercut_Storage'])
+    backend = temp.Papercut_Storage()
 
     signal.signal(signal.SIGINT, sighandler)
     print 'Papercut %s - starting up' % __VERSION__
