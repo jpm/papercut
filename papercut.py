@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.1 2002-01-10 16:21:00 jpm Exp $
+# $Id: papercut.py,v 1.2 2002-01-10 21:14:35 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -22,6 +22,7 @@ ERR_NONEXTARTICLE = '421 no next article in this group'
 ERR_NOSUCHARTICLENUM = '423 no such article number in this group'
 ERR_NOSLAVESHERE = '202 no slaves here please (this is a read-only server)'
 ERR_NOSUCHARTICLE = '430 no such article'
+ERR_NOIHAVEHERE = '435 article not wanted - do not send it'
 STATUS_HELPMSG = '100 help text follows'
 STATUS_GROUPSELECTED = '211 %s %s %s %s group selected'
 STATUS_LIST = '215 list of newsgroups follows'
@@ -46,13 +47,11 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # TODO list:
 # ----------
 # - MODE STREAM (does this mean 'Connect->command->Close' style conversations?)
-# - Format the body text for leading dots
-# - IHAVE
 # - Check more the patterns of searching (wildmat) -> backend.format_wildcards() -> Work in progress
 # - Show banner on the footer of the articles about the site
 # - Implement some sort of timeout mechanism
 # - Implement really dynamic backend storages (it's mysql only right now)
-# - Add INSTALL, LICENSE, README and all of the other crap
+# - Add INSTALL and all of the other crap
 
 class NNTPServer(SocketServer.ThreadingTCPServer):
     allow_reuse_address = 1
@@ -64,7 +63,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 'NEWNEWS', 'NEXT', 'QUIT',
                 'MODE', 'XOVER', 'XPAT',
                 'LISTGROUP', 'XGTITLE', 'XHDR',
-                'SLAVE', 'DATE')
+                'SLAVE', 'DATE', 'IHAVE')
     terminated = 0
     selected_article = 'ggg'
     selected_group = 'ggg'
@@ -384,6 +383,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     def do_QUIT(self):
         self.terminated = 1
         self.send_response(STATUS_CLOSING)
+
+    def do_IHAVE(self):
+        self.send_response(ERR_NOIHAVEHERE)
 
     def do_SLAVE(self):
         self.send_response(ERR_NOSLAVESHERE)
