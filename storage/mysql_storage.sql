@@ -4,7 +4,7 @@ CREATE TABLE papercut_default_table (
   datestamp datetime NOT NULL default '0000-00-00 00:00:00',
   thread int(10) unsigned NOT NULL default '0',
   parent int(10) unsigned NOT NULL default '0',
-  from varchar(37) NOT NULL default '',
+  author varchar(37) NOT NULL default '',
   subject varchar(255) NOT NULL default '',
   bytes int(10) unsigned NOT NULL default '0',
   lines int(10) unsigned NOT NULL default '0',
