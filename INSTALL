@@ -71,6 +71,11 @@ Step by Step Instructions:
     case, you will need to change the 'phorum_settings_path' variable on the
     settings.py file and put the full path to this folder.
 
+  - You will also need to set the version of the installed copy of Phorum so
+    Papercut can send the correct headers when sending out copies of the posted
+    articles (also called PhorumMail for the Phorum lovers out there). Set the
+    'phorum_version' variable as appropriate on your case (i.e. '3.3.2a').
+
 
 If you find any problems on this set of instructions, or if the instructions
 didn't work out for you, please let me know.
