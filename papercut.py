@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.4 2002-01-11 06:26:34 jpm Exp $
+# $Id: papercut.py,v 1.5 2002-01-11 20:29:34 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -8,6 +8,9 @@ import time
 import settings
 
 __VERSION__ = '0.3.1'
+# set this to 0 (zero) for real world use
+__DEBUG__ = 1
+__TIMEOUT__ = 60
 
 # some constants to hold the possible responses
 ERR_NOTCAPABLE = '500 command not recognized'
@@ -17,6 +20,7 @@ ERR_CMDSYNTAXERROR = '501 command syntax error (or un-implemented option)'
 ERR_NOSUCHGROUP = '411 no such news group'
 ERR_NOGROUPSELECTED = '412 no newsgroup has been selected'
 ERR_NOARTICLESELECTED = '420 no current article has been selected'
+ERR_NOARTICLERETURNED = '420 No article(s) selected'
 ERR_NOPREVIOUSARTICLE = '422 no previous article in this group'
 ERR_NONEXTARTICLE = '421 no next article in this group'
 ERR_NOSUCHARTICLENUM = '423 no such article number in this group'
@@ -25,7 +29,7 @@ ERR_NOSUCHARTICLE = '430 no such article'
 ERR_NOIHAVEHERE = '435 article not wanted - do not send it'
 ERR_NOSTREAM = '500 Command not understood'
 ERR_TIMEOUT = '503 Timeout after %s seconds, closing connection.'
-ERR_NODISTRIBUTIONS = '503 No list of newsgroup distributions available.'
+ERR_NOTPERFORMED = '503 program error, function not performed'
 STATUS_HELPMSG = '100 help text follows'
 STATUS_GROUPSELECTED = '211 %s %s %s %s group selected'
 STATUS_LIST = '215 list of newsgroups follows'
@@ -53,11 +57,9 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # - MODE STREAM (it means several commands at the same time without waiting for responses)
 # - Check more the patterns of searching (wildmat) -> backend.format_wildcards() -> Work in progress
 # - Show banner on the footer of the articles about the site
-# - Implement some sort of timeout mechanism (ERR_TIMEOUT)
+# - Implement some sort of timeout mechanism (According to the new NNTP protocol timeouts should not be explained [i.e. no responses])
 # - Implement really dynamic backend storages (it's mysql only right now)
 # - Add INSTALL and all of the other crap
-# - Implement HEAD <message-id>
-# - Maybe create a get_number_from_message_id() method
 
 class NNTPServer(SocketServer.ThreadingTCPServer):
     allow_reuse_address = 1
@@ -71,11 +73,11 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 'LISTGROUP', 'XGTITLE', 'XHDR',
                 'SLAVE', 'DATE', 'IHAVE')
     extensions = ('XOVER', 'XPAT', 'LISTGROUP',
-                  'XGTITLE', 'XHDR', 'MODE')
+                  'XGTITLE', 'XHDR', 'MODE',
+                  'OVER', 'HDR')
     terminated = 0
     selected_article = 'ggg'
     selected_group = 'ggg'
-    current_art_id = 0
     tokens = []
 
     def handle(self):
@@ -169,24 +171,31 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     def do_LIST(self):
         """
         Syntax:
-            LIST
+            LIST (done)
+            LIST ACTIVE [wildmat]
+            LIST ACTIVE.TIMES
+            LIST DISTRIBUTIONS
+            LIST DISTRIB.PATS
+            LIST NEWSGROUPS [wildmat]
+            LIST OVERVIEW.FMT (done)
+            LIST SUBSCRIPTIONS
+            LIST EXTENSIONS (not documented) (done by comparing the results of other servers)
         Responses:
             215 list of newsgroups follows
+            503 program error, function not performed
         """
-        if len(self.tokens) > 2:
-            self.send_response(ERR_CMDSYNTAXERROR)
-            return
         if (len(self.tokens) == 2) and (self.tokens[1].upper() == 'OVERVIEW.FMT'):
             self.send_response("%s\r\n%s\r\n." % (STATUS_OVERVIEWFMT, "\r\n".join(["%s:" % k for k in overview_headers])))
             return
         elif (len(self.tokens) == 2) and (self.tokens[1].upper() == 'EXTENSIONS'):
             self.send_response("%s\r\n%s\r\n." % (STATUS_EXTENSIONS, "\r\n".join(["%s" % k for k in self.extensions])))
             return
-        elif (len(self.tokens) == 2) and (self.tokens[1].upper() == 'DISTRIBUTIONS'):
-            self.send_response(ERR_NODISTRIBUTIONS)
+        elif (len(self.tokens) > 1) and (self.tokens[1].upper() == 'NEWSGROUPS'):
+            # same functionality as the XGTITLE command, so let's use that existing code
+            self.do_XGTITLE()
             return
         elif len(self.tokens) == 2:
-            self.send_response(ERR_CMDSYNTAXERROR)
+            self.send_response(ERR_NOTPERFORMED)
             return
         result = backend.get_LIST()
         lists = []
@@ -244,7 +253,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             return
         # get the article number if it is the appropriate option
         if self.tokens[1].find('@') != -1:
-            self.tokens[1] = self.tokens[1][1:self.tokens[1].find('@')]
+            self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
         head, body = backend.get_ARTICLE(self.selected_group, self.tokens[1])
         response = STATUS_ARTICLE % (self.selected_article, self.selected_group)
         msg = "%s\r\n%s\r\n\r\n%s\r\n." % (response, head, body)
@@ -310,7 +319,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if self.selected_article == 'ggg':
             self.send_response(ERR_NOARTICLESELECTED)
             return
-        body = backend.get_BODY(self.selected_group, self.selected_article)
+        if len(self.tokens) == 2:
+            if self.tokens[1].find('@') != -1:
+                self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
+            body = backend.get_BODY(self.selected_group, self.tokens[1])
+        else:
+            body = backend.get_BODY(self.selected_group, self.selected_article)
         msg = "%s\r\n%s\r\n." % (STATUS_BODY % (self.selected_article, self.selected_article, self.selected_group), body)
         self.send_response(msg)
 
@@ -325,6 +339,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOGROUPSELECTED)
             return
         if len(self.tokens) == 2:
+            if self.tokens[1].find('@') != -1:
+                self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
             head = backend.get_HEAD(self.selected_group, self.tokens[1])
         else:
             if self.selected_article == 'ggg':
@@ -333,6 +349,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             head = backend.get_HEAD(self.selected_group, self.selected_article)
         msg = "%s\r\n%s\r\n." % (STATUS_HEAD % (self.selected_article, self.selected_article, self.selected_group), head)
         self.send_response(msg)
+
+    def do_OVER(self):
+        self.do_XOVER()
 
     def do_XOVER(self):
         """
@@ -361,6 +380,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             else:
                 # this is a start-everything style of XOVER
                 overviews = backend.get_XOVER(self.selected_group, ranges[0])
+        if overviews == None:
+            self.send_response(ERR_NOARTICLERETURNED)
+            return
         msg = "%s\r\n%s\r\n." % (STATUS_XOVER, overviews)
         self.send_response(msg)
 
@@ -383,7 +405,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOGROUPSELECTED)
             return
         if self.tokens[2].find('@') != -1:
-            self.tokens[2] = self.tokens[2][1:self.tokens[2].find('@')]
+            self.tokens[2] = self.get_number_from_msg_id(self.tokens[2])
             self.do_XHDR()
             return
         else:
@@ -392,6 +414,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0], ranges[1])
             else:
                 overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0])
+        if overviews == None:
+            self.send_response(ERR_NOSUCHARTICLE)
+            return
         msg = "%s\r\n%s\r\n." % (STATUS_XPAT, overviews)
         self.send_response(msg)
 
@@ -442,6 +467,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         msg = "%s\r\n%s\r\n." % (STATUS_XGTITLE, info)
         self.send_response(msg)
 
+    def do_HDR(self):
+        self.do_XHDR()
+
     def do_XHDR(self):
         """
         Syntax:
@@ -469,14 +497,14 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         else:
             # check the XHDR style now
             if self.tokens[2].find('@') != -1:
-                self.tokens[2] = self.tokens[2][1:self.tokens[2].find('@')]
+                self.tokens[2] = self.get_number_from_msg_id(self.tokens[2])
                 info = backend.get_XHDR(self.selected_group, self.tokens[1], 'unique', (self.tokens[2]))
             else:
-                range = self.tokens[2].split('-')
-                if len(range) == 2:
-                    info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (range[0], range[1]))
+                ranges = self.tokens[2].split('-')
+                if len(ranges) == 2:
+                    info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0], ranges[1]))
                 else:
-                    info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (range[0]))
+                    info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0]))
         # check for empty results
         if info == None:
             self.send_response(ERR_NOSUCHARTICLE)
@@ -562,32 +590,35 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         """
         self.send_response(ERR_NOPOSTALLOWED)
 
+    def get_number_from_msg_id(self, msg_id):
+        return msg_id[1:msg_id.find('@')]
+
     def get_timestamp(self, date, times, gmt='yes'):
         local_year = str(time.localtime()[0])
-        if date[0:2] >= local_year[2:4]:
-            year = "19%s" % (date[0:2])
+        if date[:2] >= local_year[2:4]:
+            year = "19%s" % (date[:2])
         else:
-            year = "20%s" % (date[0:2])
-        ts = time.mktime((int(year), int(date[2:4]), int(date[4:6]), int(times[0:2]), int(times[2:4]), int(times[4:6]), 0, 0, 0))
+            year = "20%s" % (date[:2])
+        ts = time.mktime((int(year), int(date[2:4]), int(date[4:6]), int(times[:2]), int(times[2:4]), int(times[4:6]), 0, 0, 0))
         if gmt == 'yes':
             return time.gmtime(ts)
         else:
             return time.localtime(ts)
 
     def send_response(self, message):
-        print "Replying:", message
+        if __DEBUG__: print "Replying:", message
         self.wfile.write(message + "\r\n")
         self.wfile.flush()
 
     def finish(self):
-        print 'Closing the request'
+        if __DEBUG__: print 'Closing the request'
         pass
 
 
 if __name__ == '__main__':
     # set up signal handler
     def sighandler(signum, frame):
-        print "\nClosing the socket..."
+        if __DEBUG__: print "\nClosing the socket..."
         server.socket.close()
         time.sleep(1)
         sys.exit(0)
@@ -596,6 +627,6 @@ if __name__ == '__main__':
     backend = Papercut_Backend()
 
     signal.signal(signal.SIGINT, sighandler)
-    print 'Starting the server'
+    if __DEBUG__: print 'Starting the server'
     server = NNTPServer((settings.hostname, 31337), NNTPRequestHandler)
     server.serve_forever()

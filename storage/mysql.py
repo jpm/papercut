@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.5 2002-01-11 03:12:28 jpm Exp $
+# $Id: mysql.py,v 1.6 2002-01-11 20:29:34 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -33,6 +33,23 @@ class Papercut_Backend:
                     forum.forums
                 WHERE
                     nntp_group_name='%s'""" % (group_name)
+        self.cursor.execute(stmt)
+        return self.cursor.fetchone()[0]
+
+    def article_exists(self, group_name, style, range):
+        table_name = self.get_table_name(group_name)
+        stmt = """
+                SELECT
+                    COUNT(*) AS check
+                FROM
+                    forum.%s
+                WHERE""" % (table_name)
+        if style == 'range':
+            stmt = "%s id > %s" % (stmt, range[0])
+            if len(range) == 2:
+                stmt = "%s AND id < %s" % (stmt, range[1])
+        else:
+            stmt = "%s id = %s" % (stmt, range[0])
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
@@ -281,7 +298,9 @@ class Papercut_Backend:
                     A.id >= %s""" % (table_name, table_name, header, self.format_wildcards(pattern), start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.id <= %s" % (stmt, end_id)
-        self.cursor.execute(stmt)
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 0:
+            return None
         result = list(self.cursor.fetchall())
         overviews = []
         for row in result:
@@ -327,6 +346,7 @@ class Papercut_Backend:
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
+                    id,
                     author,
                     email,
                     subject
@@ -341,8 +361,11 @@ class Papercut_Backend:
             stmt = '%s id = %s' % (stmt, range[0])
         if self.cursor.execute(stmt) == 0:
             return None
-        result = self.cursor.fetchone()
-        if header == 'SUBJECT':
-            return 'Subject: %s' % (result[2])
-        elif header == 'FROM':
-            return 'From: %s <%s>' % (result[0], result[1])
+        result = self.cursor.fetchall()
+        hdrs = []
+        for row in result:
+            if header == 'SUBJECT':
+                hdrs.append('%s %s' % (row[0], row[3]))
+            elif header == 'FROM':
+                hdrs.append('%s %s <%s>' % (row[0], row[1], row[2]))
+        return "\r\n".join(["%s" % k for k in hdrs])
