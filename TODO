@@ -5,4 +5,3 @@ TODO list:
 - Check more the patterns of searching (wildmat) -> backend.format_wildcards() -> Work in progress
 - Show banner on the footer of the articles about the site
 - Implement some sort of timeout mechanism (According to the new NNTP protocol timeouts should not be explained [i.e. no responses])
-- Add INSTALL and all of the other crap

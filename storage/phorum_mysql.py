@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.16 2002-03-06 16:20:44 jpm Exp $
+# $Id: phorum_mysql.py,v 1.17 2002-03-17 03:59:46 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -208,6 +208,7 @@ class Papercut_Backend:
             author = "%s <%s>" % (result[1], result[2])
         formatted_time = self.get_formatted_time(time.localtime(result[4]))
         headers = []
+        headers.append("Path: %s" % (settings.nntp_hostname))
         headers.append("From: %s" % (author))
         headers.append("Newsgroups: %s" % (group_name))
         headers.append("Date: %s" % (formatted_time))
@@ -279,6 +280,7 @@ class Papercut_Backend:
             author = "%s <%s>" % (result[1], result[2])
         formatted_time = self.get_formatted_time(time.localtime(result[4]))
         headers = []
+        headers.append("Path: %s" % (settings.nntp_hostname))
         headers.append("From: %s" % (author))
         headers.append("Newsgroups: %s" % (group_name))
         headers.append("Date: %s" % (formatted_time))
