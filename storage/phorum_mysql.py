@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+        #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.24 2002-03-26 04:17:49 jpm Exp $
+# $Id: phorum_mysql.py,v 1.25 2002-03-26 05:34:35 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -29,30 +29,26 @@ class Papercut_Backend:
         self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
         self.cursor = self.conn.cursor()
 
-    def wrap(s, col=78, startcol=0, hangindent=0):
-        """Insert newlines into 's' so it doesn't extend past 'col'.
-
-        All lines are indented to 'startcol'.  The indentation of the first 
-        line is adjusted further by hangindent.
-        """
-        import re, string
-        s = re.split(r'\s+', s)
-        new_s = [' '*(startcol+hangindent)]
-        append = new_s.append
-        line_len = (startcol+hangindent)
-        for e in s:
-            if not e:
-                continue
-            if line_len + 1 + len(e) > col:
-                append('\n'+' '*(startcol)+e)
-                line_len = len(e) + startcol
+    def wrap(self, text, width=78):
+        i=0
+        while i<len(text):
+            if i+width+1>len(text):
+                i=len(text)
             else:
-                if line_len > startcol+hangindent:
-                    append(' ')
-                    line_len = line_len + 1
-                append(e)
-                line_len = line_len + len(e)
-        return string.join(new_s, '')
+                findnl=string.find(text, '\n', i)
+                findspc=string.rfind(text, ' ', i, i+width+1)
+                if findspc!=-1:
+                    if findnl!=-1 and findnl<findspc:
+                        i=findnl+1
+                    else:
+                        text=text[:findspc]+'\n'+text[findspc+1:]
+                        i=findspc+1
+                else:
+                    findspc=string.find(text, ' ', i)
+                    if findspc!=-1:
+                        text=text[:findspc]+'\n'+text[findspc+1:]
+                        i=findspc+1
+        return text
 
     def get_message_body(self, headers):
         return mime.get_text_message(headers)
@@ -139,7 +135,7 @@ class Papercut_Backend:
         # get the value of the configuration variable
         recipients = []
         moderator_regexp = re.compile("(.*)PHORUM\['ForumModeration'\](.*)='(.*)';", re.M)
-        mod_code = moderator_regexp.search(content, 0 ).groups()
+        mod_code = moderator_regexp.search(content, 0).groups()
         if mod_code[2] == 'r' or mod_code[2] == 'a':
             # get the moderator emails from the forum_auth table
             stmt = """
@@ -157,7 +153,7 @@ class Papercut_Backend:
                 recipients.append(row[0])
         return recipients
 
-    def send_notifications(self, group_name, msg_id, thread_id, msg_author, msg_subject, msg_body):
+    def send_notifications(self, group_name, msg_id, thread_id, parent_id, msg_author, msg_email, msg_subject, msg_body):
         msg_tpl = """From: Phorum <%(recipient)s>
 To: %(recipient)s
 Subject: Moderate for %(forum_name)s at %(phorum_server_hostname)s Message: %(msg_id)s.
@@ -192,11 +188,11 @@ To edit this message use this URL:
         fp.close()
         # regexps to get the content from the phorum configuration files
         url_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)';", re.M)
-        phorum_url = url_regexp.search(content, 0 ).groups()[2]
+        phorum_url = url_regexp.search(content, 0).groups()[2]
         admin_regexp = re.compile("(.*)PHORUM\['admin_url'\](.*)='(.*)';", re.M)
-        phorum_admin_url = admin_regexp.search(content, 0 ).groups()[2]
+        phorum_admin_url = admin_regexp.search(content, 0).groups()[2]
         server_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)http://(.*)/(.*)';", re.M)
-        phorum_server_hostname = server_regexp.search(content, 0 ).groups()[3]
+        phorum_server_hostname = server_regexp.search(content, 0).groups()[3]
         # connect to the SMTP server
         smtp = smtplib.SMTP('localhost')
         emails = self.get_notification_emails(forum_id)
@@ -207,7 +203,20 @@ To edit this message use this URL:
         # XXX: Coding blind here. I really don't know much about how Phorum works with
         # XXX: sending forum postings as emails, but it's here. Let's call this a
         # XXX: temporary implementation. Should work fine, I guess.
-        notification_mail_tpl = """This message was sent from: %(forum_name)s.
+        mail_code_regexp = re.compile("(.*)PHORUM\['PhorumMailCode'\](.*)=(.*)'(.*)';", re.M)
+        phorum_mail_code = mail_code_regexp.search(content, 0).groups()[3]
+        notification_mail_tpl = """Message-ID: %(random_msgid)s
+From: %(msg_author)s %(msg_email)s
+Subject: %(msg_subject)s
+To: %(forum_name)s <%(email_list)s>
+Return-Path: <%(email_return)s>
+Reply-To: %(email_return)s
+X-Phorum-%(phorum_mail_code)s-Version: Phorum $phorumver
+X-Phorum-%(phorum_mail_code)s-Forum: %(forum_name)s
+X-Phorum-%(phorum_mail_code)s-Thread: %(thread_id)s
+X-Phorum-%(phorum_mail_code)s-Parent: %(parent_id)s
+
+This message was sent from: %(forum_name)s.
 <%(phorum_url)s/read.php?f=%(forum_id)s&i=%(msg_id)s&t=%(thread_id)s>
 ----------------------------------------------------------------
 
@@ -218,7 +227,8 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
 """
         stmt = """
                 SELECT
-                    email_list
+                    email_list,
+                    email_return
                 FROM
                     forums
                 WHERE
@@ -226,12 +236,16 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                     id=%s""" % (forum_id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 1:
-            email_list = self.cursor.fetchone()[0]
+            email_list, email_return = self.cursor.fetchone()
             msg_body = self.wrap(msg_body)
+            if len(msg_email) > 0:
+                msg_email = '<%s>' % msg_email
+            else:
+                msg_email = ''
             # this is pretty ugly, right ?
             from papercut import __VERSION__
             current_msg = notification_mail_tpl % vars()
-            smtp.sendmail("Phorum <%s>" % (email_list), email_list, current_msg)
+            smtp.sendmail('Phorum <%s>' % (email_list), email_list, current_msg)
         smtp.quit()
 
     def get_NEWGROUPS(self, ts, group='%'):
@@ -724,5 +738,5 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                 return None
             else:
                 # alert forum moderators
-                self.send_notifications(group_name, new_id, thread_id, author.strip(), subject, body)
+                self.send_notifications(group_name, new_id, thread_id, parent_id, author.strip(), email, subject, body)
                 return 1
