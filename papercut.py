@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.2 2002-01-10 21:14:35 jpm Exp $
+# $Id: papercut.py,v 1.3 2002-01-11 06:20:57 jpm Exp $
 import SocketServer
 import sys
 import signal
 import time
 import settings
 
-__VERSION__ = '0.2.7'
+__VERSION__ = '0.3.0'
 
 # some constants to hold the possible responses
 ERR_NOTCAPABLE = '500 command not recognized'
@@ -23,6 +23,9 @@ ERR_NOSUCHARTICLENUM = '423 no such article number in this group'
 ERR_NOSLAVESHERE = '202 no slaves here please (this is a read-only server)'
 ERR_NOSUCHARTICLE = '430 no such article'
 ERR_NOIHAVEHERE = '435 article not wanted - do not send it'
+ERR_NOSTREAM = '500 Command not understood'
+ERR_TIMEOUT = '503 Timeout after %s seconds, closing connection.'
+ERR_NODISTRIBUTIONS = '503 No list of newsgroup distributions available.'
 STATUS_HELPMSG = '100 help text follows'
 STATUS_GROUPSELECTED = '211 %s %s %s %s group selected'
 STATUS_LIST = '215 list of newsgroups follows'
@@ -41,15 +44,16 @@ STATUS_XGTITLE = '282 list of groups and descriptions follows'
 STATUS_XHDR = '221 Header follows'
 STATUS_DATE = '111 %s'
 STATUS_OVERVIEWFMT = '215 information follows'
+STATUS_EXTENSIONS = '215 Extensions supported by server.'
 
 overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Bytes', 'Lines', 'Xref')
 
 # TODO list:
 # ----------
-# - MODE STREAM (does this mean 'Connect->command->Close' style conversations?)
+# - MODE STREAM (it means several commands at the same time without waiting for responses)
 # - Check more the patterns of searching (wildmat) -> backend.format_wildcards() -> Work in progress
 # - Show banner on the footer of the articles about the site
-# - Implement some sort of timeout mechanism
+# - Implement some sort of timeout mechanism (ERR_TIMEOUT)
 # - Implement really dynamic backend storages (it's mysql only right now)
 # - Add INSTALL and all of the other crap
 
@@ -64,6 +68,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 'MODE', 'XOVER', 'XPAT',
                 'LISTGROUP', 'XGTITLE', 'XHDR',
                 'SLAVE', 'DATE', 'IHAVE')
+    extensions = ('XOVER', 'XPAT', 'LISTGROUP',
+                  'XGTITLE', 'XHDR', 'MODE')
     terminated = 0
     selected_article = 'ggg'
     selected_group = 'ggg'
@@ -88,6 +94,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         settings.logEvent('Connection closed (IP Address: %s)' % (self.client_address[0]))
 
     def do_NEWGROUPS(self):
+        """
+        Syntax:
+            NEWGROUPS date time [GMT] [<distributions>]
+        Responses:
+            231 list of new newsgroups follows
+        """
         if (len(self.tokens) < 3) or (len(self.tokens) > 5):
             self.send_response(ERR_CMDSYNTAXERROR)
             return
@@ -103,6 +115,17 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(msg)
 
     def do_GROUP(self):
+        """
+        Syntax:
+            GROUP ggg
+        Responses:
+            211 n f l s group selected
+               (n = estimated number of articles in group,
+                f = first article number in the group,
+                l = last article number in the group,
+                s = name of the group.)
+            411 no such news group
+        """
         # check the syntax of the command
         if len(self.tokens) != 2:
             self.send_response(ERR_CMDSYNTAXERROR)
@@ -116,6 +139,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(STATUS_GROUPSELECTED % (total_articles, first_art_num, last_art_num, self.tokens[1]))
 
     def do_NEWNEWS(self):
+        """
+        Syntax:
+            NEWNEWS newsgroups date time [GMT] [<distribution>]
+        Responses:
+            230 list of new articles by message-id follows
+        """
         # check the syntax of the command
         if (len(self.tokens) < 4) or (len(self.tokens) > 6):
             self.send_response(ERR_CMDSYNTAXERROR)
@@ -136,11 +165,23 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(msg)
 
     def do_LIST(self):
+        """
+        Syntax:
+            LIST
+        Responses:
+            215 list of newsgroups follows
+        """
         if len(self.tokens) > 2:
             self.send_response(ERR_CMDSYNTAXERROR)
             return
         if (len(self.tokens) == 2) and (self.tokens[1].upper() == 'OVERVIEW.FMT'):
             self.send_response("%s\r\n%s\r\n." % (STATUS_OVERVIEWFMT, "\r\n".join(["%s:" % k for k in overview_headers])))
+            return
+        elif (len(self.tokens) == 2) and (self.tokens[1].upper() == 'EXTENSIONS'):
+            self.send_response("%s\r\n%s\r\n." % (STATUS_EXTENSIONS, "\r\n".join(["%s" % k for k in self.extensions])))
+            return
+        elif (len(self.tokens) == 2) and (self.tokens[1].upper() == 'DISTRIBUTIONS'):
+            self.send_response(ERR_NODISTRIBUTIONS)
             return
         elif len(self.tokens) == 2:
             self.send_response(ERR_CMDSYNTAXERROR)
@@ -154,6 +195,16 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(msg)
 
     def do_STAT(self):
+        """
+        Syntax:
+            STAT nnn|<message-id>
+        Responses:
+            223 n a article retrieved - request text separately
+               (n = article number, a = unique article id)
+            412 no newsgroup selected
+            420 no current article has been selected
+            421 no next article in this group
+        """
         # check the syntax of the command
         if len(self.tokens) != 2:
             self.send_response(ERR_CMDSYNTAXERROR)
@@ -168,6 +219,20 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(STATUS_STAT % (self.tokens[1], self.tokens[1], self.selected_group))
 
     def do_ARTICLE(self):
+        """
+        Syntax:
+            ARTICLE nnn|<message-id>
+        Responses:
+            220 n <a> article retrieved - head and body follow
+                (n = article number, <a> = message-id)
+            221 n <a> article retrieved - head follows
+            222 n <a> article retrieved - body follows
+            223 n <a> article retrieved - request text separately
+            412 no newsgroup has been selected
+            420 no current article has been selected
+            423 no such article number in this group
+            430 no such article found
+        """
         # check the syntax
         if len(self.tokens) != 2:
             self.send_response(ERR_CMDSYNTAXERROR)
@@ -184,6 +249,13 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(msg)
 
     def do_LAST(self):
+        """
+        Syntax:
+            LAST
+        Responses:
+            223 n a article retrieved - request text separately
+               (n = article number, a = unique article id)
+        """
         # check if there is a previous article
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
@@ -199,6 +271,16 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(STATUS_STAT % (article_num, article_num, self.selected_group))
 
     def do_NEXT(self):
+        """
+        Syntax:
+            NEXT
+        Responses:
+            223 n a article retrieved - request text separately
+               (n = article number, a = unique article id)
+            412 no newsgroup selected
+            420 no current article has been selected
+            421 no next article in this group
+        """
         # check if there is a previous article
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
@@ -214,6 +296,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(STATUS_STAT % (article_num, article_num, self.selected_group))
 
     def do_BODY(self):
+        """
+        Syntax:
+            BODY [nnn|<message-id>]
+        Responses:
+            222 10110 <23445@sdcsvax.ARPA> article retrieved - body follows (body text here)
+        """
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
             return
@@ -225,26 +313,34 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(msg)
 
     def do_HEAD(self):
+        """
+        Syntax:
+            HEAD [nnn|<message-id>]
+        Responses:
+            221 1013 <5734@mcvax.UUCP> Article retrieved; head follows.
+        """
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
             return
-        if self.selected_article == 'ggg':
-            self.send_response(ERR_NOARTICLESELECTED)
-            return
-        head = backend.get_HEAD(self.selected_group, self.selected_article)
+        if len(self.tokens) == 2:
+            head = backend.get_HEAD(self.selected_group, self.tokens[1])
+        else:
+            if self.selected_article == 'ggg':
+                self.send_response(ERR_NOARTICLESELECTED)
+                return
+            head = backend.get_HEAD(self.selected_group, self.selected_article)
         msg = "%s\r\n%s\r\n." % (STATUS_HEAD % (self.selected_article, self.selected_article, self.selected_group), head)
         self.send_response(msg)
 
     def do_XOVER(self):
         """
         Syntax:
-        XOVER [range]
-        Successfull:
-        224 Overview information follows\r\n
-        subject\tauthor\tdate\tmessage-id\treferences\tbyte count\tline count\r\n
-        Error:
-        412 No news group current selected
-        420 No article(s) selected
+            XOVER [range]
+        Responses:
+            224 Overview information follows\r\n
+            subject\tauthor\tdate\tmessage-id\treferences\tbyte count\tline count\r\n
+            412 No news group current selected
+            420 No article(s) selected
         """
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
@@ -269,13 +365,11 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     def do_XPAT(self):
         """
         Syntax:
-        XPAT header range|<message-id> pat [pat...]
-        Successfull:
-        221 Header follows
-        
-        Error:
-        430 no such article
-        502 no permission
+            XPAT header range|<message-id> pat [pat...]
+        Responses:
+            221 Header follows
+            430 no such article
+            502 no permission
         """
         if len(self.tokens) < 4:
             self.send_response(ERR_CMDSYNTAXERROR)
@@ -300,6 +394,14 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(msg)
 
     def do_LISTGROUP(self):
+        """
+        Syntax:
+            LISTGROUP [ggg]
+        Responses:
+            211 list of article numbers follow
+            412 Not currently in newsgroup
+            502 no permission
+        """
         if len(self.tokens) > 2:
             self.send_response(ERR_CMDSYNTAXERROR)
             return
@@ -318,6 +420,13 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(msg)
 
     def do_XGTITLE(self):
+        """
+        Syntax:
+            XGTITLE [wildmat]
+        Responses:
+            481 Groups and descriptions unavailable
+            282 list of groups and descriptions follows
+        """
         if len(self.tokens) > 2:
             self.send_response(ERR_CMDSYNTAXERROR)
             return
@@ -334,12 +443,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     def do_XHDR(self):
         """
         Syntax:
-        XHDR header [range|<message-id>]
-        Replies:
-        221 Header follows
-        412 No news group current selected
-        420 No current article selected
-        430 no such article
+            XHDR header [range|<message-id>]
+        Responses:
+            221 Header follows
+            412 No news group current selected
+            420 No current article selected
+            430 no such article
         """
         if (len(self.tokens) < 2) or (len(self.tokens) > 3):
             self.send_response(ERR_CMDSYNTAXERROR)
@@ -374,26 +483,81 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.send_response(msg)
 
     def do_DATE(self):
+        """
+        Syntax:
+            DATE
+        Responses:
+            111 YYYYMMDDhhmmss
+        """
         self.send_response(STATUS_DATE % (time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))))
 
     def do_HELP(self):
+        """
+        Syntax:
+            HELP
+        Responses:
+            100 help text follows
+        """
         msg = "%s\r\n\t%s\r\n." % (STATUS_HELPMSG, "\r\n\t".join(self.commands))
         self.send_response(msg)
 
     def do_QUIT(self):
+        """
+        Syntax:
+            QUIT
+        Responses:
+            205 closing connection - goodbye!
+        """
         self.terminated = 1
         self.send_response(STATUS_CLOSING)
 
     def do_IHAVE(self):
+        """
+        Syntax:
+            IHAVE <message-id>
+        Responses:
+            235 article transferred ok
+            335 send article to be transferred.  End with <CR-LF>.<CR-LF>
+            435 article not wanted - do not send it
+            436 transfer failed - try again later
+            437 article rejected - do not try again
+        """
         self.send_response(ERR_NOIHAVEHERE)
 
     def do_SLAVE(self):
+        """
+        Syntax:
+            SLAVE
+        Responses:
+            202 slave status noted
+        """
         self.send_response(ERR_NOSLAVESHERE)
 
     def do_MODE(self):
-        self.send_response(ERR_NOPOSTMODE)
+        """
+        Syntax:
+            MODE READER|STREAM
+        Responses:
+            200 Hello, you can post
+            201 Hello, you can't post
+            203 Streaming is OK
+            500 Command not understood
+        """
+        if self.tokens[1].upper() == 'READER':
+            self.send_response(ERR_NOPOSTMODE)
+        elif self.tokens[1].upper() == 'STREAM':
+            self.send_response(ERR_NOPOSTMODE)
 
     def do_POST(self):
+        """
+        Syntax:
+            POST
+        Responses:
+            240 article posted ok
+            340 send article to be posted. End with <CR-LF>.<CR-LF>
+            440 posting not allowed
+            441 posting failed
+        """
         self.send_response(ERR_NOPOSTALLOWED)
 
     def get_timestamp(self, date, times, gmt='yes'):
