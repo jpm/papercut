@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.36 2002-03-24 00:51:25 jpm Exp $
+# $Id: papercut.py,v 1.37 2002-03-24 01:44:10 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -241,7 +241,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             if settings.server_type == 'read-only':
                 lists.append("%s %s %s n" % (group_name, maximum, minimum))
             else:
-                lists.append("%S %s %s y" % (group_name, maximum, minimum))
+                lists.append("%s %s %s y" % (group_name, maximum, minimum))
         self.send_response("%s\r\n%s\r\n." % (STATUS_LIST, "\r\n".join(lists)))
 
     def do_STAT(self):
