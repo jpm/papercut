@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more informationB
-# $Id: mysql.py,v 1.28 2002-04-24 04:26:22 jpm Exp $
+# $Id: mysql.py,v 1.29 2002-04-24 15:50:45 jpm Exp $
 import MySQLdb
 import time
 import re
 import settings
-import mime
 
 # we don't need to compile the regexps everytime..
 singleline_regexp = re.compile("^\.", re.M)
@@ -23,14 +22,6 @@ class Papercut_Storage:
     def __init__(self):
         self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
         self.cursor = self.conn.cursor()
-
-    def get_message_body(self, headers):
-        """Parses and returns the most appropriate message body possible.
-        
-        The function tries to extract the plaintext version of a MIME based
-        message, and if it is not available then it returns the html version.        
-        """
-        return mime.get_text_message(headers)
 
     def get_formatted_time(self, time_tuple):
         """Formats the time tuple in a NNTP friendly way.
@@ -489,7 +480,7 @@ class Papercut_Storage:
 
     def do_POST(self, group_name, lines, ip_address):
         table_name = self.get_table_name(group_name)
-        body = self.get_message_body(lines)
+        body = '\r\n'.join(lines)
         author, email = from_regexp.search(lines, 0).groups()
         subject = subject_regexp.search(lines, 0).groups()[0].strip()
         if lines.find('References') != -1:
