@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.9 2002-02-03 06:17:43 jpm Exp $
+# $Id: phorum_mysql.py,v 1.10 2002-02-04 18:24:09 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -36,6 +36,9 @@ class Papercut_Backend:
 
     def format_body(self, text):
         return singleline_regexp.sub("..", text)
+
+    def quote_string(self, text):
+        return text.replace("'", "\'")
 
     def format_wildcards(self, pattern):
         pattern.replace('*', '.*')
@@ -508,7 +511,7 @@ class Papercut_Backend:
                     %s,
                     0
                 )
-                """ % (table_name, new_id, thread_id, parent_id, author.strip(), subject, email, ip_address, modifystamp)
+                """ % (table_name, new_id, thread_id, parent_id, self.quote_string(author.strip()), self.quote_string(subject), self.quote_string(email), ip_address, modifystamp)
         if not self.cursor.execute(stmt):
             return None
         else:
@@ -524,7 +527,7 @@ class Papercut_Backend:
                         %s,
                         '%s',
                         %s
-                    )""" % (table_name, new_id, body, thread_id)
+                    )""" % (table_name, new_id, self.quote_string(body), thread_id)
             if not self.cursor.execute(stmt):
                 # delete from 'table_name' before returning..
                 stmt = """
