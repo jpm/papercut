@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mbox.py,v 1.1 2002-12-13 07:32:10 jpm Exp $
+# $Id: mbox.py,v 1.2 2002-12-31 18:07:08 jpm Exp $
 
 import os
 import mailbox
@@ -78,7 +78,7 @@ class Papercut_Storage:
             return "\r\n".join(groups)
 
     def get_STAT(self, group_name, id):
-        # basically check if the message exists
+        # check if the message exists
         mbox = self.get_mailbox(group_name.replace('papercut.mbox.', ''))
         i = 0
         while mbox.next():
@@ -92,7 +92,7 @@ class Papercut_Storage:
         i = 0
         while 1:
             msg = mbox.next()
-            if msg == None:
+            if msg is None:
                 return None
             if i == int(id):
                 return ("\r\n".join(msg.headers), msg.fp.read())
