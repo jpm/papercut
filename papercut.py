@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.20 2002-01-17 03:46:25 jpm Exp $
+# $Id: papercut.py,v 1.21 2002-01-17 22:40:24 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -8,9 +8,9 @@ import time
 import re
 import settings
 
-__VERSION__ = '0.5.4'
+__VERSION__ = '0.6.1'
 # set this to 0 (zero) for real world use
-__DEBUG__ = 1
+__DEBUG__ = 0
 __TIMEOUT__ = 60
 
 # some constants to hold the possible responses
@@ -90,20 +90,24 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     tokens = []
     sending_article = 0
     article_lines = []
+    broken_oe_checker = 0
 
     def handle(self):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
         self.send_response(STATUS_READYNOPOST % (settings.hostname, __VERSION__))
         while not self.terminated:
             self.inputline = self.rfile.readline()
+            if __DEBUG__:
+                print ':', self.inputline, ':'
             line = self.inputline.strip()
             # somehow outlook express sends a lot of newlines (maybe its just my imagination)
             if (not self.sending_article) and (line == ''):
+                self.broken_oe_checker += 1
+                if self.broken_oe_checker >= 10:
+                    self.send_response(STATUS_CLOSING)
+                    self.terminated = 1
                 continue
             self.tokens = line.split(' ')
-            if __DEBUG__:
-                print line
-                #print self.tokens
             # NNTP commands are case-insensitive
             command = self.tokens[0].upper()
             settings.logEvent('Received request: %s' % (line))
@@ -663,8 +667,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.tokens = []
         self.sending_article = 0
         self.article_lines = []
-        # calling the parent's method to clean up
-        SocketServer.StreamRequestHandler.finish()
+        self.wfile.flush()
+        self.wfile.close()
+        self.rfile.close()
         if __DEBUG__: print 'Closing the request'
 
 
