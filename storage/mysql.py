@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.3 2002-01-11 02:11:37 jpm Exp $
+# $Id: mysql.py,v 1.4 2002-01-11 02:21:04 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -160,7 +160,7 @@ class Papercut_Backend:
             author = "%s <%s>" % (result[1], result[2])
         formatted_time = self.get_formatted_time(time.localtime(result[4]))
         head = "From: %s\r\nTo: %s\r\nDate: %s\r\nSubject: %s" % (mime_encode_header(author), group_name, formatted_time, mime_encode_header(result[3]))
-        return (head, self.format_body(result[5]))
+        return (head, mime_encode_header(self.format_body(result[5])))
 
     def get_LAST(self, group_name, current_id):
         table_name = self.get_table_name(group_name)
@@ -258,7 +258,7 @@ class Papercut_Backend:
             message_id = "<%s@%s>" % (row[0], group_name)
             line_count = len(row[6].split('\n'))
             xref = 'Xref: %s:%s' % (group_name, row[1])
-            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], mime_encode_header(row[4]), mime_encode_header(author), formatted_time, message_id, row[1], len(self.format_body(row[6])), line_count, xref))
+            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], mime_encode_header(row[4]), mime_encode_header(author), formatted_time, message_id, row[1], len(mime_encode_header(self.format_body(row[6]))), line_count, xref))
         return "\r\n".join(["%s" % k for k in overviews])
 
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):
@@ -292,7 +292,7 @@ class Papercut_Backend:
             formatted_time = self.get_formatted_time(time.localtime(row[5]))
             message_id = "<%s@%s>" % (row[0], group_name)
             line_count = len(row[6].split('\n'))
-            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], mime_encode_header(row[4]), mime_encode_header(author), formatted_time, message_id, row[1], len(self.format_body(row[6])), line_count))
+            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], mime_encode_header(row[4]), mime_encode_header(author), formatted_time, message_id, row[1], len(mime_encode_header(self.format_body(row[6]))), line_count))
         return "\r\n".join(["%s" % k for k in overviews])
 
     def get_LISTGROUP(self, group_name):
