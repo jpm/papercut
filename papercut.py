@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.86 2004-05-01 23:15:43 jpm Exp $
+# $Id: papercut.py,v 1.87 2004-05-01 23:18:47 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -14,7 +14,7 @@ import StringIO
 import settings
 import papercut_cache
 
-__VERSION__ = '0.9.12'
+__VERSION__ = '0.9.13'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients (draft 20 of the new NNTP protocol says at least 3 minutes)
