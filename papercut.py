@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.59 2002-09-09 22:36:11 jpm Exp $
+# $Id: papercut.py,v 1.60 2002-09-09 23:54:05 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -10,7 +10,7 @@ import settings
 import traceback
 import StringIO
 
-__VERSION__ = '0.8.3'
+__VERSION__ = '0.9.0'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
