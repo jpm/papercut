@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.91 2004-08-01 21:39:51 jpm Exp $
+# $Id: papercut.py,v 1.92 2004-08-01 21:49:59 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -515,7 +515,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 overviews = backend.get_XOVER(self.selected_group, self.tokens[1], self.tokens[1])
             else: 
                 ranges = self.tokens[1].split('-')
-                if len(ranges) == 1:
+                if ranges[1] == '':
                     # this is a start-everything style of XOVER
                     overviews = backend.get_XOVER(self.selected_group, ranges[0])
                 else:
@@ -554,7 +554,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             return
         else:
             ranges = self.tokens[2].split('-')
-            if len(ranges) == 1:
+            if ranges[1] == '':
                 overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0])
             else:
                 overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0], ranges[1])
@@ -681,7 +681,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 info = backend.get_XHDR(self.selected_group, self.tokens[1], 'unique', (self.tokens[2]))
             else:
                 ranges = self.tokens[2].split('-')
-                if len(ranges) == 1:
+                if ranges[1] == '':
                     info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0]))
                 else:
                     info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0], ranges[1]))
