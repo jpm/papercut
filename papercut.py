@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.31 2002-02-07 03:12:13 jpm Exp $
+# $Id: papercut.py,v 1.32 2002-02-12 17:07:07 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -8,7 +8,7 @@ import time
 import re
 import settings
 
-__VERSION__ = '0.7.1'
+__VERSION__ = '0.7.2'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 __TIMEOUT__ = 60
@@ -690,6 +690,6 @@ if __name__ == '__main__':
     backend = temp.Papercut_Backend()
 
     signal.signal(signal.SIGINT, sighandler)
-    if __DEBUG__: print 'Starting the server'
+    print 'Papercut %s - starting up' % __VERSION__
     server = NNTPServer((settings.nntp_hostname, settings.nntp_port), NNTPRequestHandler)
     server.serve_forever()
