@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.10 2002-01-13 07:25:27 jpm Exp $
+# $Id: papercut.py,v 1.11 2002-01-14 06:05:29 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -8,7 +8,7 @@ import time
 import re
 import settings
 
-__VERSION__ = '0.3.9'
+__VERSION__ = '0.4.9'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 1
 __TIMEOUT__ = 60
@@ -74,7 +74,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 'NEWNEWS', 'NEXT', 'QUIT',
                 'MODE', 'XOVER', 'XPAT',
                 'LISTGROUP', 'XGTITLE', 'XHDR',
-                'SLAVE', 'DATE', 'IHAVE')
+                'SLAVE', 'DATE', 'IHAVE',
+                'OVER', 'HDR')
     extensions = ('XOVER', 'XPAT', 'LISTGROUP',
                   'XGTITLE', 'XHDR', 'MODE',
                   'OVER', 'HDR')
@@ -204,10 +205,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             503 program error, function not performed
         """
         if (len(self.tokens) == 2) and (self.tokens[1].upper() == 'OVERVIEW.FMT'):
-            self.send_response("%s\r\n%s\r\n." % (STATUS_OVERVIEWFMT, "\r\n".join(["%s:" % k for k in overview_headers])))
+            self.send_response("%s\r\n%s\r\n." % (STATUS_OVERVIEWFMT, "\r\n".join(overview_headers)))
             return
         elif (len(self.tokens) == 2) and (self.tokens[1].upper() == 'EXTENSIONS'):
-            self.send_response("%s\r\n%s\r\n." % (STATUS_EXTENSIONS, "\r\n".join(["%s" % k for k in self.extensions])))
+            self.send_response("%s\r\n%s\r\n." % (STATUS_EXTENSIONS, "\r\n".join(self.extensions)))
             return
         elif (len(self.tokens) > 1) and (self.tokens[1].upper() == 'NEWSGROUPS'):
             # same functionality as the XGTITLE command, so let's use that existing code
@@ -221,8 +222,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         for group_name, table in result:
             total, maximum, minimum = backend.get_group_stats(table)
             lists.append("%s %s %s n" % (group_name, maximum, minimum))
-        msg = "%s\r\n%s\r\n." % (STATUS_LIST, "\r\n".join(["%s" % k for k in lists]))
-        self.send_response(msg)
+        self.send_response("%s\r\n%s\r\n." % (STATUS_LIST, "\r\n".join(lists)))
 
     def do_STAT(self):
         """
@@ -275,8 +275,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
         head, body = backend.get_ARTICLE(self.selected_group, self.tokens[1])
         response = STATUS_ARTICLE % (self.selected_article, self.selected_group)
-        msg = "%s\r\n%s\r\n\r\n%s\r\n." % (response, head, body)
-        self.send_response(msg)
+        self.send_response("%s\r\n%s\r\n\r\n%s\r\n." % (response, head, body))
 
     def do_LAST(self):
         """
@@ -344,8 +343,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             body = backend.get_BODY(self.selected_group, self.tokens[1])
         else:
             body = backend.get_BODY(self.selected_group, self.selected_article)
-        msg = "%s\r\n%s\r\n." % (STATUS_BODY % (self.selected_article, self.selected_article, self.selected_group), body)
-        self.send_response(msg)
+        self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (self.selected_article, self.selected_article, self.selected_group), body))
 
     def do_HEAD(self):
         """
@@ -366,8 +364,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 self.send_response(ERR_NOARTICLESELECTED)
                 return
             head = backend.get_HEAD(self.selected_group, self.selected_article)
-        msg = "%s\r\n%s\r\n." % (STATUS_HEAD % (self.selected_article, self.selected_article, self.selected_group), head)
-        self.send_response(msg)
+        self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (self.selected_article, self.selected_article, self.selected_group), head))
 
     def do_OVER(self):
         self.do_XOVER()
@@ -402,8 +399,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if overviews == None:
             self.send_response(ERR_NOARTICLERETURNED)
             return
-        msg = "%s\r\n%s\r\n." % (STATUS_XOVER, overviews)
-        self.send_response(msg)
+        self.send_response("%s\r\n%s\r\n." % (STATUS_XOVER, overviews))
 
     def do_XPAT(self):
         """
@@ -417,11 +413,11 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if len(self.tokens) < 4:
             self.send_response(ERR_CMDSYNTAXERROR)
             return
-        if (self.tokens[1].upper() != 'SUBJECT') and (self.tokens[1].upper() != 'FROM'):
-            self.send_response(ERR_CMDSYNTAXERROR)
-            return
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
+            return
+        if not self.index_in_list(overview_headers, self.tokens[1]):
+            self.send_response("%s\r\n." % (STATUS_XPAT))
             return
         if self.tokens[2].find('@') != -1:
             self.tokens[2] = self.get_number_from_msg_id(self.tokens[2])
@@ -436,8 +432,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if overviews == None:
             self.send_response(ERR_NOSUCHARTICLE)
             return
-        msg = "%s\r\n%s\r\n." % (STATUS_XPAT, overviews)
-        self.send_response(msg)
+        self.send_response("%s\r\n%s\r\n." % (STATUS_XPAT, overviews))
 
     def do_LISTGROUP(self):
         """
@@ -462,8 +457,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 self.send_response(ERR_NOGROUPSELECTED)
                 return
             numbers = backend.get_LISTGROUP(self.selected_group)
-        msg = "%s\r\n%s\r\n." % (STATUS_LISTGROUP, numbers)
-        self.send_response(msg)
+        self.send_response("%s\r\n%s\r\n." % (STATUS_LISTGROUP, numbers))
 
     def do_XGTITLE(self):
         """
@@ -483,8 +477,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 self.send_response(ERR_NOGROUPSELECTED)
                 return
             info = backend.get_XGTITLE(self.selected_group)
-        msg = "%s\r\n%s\r\n." % (STATUS_XGTITLE, info)
-        self.send_response(msg)
+        self.send_response("%s\r\n%s\r\n." % (STATUS_XGTITLE, info))
 
     def do_HDR(self):
         self.do_XHDR()
@@ -528,8 +521,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if info == None:
             self.send_response(ERR_NOSUCHARTICLE)
             return
-        msg = "%s\r\n%s\r\n." % (STATUS_XHDR, info)
-        self.send_response(msg)
+        self.send_response("%s\r\n%s\r\n." % (STATUS_XHDR, info))
 
     def do_DATE(self):
         """
@@ -547,8 +539,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         Responses:
             100 help text follows
         """
-        msg = "%s\r\n\t%s\r\n." % (STATUS_HELPMSG, "\r\n\t".join(self.commands))
-        self.send_response(msg)
+        self.send_response("%s\r\n\t%s\r\n." % (STATUS_HELPMSG, "\r\n\t".join(self.commands)))
 
     def do_QUIT(self):
         """
@@ -627,6 +618,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
 
     def get_number_from_msg_id(self, msg_id):
         return msg_id[1:msg_id.find('@')]
+
+    def index_in_list(self, list, index):
+        for i in list:
+            if i.upper() == index.upper():
+                return 1
+        return 0
 
     def get_timestamp(self, date, times, gmt='yes'):
         local_year = str(time.localtime()[0])
