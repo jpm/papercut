@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.22 2002-03-24 21:51:14 jpm Exp $
+# $Id: phorum_mysql.py,v 1.23 2002-03-25 04:47:37 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -89,8 +89,11 @@ class Papercut_Backend:
                     %s
                 WHERE
                     approved='Y'""" % (table_name)
-        self.cursor.execute(stmt)
-        return self.cursor.fetchone()
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 0:
+            return (0, 0, 0)
+        else:
+            return self.cursor.fetchone()
 
     def get_table_name(self, group_name):
         stmt = """
@@ -125,13 +128,21 @@ class Papercut_Backend:
                         forum_id=%s""" % (forum_id)
             self.cursor.execute(stmt)
             result = list(self.cursor.fetchall())
-            for email in result:
-                recipients.append(email)
-        # check if we need to also send an email to a mailing list
-        maillist_regexp = re.compile("(.*)PHORUM\['ForumEmailList'\](.*)='(.*)';", re.M)
-        mail_recipient = maillist_regexp.search(content, 0 ).groups()[2]
-        if mail_recipient != '':
-            recipients.append(mail_recipient)
+            for row in result:
+                recipients.append(row[0])
+        # get the email_list address from mysql itself
+        stmt = """
+                SELECT
+                    email_list
+                FROM
+                    forums
+                WHERE
+                    LENGTH(email_list) > 0 AND
+                    id=%s""" % (forum_id)
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 1:
+            email_list = self.cursor.fetchone()[0]
+            recipients.append(email_list)
         return recipients
 
     def send_notifications(self, group_name, msg_id, thread_id, msg_author, msg_subject, msg_body):
@@ -178,7 +189,6 @@ To edit this message use this URL:
         smtp = smtplib.SMTP('localhost')
         emails = self.get_notification_emails(forum_id)
         for recipient in emails:
-            recipient = recipient[0]
             current_msg = msg_tpl % vars()
             smtp.sendmail("Phorum <%s>" % (recipient), recipient, current_msg)
         smtp.quit()
@@ -190,7 +200,7 @@ To edit this message use this URL:
                 FROM
                     forums
                 WHERE
-                    nntp_group_name LIKE '%%%s'
+                    nntp_group_name LIKE '%%%s' 
                 ORDER BY
                     nntp_group_name ASC""" % (group)
         self.cursor.execute(stmt)
@@ -223,11 +233,16 @@ To edit this message use this URL:
                     WHERE
                         approved='Y' AND
                         UNIX_TIMESTAMP(datestamp) >= %s""" % (table, ts)
-            self.cursor.execute(stmt)
+            num_rows = self.cursor.execute(stmt)
+            if num_rows == 0:
+                continue
             ids = list(self.cursor.fetchall())
             for id in ids:
                 articles.append("<%s@%s>" % (id, group))
-        return "\r\n".join(articles)
+        if len(articles) == 0:
+            return ''
+        else:
+            return "\r\n".join(articles)
 
     def get_GROUP(self, group_name):
         table_name = self.get_table_name(group_name)
@@ -241,6 +256,8 @@ To edit this message use this URL:
                     table_name
                 FROM
                     forums
+                WHERE
+                    LENGTH(nntp_group_name) > 0
                 ORDER BY
                     nntp_group_name ASC"""
         self.cursor.execute(stmt)
@@ -457,9 +474,9 @@ To edit this message use this URL:
         hdrs = []
         for row in result:
             if header.upper() == 'SUBJECT':
-                hdrs.append('%s %s' % (row[0], row[3]))
+                hdrs.append('%s %s' % (row[0], row[4]))
             elif header.upper() == 'FROM':
-                hdrs.append('%s %s <%s>' % (row[0], row[1], row[2]))
+                hdrs.append('%s %s <%s>' % (row[0], row[2], row[3]))
             elif header.upper() == 'DATE':
                 hdrs.append('%s %s' % (row[0], self.get_formatted_time(time.localtime(result[5]))))
             elif header.upper() == 'MESSAGE-ID':
@@ -492,14 +509,14 @@ To edit this message use this URL:
         result = list(self.cursor.fetchall())
         return "\r\n".join(["%s" % k for k in result])
 
-    def get_XGTITLE(self, pattern='none'):
+    def get_XGTITLE(self, pattern=None):
         stmt = """
                 SELECT
                     nntp_group_name,
                     description
                 FROM
                     forums"""
-        if pattern != 'none':
+        if pattern != None:
             stmt = stmt + """
                 WHERE
                     nntp_group_name REGEXP '%s'""" % (self.format_wildcards(pattern))
@@ -528,20 +545,20 @@ To edit this message use this URL:
                     A.approved='Y' AND
                     A.id = B.id AND """ % (table_name, table_name)
         if style == 'range':
-            stmt = '%s id >= %s' % (stmt, range[0])
+            stmt = '%s A.id >= %s' % (stmt, range[0])
             if len(range) == 2:
-                stmt = '%s AND id <= %s' % (stmt, range[1])
+                stmt = '%s AND A.id <= %s' % (stmt, range[1])
         else:
-            stmt = '%s id = %s' % (stmt, range[0])
+            stmt = '%s A.id = %s' % (stmt, range[0])
         if self.cursor.execute(stmt) == 0:
             return None
         result = self.cursor.fetchall()
         hdrs = []
         for row in result:
             if header.upper() == 'SUBJECT':
-                hdrs.append('%s %s' % (row[0], row[3]))
+                hdrs.append('%s %s' % (row[0], row[4]))
             elif header.upper() == 'FROM':
-                hdrs.append('%s %s <%s>' % (row[0], row[1], row[2]))
+                hdrs.append('%s %s <%s>' % (row[0], row[2], row[3]))
             elif header.upper() == 'DATE':
                 hdrs.append('%s %s' % (row[0], self.get_formatted_time(time.localtime(result[5]))))
             elif header.upper() == 'MESSAGE-ID':
@@ -570,13 +587,14 @@ To edit this message use this URL:
             parent_id, void = references[-1].strip().split('@')
             stmt = """
                     SELECT
-                        MAX(id)+1
+                        IF(MAX(id) IS NULL, 1, MAX(id)+1) AS next_id
                     FROM
-                        %s
-                    WHERE
-                        approved='Y'""" % (table_name)
-            self.cursor.execute(stmt)
-            new_id = self.cursor.fetchone()[0]
+                        %s""" % (table_name)
+            num_rows = self.cursor.execute(stmt)
+            if num_rows == 0:
+                new_id = 1
+            else:
+                new_id = self.cursor.fetchone()[0]
             stmt = """
                     SELECT
                         id,
@@ -596,12 +614,10 @@ To edit this message use this URL:
         else:
             stmt = """
                     SELECT
-                        MAX(id)+1,
+                        IF(MAX(id) IS NULL, 1, MAX(id)+1) AS next_id,
                         UNIX_TIMESTAMP()
                     FROM
-                        %s
-                    WHERE
-                        approved='Y'""" % (table_name)
+                        %s""" % (table_name)
             self.cursor.execute(stmt)
             new_id, modifystamp = self.cursor.fetchone()
             parent_id = 0
