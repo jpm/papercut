@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mbox.py,v 1.2 2002-12-31 18:07:08 jpm Exp $
+# $Id: mbox.py,v 1.3 2003-12-14 19:06:30 jpm Exp $
 
 import os
 import mailbox
 import settings
+import strutil
+import string
 
 
 class Papercut_Storage:
@@ -28,19 +30,20 @@ class Papercut_Storage:
 
     def group_exists(self, group_name):
         groups = self.get_group_list()
-        if group_name in groups:
-            return True
-        else:
-            return False
-
-    def article_exists(self, group_name, style, range):
-        pass
+        found = False
+        for name in groups:
+            # group names are supposed to be case insensitive
+            if string.lower(name) == string.lower(group_name):
+                found = True
+                break
+        return found
 
     def get_first_article(self, group_name):
         return 1
 
     def get_group_stats(self, filename):
         mbox = self.get_mailbox(filename)
+        dir(mbox)
         cnt = 0
         while mbox.next():
             cnt = cnt + 1
@@ -95,35 +98,114 @@ class Papercut_Storage:
             if msg is None:
                 return None
             if i == int(id):
-                return ("\r\n".join(msg.headers), msg.fp.read())
+                return ("\r\n".join(["%s" % string.strip(k) for k in msg.headers]), msg.fp.read())
             i = i + 1
 
     def get_LAST(self, group_name, current_id):
-        pass
+        mbox = self.get_mailbox(group_name.replace('papercut.mbox.', ''))
+        if current_id == 1:
+            return None
+        else:
+            i = 0
+            while 1:
+                msg = mbox.next()
+                if msg is None:
+                    return None
+                if (i+1) == current_id:
+                    return i
+                i = i + 1
 
     def get_NEXT(self, group_name, current_id):
-        pass
+        mbox = self.get_mailbox(group_name.replace('papercut.mbox.', ''))
+        print repr(current_id)
+        i = 0
+        while 1:
+            msg = mbox.next()
+            if msg is None:
+                return None
+            if i > current_id:
+                return i
+            i = i + 1
+
+    def get_message(self, group_name, id):
+        mbox = self.get_mailbox(group_name.replace('papercut.mbox.', ''))
+        i = 0
+        while 1:
+            msg = mbox.next()
+            if msg is None:
+                return None
+            if i == int(id):
+                return msg
+            i = i + 1
 
     def get_HEAD(self, group_name, id):
-        pass
+        msg = self.get_message(group_name, id)
+        headers = []
+        headers.append("Path: %s" % (settings.nntp_hostname))
+        headers.append("From: %s" % (msg.get('from')))
+        headers.append("Newsgroups: %s" % (group_name))
+        headers.append("Date: %s" % (msg.get('date')))
+        headers.append("Subject: %s" % (msg.get('subject')))
+        headers.append("Message-ID: <%s@%s>" % (id, group_name))
+        headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, id))
+        return "\r\n".join(headers)
 
     def get_BODY(self, group_name, id):
-        pass
+        msg = self.get_message(group_name, id)
+        if msg is None:
+            return None
+        else:
+            return strutil.format_body(msg.fp.read())
 
     def get_XOVER(self, group_name, start_id, end_id='ggg'):
-        pass
+        mbox = self.get_mailbox(group_name.replace('papercut.mbox.', ''))
+        # don't count the first message
+        mbox.next()
+        i = 1
+        overviews = []
+        while 1:
+            msg = mbox.next()
+            if msg is None:
+                break
+            author = msg.get('from')
+            formatted_time = msg.get('date')
+            message_id = msg.get('message-id')
+            line_count = len(msg.fp.read().split('\n'))
+            xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, i)
+            if msg.get('in-reply-to') is not None:
+                reference = msg.get('in-reply-to')
+            else:
+                reference = ""
+            # message_number <tab> subject <tab> author <tab> date <tab> message_id <tab> reference <tab> bytes <tab> lines <tab> xref
+            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (i, msg.get('subject'), author, formatted_time, message_id, reference, len(strutil.format_body(msg.fp.read())), line_count, xref))
+            i = i + 1
+        return "\r\n".join(overviews)
 
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):
-        pass
+        # no support for this right now
+        return None
 
     def get_LISTGROUP(self, group_name):
-        pass
+        mbox = self.get_mailbox(group_name.replace('papercut.mbox.', ''))
+        # don't count the first message
+        mbox.next()
+        i = 0
+        ids = []
+        while 1:
+            msg = mbox.next()
+            if msg is None:
+                break
+            i = i + 1
+            ids.append(i)
+        return "\r\n".join(ids)
 
     def get_XGTITLE(self, pattern=None):
-        pass
+        # no support for this right now
+        return None
 
     def get_XHDR(self, group_name, header, style, range):
-        pass
+        # no support for this right now
+        return None
 
     def do_POST(self, group_name, lines, ip_address, username=''):
         # let's make the mbox storage always read-only for now
