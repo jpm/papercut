@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.23 2002-03-25 04:47:37 jpm Exp $
+# $Id: phorum_mysql.py,v 1.24 2002-03-26 04:17:49 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -28,6 +28,31 @@ class Papercut_Backend:
     def __init__(self):
         self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
         self.cursor = self.conn.cursor()
+
+    def wrap(s, col=78, startcol=0, hangindent=0):
+        """Insert newlines into 's' so it doesn't extend past 'col'.
+
+        All lines are indented to 'startcol'.  The indentation of the first 
+        line is adjusted further by hangindent.
+        """
+        import re, string
+        s = re.split(r'\s+', s)
+        new_s = [' '*(startcol+hangindent)]
+        append = new_s.append
+        line_len = (startcol+hangindent)
+        for e in s:
+            if not e:
+                continue
+            if line_len + 1 + len(e) > col:
+                append('\n'+' '*(startcol)+e)
+                line_len = len(e) + startcol
+            else:
+                if line_len > startcol+hangindent:
+                    append(' ')
+                    line_len = line_len + 1
+                append(e)
+                line_len = line_len + len(e)
+        return string.join(new_s, '')
 
     def get_message_body(self, headers):
         return mime.get_text_message(headers)
@@ -130,19 +155,6 @@ class Papercut_Backend:
             result = list(self.cursor.fetchall())
             for row in result:
                 recipients.append(row[0])
-        # get the email_list address from mysql itself
-        stmt = """
-                SELECT
-                    email_list
-                FROM
-                    forums
-                WHERE
-                    LENGTH(email_list) > 0 AND
-                    id=%s""" % (forum_id)
-        num_rows = self.cursor.execute(stmt)
-        if num_rows == 1:
-            email_list = self.cursor.fetchone()[0]
-            recipients.append(email_list)
         return recipients
 
     def send_notifications(self, group_name, msg_id, thread_id, msg_author, msg_subject, msg_body):
@@ -191,6 +203,35 @@ To edit this message use this URL:
         for recipient in emails:
             current_msg = msg_tpl % vars()
             smtp.sendmail("Phorum <%s>" % (recipient), recipient, current_msg)
+
+        # XXX: Coding blind here. I really don't know much about how Phorum works with
+        # XXX: sending forum postings as emails, but it's here. Let's call this a
+        # XXX: temporary implementation. Should work fine, I guess.
+        notification_mail_tpl = """This message was sent from: %(forum_name)s.
+<%(phorum_url)s/read.php?f=%(forum_id)s&i=%(msg_id)s&t=%(thread_id)s>
+----------------------------------------------------------------
+
+%(msg_body)s
+
+----------------------------------------------------------------
+Sent using Papercut version %(__VERSION__)s <http://papercut.org>
+"""
+        stmt = """
+                SELECT
+                    email_list
+                FROM
+                    forums
+                WHERE
+                    LENGTH(email_list) > 0 AND
+                    id=%s""" % (forum_id)
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 1:
+            email_list = self.cursor.fetchone()[0]
+            msg_body = self.wrap(msg_body)
+            # this is pretty ugly, right ?
+            from papercut import __VERSION__
+            current_msg = notification_mail_tpl % vars()
+            smtp.sendmail("Phorum <%s>" % (email_list), email_list, current_msg)
         smtp.quit()
 
     def get_NEWGROUPS(self, ts, group='%'):
@@ -515,10 +556,11 @@ To edit this message use this URL:
                     nntp_group_name,
                     description
                 FROM
-                    forums"""
-        if pattern != None:
-            stmt = stmt + """
+                    forums
                 WHERE
+                    LENGTH(nntp_group_name) > 0"""
+        if pattern != None:
+            stmt = stmt + """ AND
                     nntp_group_name REGEXP '%s'""" % (self.format_wildcards(pattern))
         stmt = stmt + """
                 ORDER BY
