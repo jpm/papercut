@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.7 2002-01-12 01:33:10 jpm Exp $
+# $Id: papercut.py,v 1.8 2002-01-12 05:17:58 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -610,7 +610,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         group_name = re.compile("^Newsgroups:(.*)", re.M).search(str, 1).groups()[0].strip()
         if not backend.group_exists(group_name):
             self.send_response(ERR_POSTINGFAILED)
-        result = backend.do_POST(group_name, self.article_lines)
+        result = backend.do_POST(group_name, self.article_lines, self.client_address[0])
         if result == None:
             self.send_response(ERR_POSTINGFAILED)
         else:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.8 2002-01-12 04:20:08 jpm Exp $
+# $Id: mysql.py,v 1.9 2002-01-12 05:18:22 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -373,15 +373,13 @@ class Papercut_Backend:
                 hdrs.append('%s %s <%s>' % (row[0], row[1], row[2]))
         return "\r\n".join(["%s" % k for k in hdrs])
 
-    def do_POST(self, group_name, lines):
+    def do_POST(self, group_name, lines, ip_address):
         table_name = self.get_table_name(group_name)
+        author, email = re.compile("^From:(.*)<(.*)>", re.M).search(lines, 1).groups()
+        subject = re.compile("^Subject:(.*)", re.M).search(lines, 1).groups()[0].strip()
+        # get the 'modifystamp' value from the parent (if any)
         thread = None
         parent = None
-        author = None
-        email = None
-        subject = re.compile("^Subject:(.*)", re.M).search(str, 1).groups()[0].strip()
-        host = None
-        # get the 'modifystamp' value from the parent (if any)
         modifystamp = None
         stmt = """
                 INSERT INTO
@@ -413,7 +411,7 @@ class Papercut_Backend:
                     %s,
                     0
                 )
-                """ % (table_name, thread, parent, author, subject, email, host, modifystamp)
+                """ % (table_name, thread, parent, author.strip(), subject, email, ip_address, modifystamp)
         if not self.cursor.execute(stmt):
             return None
         else:
