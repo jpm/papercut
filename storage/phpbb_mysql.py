@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.11 2003-06-06 00:30:31 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.12 2003-06-21 01:22:02 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -731,12 +731,23 @@ class Papercut_Storage:
                                 forum_id=%s
                             """ % (settings.phpbb_table_prefix, new_id, forum_id)
                     self.cursor.execute(stmt)
+                # update the user's post count, if this is indeed a real user
+                if poster_id != -1:
+                    stmt = """
+                            UPDATE
+                                %susers
+                            SET
+                                user_posts=user_posts+1
+                            WHERE
+                                user_id=%s""" % (prefix, poster_id)
+                    self.cursor.execute(stmt)
                 # setup last post on the topic thread (Patricio Anguita <pda@ing.puc.cl>)
                 stmt = """
                         UPDATE
                             %stopics
                         SET
-                            topic_last_post_id = %s
+                            topic_replies=topic_replies+1,
+                            topic_last_post_id=%s
                         WHERE
                             topic_id=%s""" % (prefix, new_id, thread_id)
                 self.cursor.execute(stmt)
