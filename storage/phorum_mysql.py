@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.10 2002-02-04 18:24:09 jpm Exp $
+# $Id: phorum_mysql.py,v 1.11 2002-02-05 18:45:58 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -38,7 +38,7 @@ class Papercut_Backend:
         return singleline_regexp.sub("..", text)
 
     def quote_string(self, text):
-        return text.replace("'", "\'")
+        return text.replace("'", "\\'")
 
     def format_wildcards(self, pattern):
         pattern.replace('*', '.*')
@@ -281,8 +281,11 @@ class Papercut_Backend:
                     forum.%s_bodies
                 WHERE
                     id=%s""" % (table_name, id)
-        self.cursor.execute(stmt)
-        return self.format_body(self.cursor.fetchone()[0])
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 0:
+            return ""
+        else:
+            return self.format_body(self.cursor.fetchone()[0])
 
     def get_XOVER(self, group_name, start_id, end_id='ggg'):
         table_name = self.get_table_name(group_name)
