@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.77 2003-02-21 22:12:31 jpm Exp $
+# $Id: papercut.py,v 1.78 2003-05-02 19:36:33 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -14,7 +14,7 @@ import StringIO
 import settings
 import papercut_cache
 
-__VERSION__ = '0.9.7'
+__VERSION__ = '0.9.9'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients
@@ -50,7 +50,8 @@ STATUS_NEWGROUPS = '231 list of new newsgroups follows'
 STATUS_NEWNEWS = '230 list of new articles by message-id follows'
 STATUS_HEAD = '221 %s %s article retrieved - head follows'
 STATUS_BODY = '222 %s %s article retrieved - body follows'
-STATUS_READYNOPOST = '200 %s Papercut %s server ready (posting allowed)'
+STATUS_READYNOPOST = '201 %s Papercut %s server ready (no posting allowed)'
+STATUS_READYOKPOST = '200 %s Papercut %s server ready (posting allowed)'
 STATUS_CLOSING = '205 closing connection - goodbye!'
 STATUS_XOVER = '224 Overview information follows'
 STATUS_XPAT = '221 Header follows'
@@ -118,7 +119,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
 
     def handle(self):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
-        self.send_response(STATUS_READYNOPOST % (settings.nntp_hostname, __VERSION__))
+        if settings.server_type == 'read-only':
+            self.send_response(STATUS_READYNOPOST % (settings.nntp_hostname, __VERSION__))
+        else:
+            self.send_response(STATUS_READYOKPOST % (settings.nntp_hostname, __VERSION__))
         while not self.terminated:
             if self.sending_article == 0:
                 self.article_lines = []
@@ -155,7 +159,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                         self.sending_article = 1
                         self.send_response(STATUS_SENDARTICLE)
             else:
-                if settings.nntp_auth == 'yes' and self.auth_username == '' and command != 'AUTHINFO':
+                if settings.nntp_auth == 'yes' and self.auth_username == '' and command not in ('AUTHINFO', 'MODE'):
                     self.send_response(STATUS_AUTH_REQUIRED)
                 else:
                     if self.sending_article:
