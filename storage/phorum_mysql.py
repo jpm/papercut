@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.41 2003-03-31 15:31:47 jpm Exp $
+# $Id: phorum_mysql.py,v 1.42 2003-09-19 03:13:03 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -9,7 +9,6 @@ import settings
 import mime
 import strutil
 import smtplib
-import binascii
 import md5
 
 # patch by Andreas Wegmann <Andreas.Wegmann@VSA.de> to fix the handling of unusual encodings of messages
@@ -56,7 +55,7 @@ class Papercut_Storage:
     def group_exists(self, group_name):
         stmt = """
                 SELECT
-                    COUNT(*) AS check
+                    COUNT(*) AS total
                 FROM
                     forums
                 WHERE
@@ -68,7 +67,7 @@ class Papercut_Storage:
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
-                    COUNT(*) AS check
+                    COUNT(*) AS total
                 FROM
                     %s
                 WHERE
@@ -231,7 +230,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                 msg_email = '<%s>' % msg_email
             else:
                 msg_email = ''
-            random_msgid = binascii.hexlify(md5.new(str(time.clock())).digest())
+            random_msgid = md5.new(str(time.clock())).hexdigest()
             # this is pretty ugly, right ?
             from papercut import __VERSION__
             phorum_version = settings.phorum_version

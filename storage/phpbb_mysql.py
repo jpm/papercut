@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.12 2003-06-21 01:22:02 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.13 2003-09-19 03:13:03 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
 import re
 import settings
 import md5
-import binascii
 import mime
 import strutil
 
@@ -49,7 +48,7 @@ class Papercut_Storage:
         return text.replace("'", "\\'")
 
     def make_bbcode_uid(self):
-        return binascii.hexlify(md5.new(str(time.clock())).digest())
+        return md5.new(str(time.clock())).hexdigest()
 
     def encode_ip(self, dotquad_ip):
         t = dotquad_ip.split('.')
@@ -58,7 +57,7 @@ class Papercut_Storage:
     def group_exists(self, group_name):
         stmt = """
                 SELECT
-                    COUNT(*) AS check
+                    COUNT(*) AS total
                 FROM
                     %sforums
                 WHERE
@@ -70,7 +69,7 @@ class Papercut_Storage:
         forum_id = self.get_forum(group_name)
         stmt = """
                 SELECT
-                    COUNT(*) AS check
+                    COUNT(*) AS total
                 FROM
                     %sposts
                 WHERE
@@ -343,7 +342,7 @@ class Papercut_Storage:
             return None
         result = list(self.cursor.fetchone())
         # check if there is a registered user
-        if len(result[6]) == 0:
+        if len(result[6]) == 0 or result[6] == '':
             if len(result[2]) == 0:
                 author = result[1]
             else:
