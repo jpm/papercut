@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.28 2002-02-06 18:55:12 jpm Exp $
+# $Id: papercut.py,v 1.29 2002-02-06 19:33:59 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -22,7 +22,7 @@ ERR_NOARTICLESELECTED = '420 no current article has been selected'
 ERR_NOARTICLERETURNED = '420 No article(s) selected'
 ERR_NOPREVIOUSARTICLE = '422 no previous article in this group'
 ERR_NONEXTARTICLE = '421 no next article in this group'
-ERR_NOSUCHARTICLENUM = '423 no such article number in this group'
+ERR_NOSUCHARTICLENUM = '423 no such article in this group'
 ERR_NOSLAVESHERE = '202 no slaves here please (this is a standalone server)'
 ERR_NOSUCHARTICLE = '430 no such article'
 ERR_NOIHAVEHERE = '435 article not wanted - do not send it'
@@ -283,9 +283,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         # get the article number if it is the appropriate option
         if self.tokens[1].find('@') != -1:
             self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
-        head, body = backend.get_ARTICLE(self.selected_group, self.tokens[1])
-        response = STATUS_ARTICLE % (self.selected_article, self.selected_group)
-        self.send_response("%s\r\n%s\r\n\r\n%s\r\n." % (response, head, body))
+        result = backend.get_ARTICLE(self.selected_group, self.tokens[1])
+        if result == None:
+            self.send_response(ERR_NOSUCHARTICLENUM)
+        else:
+            response = STATUS_ARTICLE % (self.selected_article, self.selected_group)
+            self.send_response("%s\r\n%s\r\n\r\n%s\r\n." % (response, result[0], result[1]))
 
     def do_LAST(self):
         """
@@ -355,7 +358,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         else:
             article_number = self.selected_article
             body = backend.get_BODY(self.selected_group, self.selected_article)
-        self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (article_number, self.selected_article, self.selected_group), body))
+        if body == None:
+            self.send_response(ERR_NOSUCHARTICLENUM)
+        else:
+            self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (article_number, self.selected_article, self.selected_group), body))
 
     def do_HEAD(self):
         """
@@ -378,7 +384,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                 return
             article_number = self.selected_article
             head = backend.get_HEAD(self.selected_group, self.selected_article)
-        self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (article_number, self.selected_article, self.selected_group), head))
+        if head == None:
+            self.send_response(ERR_NOSUCHARTICLENUM)
+        else:
+            self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (article_number, self.selected_article, self.selected_group), head))
 
     def do_OVER(self):
         self.do_XOVER()
@@ -538,8 +547,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         # check for empty results
         if info == None:
             self.send_response(ERR_NOSUCHARTICLE)
-            return
-        self.send_response("%s\r\n%s\r\n." % (STATUS_XHDR, info))
+        else:
+            self.send_response("%s\r\n%s\r\n." % (STATUS_XHDR, info))
 
     def do_DATE(self):
         """

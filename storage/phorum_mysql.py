@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.12 2002-02-06 18:52:19 jpm Exp $
+# $Id: phorum_mysql.py,v 1.13 2002-02-06 19:35:31 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -32,7 +32,7 @@ class Papercut_Backend:
         return mime.get_text_message(headers)
 
     def get_formatted_time(self, time_tuple):
-        return time.strftime('%a, %d %B %Y %H:%M:%S %Z', time_tuple)
+        return time.strftime('%d %B %Y %H:%M:%S %Z', time_tuple)
 
     def format_body(self, text):
         return singleline_regexp.sub("..", text)
@@ -188,7 +188,9 @@ class Papercut_Backend:
                 WHERE
                     A.id=B.id AND
                     A.id=%s""" % (table_name, table_name, id)
-        self.cursor.execute(stmt)
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 0:
+            return None
         result = list(self.cursor.fetchone())
         if len(result[2]) == 0:
             author = result[1]
@@ -202,7 +204,7 @@ class Papercut_Backend:
         headers.append("Subject: %s" % (result[3]))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
         headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
-        if result[6] != "":
+        if result[6] != 0:
             headers.append("References: <%s@%s>" % (result[6], group_name))
         return ("\r\n".join(headers), self.format_body(result[5]))
 
@@ -254,7 +256,9 @@ class Papercut_Backend:
                     forum.%s
                 WHERE
                     id=%s""" % (table_name, id)
-        self.cursor.execute(stmt)
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 0:
+            return None
         result = list(self.cursor.fetchone())
         if len(result[2]) == 0:
             author = result[1]
@@ -268,7 +272,7 @@ class Papercut_Backend:
         headers.append("Subject: %s" % (result[3]))
         headers.append("Message-ID: <%s@%s>" % (result[0], group_name))
         headers.append("Xref: %s %s:%s" % (settings.nntp_hostname, group_name, result[0]))
-        if result[5] != "":
+        if result[5] != 0:
             headers.append("References: <%s@%s>" % (result[5], group_name))
         return "\r\n".join(headers)
 
@@ -283,7 +287,7 @@ class Papercut_Backend:
                     id=%s""" % (table_name, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
-            return ""
+            return None
         else:
             return self.format_body(self.cursor.fetchone()[0])
 
@@ -318,7 +322,11 @@ class Papercut_Backend:
             message_id = "<%s@%s>" % (row[0], group_name)
             line_count = len(row[6].split('\n'))
             xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, row[0])
-            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, row[1], len(self.format_body(row[6])), line_count, xref))
+            if row[1] != 0:
+                parent = row[1]
+            else:
+                parent = ""
+            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, parent, len(self.format_body(row[6])), line_count, xref))
         return "\r\n".join(overviews)
 
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):
@@ -355,7 +363,7 @@ class Papercut_Backend:
                 hdrs.append('%s %s' % (row[0], self.get_formatted_time(time.localtime(result[5]))))
             elif header.upper() == 'MESSAGE-ID':
                 hdrs.append('%s <%s@%s>' % (row[0], row[0], group_name))
-            elif header.upper() == 'REFERENCES':
+            elif (header.upper() == 'REFERENCES') and (row[1] != 0):
                 hdrs.append('%s <%s@%s>' % (row[0], row[1], group_name))
             elif header.upper() == 'BYTES':
                 hdrs.append('%s %s' % (row[0], len(row[6])))
@@ -363,7 +371,10 @@ class Papercut_Backend:
                 hdrs.append('%s %s' % (row[0], len(row[6].split('\n'))))
             elif header.upper() == 'XREF':
                 hdrs.append('%s %s %s:%s' % (row[0], settings.nntp_hostname, group_name, row[0]))
-        return "\r\n".join(hdrs)
+        if len(hdrs) == 0:
+            return ""
+        else:
+            return "\r\n".join(hdrs)
 
     def get_LISTGROUP(self, group_name):
         table_name = self.get_table_name(group_name)
@@ -428,7 +439,7 @@ class Papercut_Backend:
                 hdrs.append('%s %s' % (row[0], self.get_formatted_time(time.localtime(result[5]))))
             elif header.upper() == 'MESSAGE-ID':
                 hdrs.append('%s <%s@%s>' % (row[0], row[0], group_name))
-            elif header.upper() == 'REFERENCES':
+            elif (header.upper() == 'REFERENCES') and (row[1] != 0):
                 hdrs.append('%s <%s@%s>' % (row[0], row[1], group_name))
             elif header.upper() == 'BYTES':
                 hdrs.append('%s %s' % (row[0], len(row[6])))
@@ -436,7 +447,10 @@ class Papercut_Backend:
                 hdrs.append('%s %s' % (row[0], len(row[6].split('\n'))))
             elif header.upper() == 'XREF':
                 hdrs.append('%s %s %s:%s' % (row[0], settings.nntp_hostname, group_name, row[0]))
-        return "\r\n".join(hdrs)
+        if len(hdrs) == 0:
+            return ""
+        else:
+            return "\r\n".join(hdrs)
 
     def do_POST(self, group_name, lines, ip_address):
         table_name = self.get_table_name(group_name)
