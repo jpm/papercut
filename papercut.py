@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.48 2002-04-04 05:04:57 jpm Exp $
+# $Id: papercut.py,v 1.49 2002-04-04 23:10:20 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -706,14 +706,14 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if len(self.tokens) != 3:
             self.send_response(ERR_CMDSYNTAXERROR)
             return
+        if settings.nntp_auth == 'no':
+            self.send_response(STATUS_AUTH_ACCEPTED)
+            return
         if self.tokens[1].upper() == 'USER':
-            if settings.nntp_auth == 'no':
-                self.send_response(STATUS_AUTH_ACCEPTED)
-            else:
-                self.send_response(STATUS_AUTH_CONTINUE)
-        elif self.tokens[1].upper() == 'PASS':
+            self.send_response(STATUS_AUTH_CONTINUE)
+        elif self.tokens[1].upper() == 'PASS' and settings.nntp_auth == 'yes':
             # XXX: we don't have the 'auth' package or the self.auth variable yet
-            if auth.is_valid_user(self.auth['username'], self.tokens[2]):
+            auth.is_valid_user(self.auth['username'], self.tokens[2]):
                 self.send_response(STATUS_AUTH_ACCEPTED)
             else:
                 self.send_response(ERR_AUTH_NO_PERMISSION)
@@ -769,6 +769,10 @@ if __name__ == '__main__':
     # dynamic loading of the appropriate storage backend module
     temp = __import__('storage.%s' % (settings.storage_backend), globals(), locals(), ['Papercut_Storage'])
     backend = temp.Papercut_Storage()
+
+    if settings.nntp_auth == 'yes':
+        temp = __import__('auth.%s' % (settings.auth_backend), globals(), locals(), ['Papercut_Auth'])
+        auth = temp.Papercut_Auth()
 
     signal.signal(signal.SIGINT, sighandler)
     print 'Papercut %s - starting up' % __VERSION__
