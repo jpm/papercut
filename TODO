@@ -4,6 +4,6 @@ TODO list:
 - Set the self.commands and self.extensions on the storage extensions, as some storages do not support all commands
 - MODE STREAM (it means several commands at the same time without waiting for responses)
 - Check more the patterns of searching (wildmat) -> backend.format_wildcards() -> Work in progress
-- Show banner on the footer of the articles about the site
 - Fork the server to the background automatically (using fork()?)
 - Make a command line option to make the server actually run on the foreground (-f option?)
+- Add a --verbose flag to replace the current __DEBUG__ flag

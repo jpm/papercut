@@ -1,14 +1,14 @@
 --------------------
-Papercut News Server
+Papercut NNTP Server
 --------------------
 
 Papercut is a news server written in 100% pure Python. It is intended to be 
-extensible to the point where people can develop their own 'plug-ins' and by
+extensible to the point where people can develop their own plug-ins and by
 that integrate the NNTP protocol to their applications.
 
 The server is compliant with most of the RFC0977 standards (when they make sense
 and are needed) and implements a lot of RFC1036 and RFC2980 extensions to the
-NNTP protocol. It was used against Netscape News, Mozilla News and tin (under
+NNTP protocol. It was tested against Netscape News, Mozilla News and tin (under
 Solaris) and it works properly.
 
 The original need for this server was to integrate my PHP related web site
@@ -18,24 +18,20 @@ this case was Phorum (http://phorum.org) and the site is PHPBrasil.com
 (http://phpbrasil.com). At first it wasn't intended to support message posting,
 but it made sense to allow it after seeing how effective the tool was.
 
-The concept of 'backends' was created exactly for this. I would create a Python
+The concept of storage modules was created exactly for this. I would create a Python
 class to handle the inner-workins of Phorum and MySQL and if I ever wanted to
 integrate the server with another type of software, I would just need to write 
-a new 'backend' class.
+a new storage module class.
 
-Anyway, back to the technical praise. Papercut is multi-threaded and should be
-reasonably fast (that means basically: 'it's pretty fast, but don't try serving
-1000 connection at a time). The best thing about it is that it is very simple to
+Anyway, back to the technical praise. Papercut is multi-threaded on Windows
+platforms and forking-based on UNIX platforms and should be reasonably fast
+(that means basically: 'it's pretty fast, but don't try serving 1000 connection
+at a time). The best thing about the application is that it is very simple to
 extend it.
 
-It is licensed under the BSD license, which means you can sell it or do whatever
-you like with it. However, I ask that if you think Papercut is a good tool and
-you made a few enhancements to it or even fixed some bugs, please send me a 
-patch or something. I appreciate it :)
+Papercut is licensed under the BSD license, which means you can sell it or do
+whatever you like with it. However, I ask that if you think Papercut is a good
+tool and you made a few enhancements to it or even fixed some bugs, please send
+me a patch or something. I will appreciate it :)
 
-Oh yeah, if you liked the tool and you would want to extend it (i.e. create new
-'backends' or even add new features) but you don't know how to, I can provide
-consulting services based on Papercut and NNTP. Just visit my consulting 
-company web site (http://impleo.net) and get in touch with me.
-
--- Joao Prado Maia (jpm@impleo.net)
+-- Joao Prado Maia (jpm@papercut.org)

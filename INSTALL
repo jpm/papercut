@@ -1,5 +1,5 @@
 --------------------
-Papercut News Server
+Papercut NNTP Server
 --------------------
 
 For more information on what exactly Papercut is, and what are its main 
@@ -10,8 +10,14 @@ Requirements:
 -------------
 
 - Python 2.2 (it needs the email module to parse MIME based messages)
-- MySQL server (the Phorum backend needs MySQL as the storage driver)
+- Database server
+  - The Phorum backend needs MySQL or PostgreSQL as the storage driver)
     - MySQLdb python module (http://sf.net/projects/mysql-python)
+    or
+    - pyPgSQL python module (http://pypgsql.sourceforge.net/)
+  - The phpBB backend needs MySQL
+    - MySQLdb python module (http://sf.net/projects/mysql-python)
+  - There are other storage modules, seek the source for details on those
 
 - Permission to add a new column to one of the Phorum tables
 
@@ -42,8 +48,7 @@ Step by Step Instructions:
   - Finally, change the MySQL related variables so Papercut can connect to the
     appropriate database and get the content of the messages.
 
-3) If your backend type is 'phorum_mysql' (Only option as of the current 
-   version):
+3) If your backend type is 'phorum_mysql':
 
   - You will need to add a new column under the main forum listing table to
     associate the name of a newsgroup to a table name. Since Phorum is totally
