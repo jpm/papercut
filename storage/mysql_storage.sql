@@ -1,5 +1,5 @@
 DROP TABLE IF EXISTS papercut_default_table;
-CREATE TABLE default_table (
+CREATE TABLE papercut_default_table (
   id int(10) unsigned NOT NULL default '0',
   datestamp datetime NOT NULL default '0000-00-00 00:00:00',
   thread int(10) unsigned NOT NULL default '0',
@@ -17,7 +17,7 @@ CREATE TABLE default_table (
   KEY parent (parent)
 );
 DROP TABLE IF EXISTS papercut_groups;
-CREATE TABLE groups (
+CREATE TABLE papercut_groups (
   id int(10) unsigned NOT NULL auto_increment,
   name varchar(50) NOT NULL default '',
   active smallint(6) NOT NULL default '0',
@@ -28,7 +28,7 @@ CREATE TABLE groups (
   KEY active (active)
 );
 DROP TABLE IF EXISTS papercut_groups_auth;
-CREATE TABLE groups_auth (
+CREATE TABLE papercut_groups_auth (
   id int(10) unsigned NOT NULL auto_increment,
   sess_id varchar(32) NOT NULL default '',
   name varchar(50) NOT NULL default '',

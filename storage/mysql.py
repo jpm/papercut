@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more informationB
-# $Id: mysql.py,v 1.24 2002-04-23 04:27:14 jpm Exp $
+# $Id: mysql.py,v 1.25 2002-04-24 04:09:00 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -81,13 +81,13 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    approved='Y'""" % (table_name)
+                    """ % (table_name)
         if style == 'range':
-            stmt = "%s AND id > %s" % (stmt, range[0])
+            stmt = "%s id > %s" % (stmt, range[0])
             if len(range) == 2:
                 stmt = "%s AND id < %s" % (stmt, range[1])
         else:
-            stmt = "%s AND id = %s" % (stmt, range[0])
+            stmt = "%s id = %s" % (stmt, range[0])
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
@@ -97,9 +97,7 @@ class Papercut_Storage:
                 SELECT
                     MIN(id) AS first_article
                 FROM
-                    %s
-                WHERE
-                    approved='Y'""" % (table_name)
+                    %s""" % (table_name)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -113,9 +111,7 @@ class Papercut_Storage:
                    MAX(id) AS maximum,
                    MIN(id) AS minimum
                 FROM
-                    %s
-                WHERE
-                    approved='Y'""" % (table_name)
+                    %s""" % (table_name)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return (0, 0, 0)
@@ -171,7 +167,6 @@ class Papercut_Storage:
                     FROM
                         %s
                     WHERE
-                        approved='Y' AND
                         UNIX_TIMESTAMP(datestamp) >= %s""" % (table, ts)
             num_rows = self.cursor.execute(stmt)
             if num_rows == 0:
@@ -214,7 +209,6 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    approved='Y' AND
                     id=%s""" % (table_name, id)
         return self.cursor.execute(stmt)
 
@@ -232,7 +226,6 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    approved='Y' AND
                     id=%s""" % (table_name, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
@@ -263,7 +256,6 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    approved='Y' AND
                     id < %s
                 ORDER BY
                     id DESC
@@ -281,7 +273,6 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    approved='Y' AND
                     id > %s
                 ORDER BY
                     id ASC
@@ -304,7 +295,6 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    approved='Y' AND
                     id=%s""" % (table_name, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
@@ -335,7 +325,6 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    approved='Y' AND
                     id=%s""" % (table_name, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
@@ -357,7 +346,6 @@ class Papercut_Storage:
                 FROM
                     %s 
                 WHERE
-                    approved='Y' AND
                     id >= %s""" % (table_name, start_id)
         if end_id != 'ggg':
             stmt = "%s AND id <= %s" % (stmt, end_id)
@@ -395,7 +383,6 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    approved='Y' AND
                     %s REGEXP '%s' AND
                     id >= %s""" % (table_name, header, self.format_wildcards(pattern), start_id)
         if end_id != 'ggg':
@@ -434,8 +421,6 @@ class Papercut_Storage:
                     id
                 FROM
                     %s
-                WHERE
-                    approved='Y'
                 ORDER BY
                     id ASC""" % (table_name)
         self.cursor.execute(stmt)
@@ -475,7 +460,7 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    approved='Y' AND """ % (table_name)
+                    """ % (table_name)
         if style == 'range':
             stmt = '%s id >= %s' % (stmt, range[0])
             if len(range) == 2:
@@ -534,7 +519,6 @@ class Papercut_Storage:
                     FROM
                         %s
                     WHERE
-                        approved='Y' AND
                         id=%s
                     GROUP BY
                         id""" % (table_name, parent_id)
