@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.7 2002-12-13 07:34:38 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.8 2003-02-21 19:27:59 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -700,6 +700,29 @@ class Papercut_Storage:
                 self.cursor.execute(stmt)
                 return None
             else:
+                if lines.find('References') != -1:
+                    # update the total number of posts in the forum
+                    stmt = """
+                            UPDATE
+                                forums
+                            SET
+                                forum_posts=forum_posts+1
+                            WHERE
+                                forum_id=%s
+                            """ % (forum_id)
+                    self.cursor.execute(stmt)
+                else:
+                    # update the total number of topics and posts in the forum
+                    stmt = """
+                            UPDATE
+                                forums
+                            SET
+                                forum_topics=forum_topics+1,
+                                forum_posts=forum_posts+1
+                            WHERE
+                                forum_id=%s
+                            """ % (forum_id)
+                    self.cursor.execute(stmt)
                 # setup last post on the topic thread (Patricio Anguita <pda@ing.puc.cl>)
                 stmt = """
                         UPDATE
