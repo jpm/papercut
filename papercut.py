@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.81 2004-01-04 20:27:07 jpm Exp $
+# $Id: papercut.py,v 1.82 2004-01-04 20:33:55 jpm Exp $
 import SocketServer
 import sys
 import os
@@ -46,7 +46,7 @@ STATUS_HELPMSG = '100 help text follows'
 STATUS_GROUPSELECTED = '211 %s %s %s %s group selected'
 STATUS_LIST = '215 list of newsgroups follows'
 STATUS_STAT = '223 %s %s article retrieved - request text separately'
-STATUS_ARTICLE = '220 %s All of the article follows'
+STATUS_ARTICLE = '220 %s %s All of the article follows'
 STATUS_NEWGROUPS = '231 list of new newsgroups follows'
 STATUS_NEWNEWS = '230 list of new articles by message-id follows'
 STATUS_HEAD = '221 %s %s article retrieved - head follows'
@@ -313,11 +313,17 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
             return
+        # get the article number if it is the appropriate option
+        if self.tokens[1].find('@') != -1:
+            self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
+            report_article_number = 0
+        else:
+            report_article_number = self.tokens[1]      
         if not backend.get_STAT(self.selected_group, self.tokens[1]):
             self.send_response(ERR_NOSUCHARTICLENUM)
             return
         self.selected_article = self.tokens[1]
-        self.send_response(STATUS_STAT % (self.tokens[1], backend.get_message_id(self.tokens[1], self.selected_group)))
+        self.send_response(STATUS_STAT % (report_article_number, backend.get_message_id(self.tokens[1], self.selected_group)))
 
     def do_ARTICLE(self):
         """
@@ -344,11 +350,14 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         # get the article number if it is the appropriate option
         if self.tokens[1].find('@') != -1:
             self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
+            report_article_number = 0
+        else:
+            report_article_number = self.tokens[1]
         result = backend.get_ARTICLE(self.selected_group, self.tokens[1])
         if result == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
-            response = STATUS_ARTICLE % (backend.get_message_id(self.selected_article, self.selected_group))
+            response = STATUS_ARTICLE % (report_article_number, backend.get_message_id(self.selected_article, self.selected_group))
             self.send_response("%s\r\n%s\r\n\r\n%s\r\n." % (response, result[0], result[1]))
 
     def do_LAST(self):
@@ -475,14 +484,18 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             if self.selected_article == 'ggg':
                 self.send_response(ERR_NOARTICLESELECTED)
                 return
+            overviews = backend.get_XOVER(self.selected_group, self.selected_article, self.selected_article)
         else:
-            ranges = self.tokens[1].split('-')
-            if ranges[1] == '':
-                # this is a start-everything style of XOVER
-                overviews = backend.get_XOVER(self.selected_group, ranges[0])
-            else:
-                # this is a start-end style of XOVER
-                overviews = backend.get_XOVER(self.selected_group, ranges[0], ranges[1])
+            if self.tokens[1].find('-') == -1:
+                overviews = backend.get_XOVER(self.selected_group, self.tokens[1], self.tokens[1])
+            else: 
+                ranges = self.tokens[1].split('-')
+                if ranges[1] == '':
+                    # this is a start-everything style of XOVER
+                    overviews = backend.get_XOVER(self.selected_group, ranges[0])
+                else:
+                    # this is a start-end style of XOVER
+                    overviews = backend.get_XOVER(self.selected_group, ranges[0], ranges[1])
         if overviews == None:
             self.send_response(ERR_NOTCAPABLE)
             return
