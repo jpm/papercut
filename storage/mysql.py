@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.12 2002-01-12 21:59:23 jpm Exp $
+# $Id: mysql.py,v 1.13 2002-01-12 22:01:41 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -390,7 +390,9 @@ class Papercut_Backend:
                     FROM
                         forum.%s
                     WHERE
-                        id=%s""" % (table_name, parent_id)
+                        id=%s
+                    GROUP BY
+                        id""" % (table_name, parent_id)
             num_rows = self.cursor.execute(stmt)
             if num_rows == 0:
                 return None
@@ -401,7 +403,9 @@ class Papercut_Backend:
                         MAX(id)+1,
                         NOW()
                     FROM
-                        forum.%s""" % (table_name)
+                        forum.%s
+                    GROUP BY
+                        id""" % (table_name)
             self.cursor.execute(stmt)
             new_id, modifystamp = self.cursor.fetchone()
             parent_id = 0
