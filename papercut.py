@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.29 2002-02-06 19:33:59 jpm Exp $
+# $Id: papercut.py,v 1.30 2002-02-07 02:18:56 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -214,7 +214,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             503 program error, function not performed
         """
         if (len(self.tokens) == 2) and (self.tokens[1].upper() == 'OVERVIEW.FMT'):
-            self.send_response("%s\r\n%s\r\n." % (STATUS_OVERVIEWFMT, "\r\n".join(overview_headers)))
+            self.send_response("%s\r\n%s:\r\n." % (STATUS_OVERVIEWFMT, ":\r\n".join(overview_headers)))
             return
         elif (len(self.tokens) == 2) and (self.tokens[1].upper() == 'EXTENSIONS'):
             self.send_response("%s\r\n%s\r\n." % (STATUS_EXTENSIONS, "\r\n".join(self.extensions)))
