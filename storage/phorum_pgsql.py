@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_pgsql.py,v 1.5 2003-02-21 18:55:23 jpm Exp $
+# $Id: phorum_pgsql.py,v 1.6 2003-02-22 00:48:06 jpm Exp $
 from pyPgSQL import PgSQL
 import time
 from mimify import mime_encode_header
@@ -118,7 +118,7 @@ class Papercut_Storage:
                 FROM
                     forums
                 WHERE
-                    nntp_group_name='%s'""" % (group_name.replace('*', '%'))
+                    nntp_group_name LIKE '%s'""" % (group_name.replace('*', '%'))
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
@@ -388,7 +388,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                     id < %s
                 ORDER BY
                     id DESC
-                LIMIT 0, 1""" % (table_name, current_id)
+                LIMIT 1, 0""" % (table_name, current_id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -406,7 +406,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                     id > %s
                 ORDER BY
                     id ASC
-                LIMIT 0, 1""" % (table_name, current_id)
+                LIMIT 1, 0""" % (table_name, current_id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -524,9 +524,9 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                     %s_bodies B
                 WHERE
                     A.approved='Y' AND
-                    %s REGEXP '%s' AND
+                    %s LIKE '%s' AND
                     A.id = B.id AND
-                    A.id >= %s""" % (table_name, table_name, header, strutil.format_wildcards(pattern), start_id)
+                    A.id >= %s""" % (table_name, table_name, header, strutil.format_wildcards_sql(pattern), start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.id <= %s" % (stmt, end_id)
         num_rows = self.cursor.execute(stmt)
@@ -583,7 +583,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                     LENGTH(nntp_group_name) > 0"""
         if pattern != None:
             stmt = stmt + """ AND
-                    nntp_group_name REGEXP '%s'""" % (strutil.format_wildcards(pattern))
+                    nntp_group_name LIKE '%s'""" % (strutil.format_wildcards_sql(pattern))
         stmt = stmt + """
                 ORDER BY
                     nntp_group_name ASC"""
