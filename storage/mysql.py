@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.16 2002-01-13 07:06:41 jpm Exp $
+# $Id: mysql.py,v 1.17 2002-01-13 07:19:23 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -15,6 +15,17 @@ class Papercut_Backend:
         print 'Connecting to the MySQL server...'
         self.conn = MySQLdb.connect(db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
         self.cursor = self.conn.cursor()
+
+    def get_message_body(self, raw_headers):
+        body = []
+        found = 0
+        for line in raw_headers:
+            if (line == "\n") or (line == "\r\n"):
+                found = 1
+                continue
+            if found:
+                body.append(line)
+        return "".join(body)
 
     def get_formatted_time(self, time_tuple):
         return time.strftime('%a, %d %B %Y %H:%M:%S %Z', time_tuple)
@@ -377,10 +388,7 @@ class Papercut_Backend:
 
     def do_POST(self, group_name, lines, ip_address):
         table_name = self.get_table_name(group_name)
-        sys.stdin.write("".join(lines))
-        m = rfc822.Message(sys.stdin)
-        body = mime_decode_header(m.fp.read().replace("'", "\\'"))
-        lines = "".join(m.headers)
+        body = self.get_message_body(lines)
         author, email = re.compile("^From:(.*)<(.*)>", re.M).search(lines, 1).groups()
         subject = re.compile("^Subject:(.*)", re.M).search(lines, 1).groups()[0].strip()
         if lines.find('References') != -1:
