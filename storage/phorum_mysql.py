@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.18 2002-03-24 00:08:35 jpm Exp $
+# $Id: phorum_mysql.py,v 1.19 2002-03-24 02:42:45 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -82,8 +82,8 @@ class Papercut_Backend:
         stmt = """
                 SELECT
                    COUNT(id) AS total,
-                   MIN(id) AS maximum,
-                   MAX(id) AS minimum
+                   MAX(id) AS maximum,
+                   MIN(id) AS minimum
                 FROM
                     %s
                 WHERE

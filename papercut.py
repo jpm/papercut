@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.37 2002-03-24 01:44:10 jpm Exp $
+# $Id: papercut.py,v 1.38 2002-03-24 02:42:45 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -8,7 +8,7 @@ import time
 import re
 import settings
 
-__VERSION__ = '0.7.5'
+__VERSION__ = '0.7.6'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 __TIMEOUT__ = 60
