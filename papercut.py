@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.53 2002-05-05 16:38:55 jpm Exp $
+# $Id: papercut.py,v 1.54 2002-05-21 03:13:20 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -105,14 +105,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
         self.send_response(STATUS_READYNOPOST % (settings.nntp_hostname, __VERSION__))
         while not self.terminated:
-            # setup the signal handler for the timeout mechanism
-            signal.signal(signal.SIGALRM, self.handle_timeout)
-            signal.alarm(__TIMEOUT__)
-            if self.sending_article == 0:
+           if self.sending_article == 0:
                 self.article_lines = []
             self.inputline = self.rfile.readline()
-            # turn off the alarm
-            signal.alarm(0)
             if __DEBUG__:
                 print "client>", repr(self.inputline)
             line = self.inputline.strip()
