@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.42 2002-03-25 04:43:18 jpm Exp $
+# $Id: papercut.py,v 1.43 2002-03-25 04:55:55 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -509,7 +509,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         check = numbers.split('\r\n') 
         if len(check) > 0:
             self.selected_article = check[0]
-            self.selected_group = self.tokens[1]
+            if len(self.tokens) == 2:
+                self.selected_group = self.tokens[1]
         self.send_response("%s\r\n%s\r\n." % (STATUS_LISTGROUP, numbers))
 
     def do_XGTITLE(self):
