@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.24 2002-02-01 16:00:22 jpm Exp $
+# $Id: papercut.py,v 1.25 2002-02-02 22:22:44 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -614,12 +614,6 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if not backend.group_exists(group_name):
             self.send_response(ERR_POSTINGFAILED)
             return
-#        if lines.find('Content-Type') != -1:
-            # check the 'Content-Type' header
-#            content = contenttype_regexp.search(lines, 1).groups()[0].strip()
-#            if content != 'text/plain':
-#                self.send_response()
-#                return
         result = backend.do_POST(group_name, lines, self.client_address[0])
         if result == None:
             self.send_response(ERR_POSTINGFAILED)
