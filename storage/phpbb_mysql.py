@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.10 2003-04-17 01:45:28 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.11 2003-06-06 00:30:31 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -148,13 +148,13 @@ class Papercut_Storage:
                 FROM
                     %sforums
                 WHERE
-                    nntp_group_name='%s'
+                    nntp_group_name LIKE '%s'
                 ORDER BY
-                    nntp_group_name ASC""" % (settings.phpbb_table_prefix, group_name)
+                    nntp_group_name ASC""" % (settings.phpbb_table_prefix, group.replace('*', '%'))
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         articles = []
-        for group, forum_id in result:
+        for group_name, forum_id in result:
             stmt = """
                     SELECT
                         post_id
@@ -168,7 +168,7 @@ class Papercut_Storage:
                 continue
             ids = list(self.cursor.fetchall())
             for id in ids:
-                articles.append("<%s@%s>" % (id, group))
+                articles.append("<%s@%s>" % (id, group_name))
         if len(articles) == 0:
             return ''
         else:
