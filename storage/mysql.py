@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.42 2004-02-01 05:23:13 jpm Exp $
+# $Id: mysql.py,v 1.43 2004-02-01 20:13:58 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -104,21 +104,7 @@ class Papercut_Storage:
         return '<%s@%s>' % (msg_num, group)
 
     def get_NEWGROUPS(self, ts, group='%'):
-        stmt = """
-                SELECT
-                    name
-                FROM
-                    papercut_groups
-                WHERE
-                    name LIKE '%%%s' 
-                ORDER BY
-                    name ASC""" % (group)
-        self.cursor.execute(stmt)
-        result = list(self.cursor.fetchall())
-        if len(result) == 0:
-            return None
-        else:
-            return "\r\n".join(["%s" % k for k in result])
+        return None
 
     def get_NEWNEWS(self, ts, group='*'):
         stmt = """

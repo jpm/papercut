@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002, 2003, 2004 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.17 2004-02-01 05:23:13 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.18 2004-02-01 20:13:58 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -127,21 +127,8 @@ class Papercut_Storage:
         return '<%s@%s>' % (msg_num, group)
 
     def get_NEWGROUPS(self, ts, group='%'):
-        stmt = """
-                SELECT
-                    nntp_group_name
-                FROM
-                    %sforums
-                WHERE
-                    nntp_group_name LIKE '%%%s' 
-                ORDER BY
-                    nntp_group_name ASC""" % (settings.phpbb_table_prefix, group)
-        self.cursor.execute(stmt)
-        result = list(self.cursor.fetchall())
-        if len(result) == 0:
-            return None
-        else:
-            return "\r\n".join(["%s" % k for k in result])
+        # since phpBB doesn't record when each forum was created, we have no way of knowing this...
+        return None
 
     def get_NEWNEWS(self, ts, group='*'):
         stmt = """

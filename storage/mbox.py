@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mbox.py,v 1.5 2004-02-01 05:23:13 jpm Exp $
+# $Id: mbox.py,v 1.6 2004-02-01 20:13:58 jpm Exp $
 
 import os
 import mailbox
@@ -57,11 +57,8 @@ class Papercut_Storage:
         return '<%s@%s>' % (msg_num, group)
 
     def get_NEWGROUPS(self, ts, group='%'):
-        result = self.get_group_list()
-        if len(result) == 0:
-            return None
-        else:
-            return "\r\n".join(["%s" % k for k in result])
+        # XXX: eventually add some code in here to get the mboxes newer than the given timestamp
+        return None
 
     def get_NEWNEWS(self, ts, group='*'):
         return ''

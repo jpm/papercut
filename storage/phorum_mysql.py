@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.45 2004-02-01 05:23:13 jpm Exp $
+# $Id: phorum_mysql.py,v 1.46 2004-02-01 20:13:58 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header, mime_decode_header
@@ -243,21 +243,8 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         smtp.quit()
 
     def get_NEWGROUPS(self, ts, group='%'):
-        stmt = """
-                SELECT
-                    nntp_group_name
-                FROM
-                    forums
-                WHERE
-                    nntp_group_name LIKE '%%%s' 
-                ORDER BY
-                    nntp_group_name ASC""" % (group)
-        self.cursor.execute(stmt)
-        result = list(self.cursor.fetchall())
-        if len(result) == 0:
-            return None
-        else:
-            return "\r\n".join(["%s" % k for k in result])
+        # since phorum doesn't record when each forum was created, we have no way of knowing this...
+        return None
 
     def get_NEWNEWS(self, ts, group='*'):
         stmt = """
