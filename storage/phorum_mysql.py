@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.31 2002-03-27 20:14:45 jpm Exp $
+# $Id: phorum_mysql.py,v 1.32 2002-03-28 22:01:45 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -131,6 +131,21 @@ class Papercut_Backend:
             stmt = "%s AND id = %s" % (stmt, range[0])
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
+
+    def get_first_article(self, group_name):
+        table_name = self.get_table_name(group_name)
+        stmt = """
+                SELECT
+                    MIN(id) AS first_article
+                FROM
+                    %s
+                WHERE
+                    approved='Y'""" % (table_name)
+        num_rows = self.cursor.execute(stmt)
+        if num_rows == 0:
+            return None
+        else:
+            return self.cursor.fetchone()[0]
 
     def get_group_stats(self, table_name):
         stmt = """

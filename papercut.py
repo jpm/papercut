@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.45 2002-03-26 06:20:54 jpm Exp $
+# $Id: papercut.py,v 1.46 2002-03-28 22:01:45 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -10,7 +10,7 @@ import settings
 import traceback
 import StringIO
 
-__VERSION__ = '0.7.9'
+__VERSION__ = '0.7.10'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 0
 __TIMEOUT__ = 60
@@ -348,9 +348,9 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             self.send_response(ERR_NOGROUPSELECTED)
             return
         if self.selected_article == 'ggg':
-            self.send_response(ERR_NOARTICLESELECTED)
-            return
-        article_num = backend.get_NEXT(self.selected_group, self.selected_article)
+            article_num = backend.get_first_article(self.selected_group)
+        else:
+            article_num = backend.get_NEXT(self.selected_group, self.selected_article)
         if article_num == None:
             self.send_response(ERR_NONEXTARTICLE)
             return
