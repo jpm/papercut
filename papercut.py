@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.27 2002-02-05 18:45:13 jpm Exp $
+# $Id: papercut.py,v 1.28 2002-02-06 18:55:12 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -350,10 +350,12 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if len(self.tokens) == 2:
             if self.tokens[1].find('@') != -1:
                 self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
+            article_number = self.tokens[1]
             body = backend.get_BODY(self.selected_group, self.tokens[1])
         else:
+            article_number = self.selected_article
             body = backend.get_BODY(self.selected_group, self.selected_article)
-        self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (self.selected_article, self.selected_article, self.selected_group), body))
+        self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (article_number, self.selected_article, self.selected_group), body))
 
     def do_HEAD(self):
         """
@@ -368,13 +370,15 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         if len(self.tokens) == 2:
             if self.tokens[1].find('@') != -1:
                 self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
+            article_number = self.tokens[1]
             head = backend.get_HEAD(self.selected_group, self.tokens[1])
         else:
             if self.selected_article == 'ggg':
                 self.send_response(ERR_NOARTICLESELECTED)
                 return
+            article_number = self.selected_article
             head = backend.get_HEAD(self.selected_group, self.selected_article)
-        self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (self.selected_article, self.selected_article, self.selected_group), head))
+        self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (article_number, self.selected_article, self.selected_group), head))
 
     def do_OVER(self):
         self.do_XOVER()
