@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.33 2002-05-21 03:12:16 jpm Exp $
+# $Id: mysql.py,v 1.34 2002-05-21 03:25:12 jpm Exp $
 import MySQLdb
 import time
 import re
@@ -469,7 +469,7 @@ class Papercut_Storage:
     def do_POST(self, group_name, body, ip_address):
         table_name = self.get_table_name(group_name)
         author, email = from_regexp.search(body, 0).groups()
-        subject = subject_regexp.search(lines, 0).groups()[0].strip()
+        subject = subject_regexp.search(body, 0).groups()[0].strip()
         if body.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
             references = references_regexp.search(body, 1).groups()
