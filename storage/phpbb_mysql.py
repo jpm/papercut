@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phpbb_mysql.py,v 1.5 2002-10-03 03:50:15 jpm Exp $
+# $Id: phpbb_mysql.py,v 1.6 2002-12-12 05:49:39 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
 import re
 import settings
 import md5
+import binascii
 import mime
 import strutil
 
@@ -44,7 +45,7 @@ class Papercut_Storage:
         return text.replace("'", "\\'")
 
     def make_bbcode_uid(self):
-        return md5.new(str(time.clock())).digest()
+        return binascii.hexlify(md5.new(str(time.clock())).digest())
 
     def encode_ip(self, dotquad_ip):
         t = dotquad_ip.split('.')
@@ -389,15 +390,10 @@ class Papercut_Storage:
                     B.post_subject,
                     A.post_time,
                     B.post_text,
-                    A.post_username,
-                    MIN(D.post_id)
+                    A.post_username
                 FROM
                     %sposts A, 
                     %sposts_text B
-                INNER JOIN
-                    %sposts D
-                ON
-                    D.topic_id=A.topic_id
                 LEFT JOIN
                     %susers C
                 ON
@@ -405,9 +401,7 @@ class Papercut_Storage:
                 WHERE
                     A.post_id=B.post_id AND
                     A.forum_id=%s AND
-                    A.post_id >= %s
-                GROUP BY
-                    D.topic_id""" % (prefix, prefix, prefix, prefix, forum_id, start_id)
+                    A.post_id >= %s""" % (prefix, prefix, prefix, forum_id, start_id)
         if end_id != 'ggg':
             stmt = "%s AND A.post_id <= %s" % (stmt, end_id)
         self.cursor.execute(stmt)
@@ -425,8 +419,8 @@ class Papercut_Storage:
             message_id = "<%s@%s>" % (row[0], group_name)
             line_count = len(row[6].split('\n'))
             xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, row[0])
-            if row[8] != row[0]:
-                reference = "<%s@%s>" % (row[8], group_name)
+            if row[1] != row[0]:
+                reference = "<%s@%s>" % (row[1], group_name)
             else:
                 reference = ""
             # message_number <tab> subject <tab> author <tab> date <tab> message_id <tab> reference <tab> bytes <tab> lines <tab> xref
