@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.13 2002-01-14 14:47:29 jpm Exp $
+# $Id: papercut.py,v 1.14 2002-01-14 15:23:13 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -8,7 +8,7 @@ import time
 import re
 import settings
 
-__VERSION__ = '0.4.9'
+__VERSION__ = '0.5.3'
 # set this to 0 (zero) for real world use
 __DEBUG__ = 1
 __TIMEOUT__ = 60
@@ -61,7 +61,6 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # - Check more the patterns of searching (wildmat) -> backend.format_wildcards() -> Work in progress
 # - Show banner on the footer of the articles about the site
 # - Implement some sort of timeout mechanism (According to the new NNTP protocol timeouts should not be explained [i.e. no responses])
-# - Implement really dynamic backend storages (it's mysql only right now)
 # - Add INSTALL and all of the other crap
 #
 # Known Problems:
@@ -215,6 +214,7 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
             return
         elif (len(self.tokens) > 1) and (self.tokens[1].upper() == 'NEWSGROUPS'):
             # same functionality as the XGTITLE command, so let's use that existing code
+            self.tokens[1] = '%'
             self.do_XGTITLE()
             return
         elif len(self.tokens) == 2:
@@ -669,7 +669,7 @@ if __name__ == '__main__':
         time.sleep(1)
         sys.exit(0)
 
-    from backends.mysql import Papercut_Backend
+    __import__('backends.%s' % (settings.backend_type), globals(), locals(), ['Papercut_Backend'])
     backend = Papercut_Backend()
 
     signal.signal(signal.SIGINT, sighandler)

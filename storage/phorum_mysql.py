@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.22 2002-01-14 14:47:29 jpm Exp $
+# $Id: phorum_mysql.py,v 1.1 2002-01-14 15:23:13 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
