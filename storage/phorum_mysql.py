@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.15 2002-02-25 16:43:41 jpm Exp $
+# $Id: phorum_mysql.py,v 1.16 2002-03-06 16:20:44 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -67,13 +67,14 @@ class Papercut_Backend:
                     COUNT(*) AS check
                 FROM
                     forum.%s
-                WHERE""" % (table_name)
+                WHERE
+                    approved='Y'""" % (table_name)
         if style == 'range':
-            stmt = "%s id > %s" % (stmt, range[0])
+            stmt = "%s AND id > %s" % (stmt, range[0])
             if len(range) == 2:
                 stmt = "%s AND id < %s" % (stmt, range[1])
         else:
-            stmt = "%s id = %s" % (stmt, range[0])
+            stmt = "%s AND id = %s" % (stmt, range[0])
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
@@ -84,7 +85,9 @@ class Papercut_Backend:
                    MIN(id) AS maximum,
                    MAX(id) AS minimum
                 FROM
-                    forum.%s""" % (table_name)
+                    forum.%s
+                WHERE
+                    approved='Y'""" % (table_name)
         self.cursor.execute(stmt)
         return self.cursor.fetchone()
 
@@ -290,11 +293,14 @@ class Papercut_Backend:
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
-                    body
+                    B.body
                 FROM
-                    forum.%s_bodies
+                    forum.%s A,
+                    forum.%s_bodies B
                 WHERE
-                    id=%s""" % (table_name, id)
+                    A.id=B.id AND
+                    A.approved='Y' AND
+                    B.id=%s""" % (table_name, table_name, id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -395,8 +401,9 @@ class Papercut_Backend:
                     id
                 FROM
                     forum.%s
+                WHERE
+                    approved='Y'
                 ORDER BY
-                    approved='Y' AND
                     id ASC""" % (table_name)
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
