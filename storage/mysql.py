@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2001 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: mysql.py,v 1.11 2002-01-12 17:49:43 jpm Exp $
+# $Id: mysql.py,v 1.12 2002-01-12 21:59:23 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -377,26 +377,40 @@ class Papercut_Backend:
         table_name = self.get_table_name(group_name)
         author, email = re.compile("^From:(.*)<(.*)>", re.M).search(lines, 1).groups()
         subject = re.compile("^Subject:(.*)", re.M).search(lines, 1).groups()[0].strip()
-        # get the 'modifystamp' value from the parent (if any)
-        references = re.compile("^References: <(.*)>", re.M).search(lines, 1).groups()[0].strip()
-        (id,) = references.split('@')
-        stmt = """
-                SELECT
-                    parent,
-                    thread,
-                    modifystamp
-                FROM
-                    forum.%s
-                WHERE
-                    id=%s""" % (table_name, id)
-        num_rows = self.cursor.execute(stmt)
-        if num_rows == 0:
-            return None
-        result = self.cursor.fetchone()
+        if lines.find('References') != -1:
+            # get the 'modifystamp' value from the parent (if any)
+            references = re.compile("^References: <(.*)>", re.M).search(lines, 1).groups()[0].strip()
+            parent_id, void = references.split('@')
+            stmt = """
+                    SELECT
+                        MAX(id)+1,
+                        id,
+                        thread,
+                        modifystamp
+                    FROM
+                        forum.%s
+                    WHERE
+                        id=%s""" % (table_name, parent_id)
+            num_rows = self.cursor.execute(stmt)
+            if num_rows == 0:
+                return None
+            new_id, parent_id, thread_id, modifystamp = self.cursor.fetchone()
+        else:
+            stmt = """
+                    SELECT
+                        MAX(id)+1,
+                        NOW()
+                    FROM
+                        forum.%s""" % (table_name)
+            self.cursor.execute(stmt)
+            new_id, modifystamp = self.cursor.fetchone()
+            parent_id = 0
+            thread_id = new_id
         stmt = """
                 INSERT INTO
                     forum.%s
                 (
+                    id,
                     datestamp,
                     thread,
                     parent,
@@ -410,6 +424,7 @@ class Papercut_Backend:
                     modifystamp,
                     userid
                 ) VALUES (
+                    %s,
                     NOW(),
                     %s,
                     %s,
@@ -423,7 +438,7 @@ class Papercut_Backend:
                     %s,
                     0
                 )
-                """ % (table_name, result[1], id, author.strip(), subject, email, ip_address, result[2])
+                """ % (table_name, new_id, thread_id, parent_id, author.strip(), subject, email, ip_address, modifystamp)
         if not self.cursor.execute(stmt):
             return None
         else:
@@ -439,9 +454,15 @@ class Papercut_Backend:
                         %s,
                         '%s',
                         %s
-                    )""" % (id, lines, thread)
+                    )""" % (table_name, new_id, lines, thread_id)
             if not self.cursor.execute(stmt):
                 # delete from 'table_name' before returning..
+                stmt = """
+                        DELETE FROM
+                            forum.%s
+                        WHERE
+                            id=%s""" % (table_name, new_id)
+                self.cursor.execute(stmt)
                 return None
             else:
                 return 1
