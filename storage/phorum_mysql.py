@@ -1,6 +1,6 @@
-        #!/usr/bin/env python
+#!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.29 2002-03-26 06:24:01 jpm Exp $
+# $Id: phorum_mysql.py,v 1.30 2002-03-26 22:55:00 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -11,12 +11,19 @@ import smtplib
 import binascii
 import md5
 
+# we don't need to compile the regexps everytime..
 doubleline_regexp = re.compile("^\.\.", re.M)
 singleline_regexp = re.compile("^\.", re.M)
 from_regexp = re.compile("^From:(.*)<(.*)>", re.M)
 subject_regexp = re.compile("^Subject:(.*)", re.M)
 references_regexp = re.compile("^References:(.*)<(.*)>", re.M)
 lines_regexp = re.compile("^Lines:(.*)", re.M)
+# phorum configuration files related regexps
+moderator_regexp = re.compile("(.*)PHORUM\['ForumModeration'\](.*)='(.*)';", re.M)
+url_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)';", re.M)
+admin_regexp = re.compile("(.*)PHORUM\['admin_url'\](.*)='(.*)';", re.M)
+server_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)http://(.*)/(.*)';", re.M)
+mail_code_regexp = re.compile("(.*)PHORUM\['PhorumMailCode'\](.*)=(.*)'(.*)';", re.M)
 
 class Papercut_Backend:
     """
@@ -32,6 +39,12 @@ class Papercut_Backend:
         self.cursor = self.conn.cursor()
 
     def wrap(self, text, width=78):
+        """Wraps text at a specified width.
+        
+        This is used on the PhorumMail feature, as to emulate completely the
+        current Phorum behavior when it sends out copies of the posted
+        articles.
+        """
         i=0
         while i<len(text):
             if i+width+1>len(text):
@@ -53,9 +66,19 @@ class Papercut_Backend:
         return text
 
     def get_message_body(self, headers):
+        """Parses and returns the most appropriate message body possible.
+        
+        The function tries to extract the plaintext version of a MIME based
+        message, and if it is not available then it returns the html version.        
+        """
         return mime.get_text_message(headers)
 
     def get_formatted_time(self, time_tuple):
+        """Formats the time tuple in a NNTP friendly way.
+        
+        Some newsreaders didn't like the date format being sent using leading
+        zeros on the days, so we needed to hack our own little format.
+        """
         # days without leading zeros, please
         day = int(time.strftime('%d', time_tuple))
         tmp1 = time.strftime('%a,', time_tuple)
@@ -63,9 +86,16 @@ class Papercut_Backend:
         return "%s %s %s" % (tmp1, day, tmp2)
 
     def format_body(self, text):
+        """Formats the body of message being sent to the client.
+        
+        Since the NNTP protocol uses a single dot on a line to denote the end
+        of the response, we need to substitute all leading dots on the body of
+        the message with two dots.
+        """
         return singleline_regexp.sub("..", text)
 
     def quote_string(self, text):
+        """Quotes strings the MySQL way."""
         return text.replace("'", "\\'")
 
     def format_wildcards(self, pattern):
@@ -136,7 +166,6 @@ class Papercut_Backend:
         fp.close()
         # get the value of the configuration variable
         recipients = []
-        moderator_regexp = re.compile("(.*)PHORUM\['ForumModeration'\](.*)='(.*)';", re.M)
         mod_code = moderator_regexp.search(content, 0).groups()
         if mod_code[2] == 'r' or mod_code[2] == 'a':
             # get the moderator emails from the forum_auth table
@@ -189,11 +218,8 @@ To edit this message use this URL:
         content = fp.read()
         fp.close()
         # regexps to get the content from the phorum configuration files
-        url_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)';", re.M)
         phorum_url = url_regexp.search(content, 0).groups()[2]
-        admin_regexp = re.compile("(.*)PHORUM\['admin_url'\](.*)='(.*)';", re.M)
         phorum_admin_url = admin_regexp.search(content, 0).groups()[2]
-        server_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)http://(.*)/(.*)';", re.M)
         phorum_server_hostname = server_regexp.search(content, 0).groups()[3]
         # connect to the SMTP server
         smtp = smtplib.SMTP('localhost')
@@ -205,7 +231,6 @@ To edit this message use this URL:
         # XXX: Coding blind here. I really don't know much about how Phorum works with
         # XXX: sending forum postings as emails, but it's here. Let's call this a
         # XXX: temporary implementation. Should work fine, I guess.
-        mail_code_regexp = re.compile("(.*)PHORUM\['PhorumMailCode'\](.*)=(.*)'(.*)';", re.M)
         phorum_mail_code = mail_code_regexp.search(content, 0).groups()[3]
         notification_mail_tpl = """Message-ID: <%(random_msgid)s@%(phorum_server_hostname)s>
 From: %(msg_author)s %(msg_email)s
