@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut_cache.py,v 1.2 2002-10-03 00:38:08 jpm Exp $
+# $Id: papercut_cache.py,v 1.3 2002-10-03 00:39:57 jpm Exp $
 
 import binascii
 import md5
@@ -20,7 +20,7 @@ class CallableWrapper:
         self.thecallable = thecallable
 
     def __call__(self, *args, **kwds):
-        filename = self._get_cache_file(*args, **kwds)
+        filename = self._get_filename(*args, **kwds)
         if os.path.exists(filename):
             # check the expiration
             expire, result = self._get_cached_result(filename)
