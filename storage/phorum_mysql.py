@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_mysql.py,v 1.33 2002-04-03 23:07:22 jpm Exp $
+# $Id: phorum_mysql.py,v 1.34 2002-04-12 04:41:05 jpm Exp $
 import MySQLdb
 import time
 from mimify import mime_encode_header
@@ -539,10 +539,11 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
             line_count = len(row[6].split('\n'))
             xref = 'Xref: %s %s:%s' % (settings.nntp_hostname, group_name, row[0])
             if row[1] != 0:
-                parent = row[1]
+                reference = "<%s@%s>" % (row[1], group_name)
             else:
-                parent = ""
-            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, parent, len(self.format_body(row[6])), line_count, xref))
+                reference = ""
+            # message_number <tab> subject <tab> author <tab> date <tab> message_id <tab> reference <tab> bytes <tab> lines <tab> xref
+            overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (row[0], row[4], author, formatted_time, message_id, reference, len(self.format_body(row[6])), line_count, xref))
         return "\r\n".join(overviews)
 
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):

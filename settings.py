@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: settings.py,v 1.11 2002-04-03 23:07:22 jpm Exp $
+# $Id: settings.py,v 1.12 2002-04-12 04:41:05 jpm Exp $
 import time
 import sys
 import os
@@ -12,7 +12,7 @@ import os
 #
 
 # full path for where Papercut will store the log file
-log_path = "/home/jpm/papercut/logs/"
+log_path = "/home/papercut/logs/"
 # the actual log filename
 log_file = log_path + "papercut.log"
 
@@ -27,7 +27,7 @@ ssl_cert_path = ''
 ssl_key_path = ''
 
 # check for the appropriate path
-if ssl_cert_path == '' or ssl_key_path == '' or not os.path.exists(ssl_cert_path) or not os.path.exists(ssl_key_path):
+if nntp_ssl == 'yes' and (ssl_cert_path == '' or ssl_key_path == '' or not os.path.exists(ssl_cert_path) or not os.path.exists(ssl_key_path)):
     sys.exit("Please configure the 'ssl_cert_path' and 'ssl_key_path' options correctly")
 
 # server needs authentication ? ('yes' or 'no')
@@ -44,6 +44,9 @@ server_type = 'read-write'
 
 # backend that Papercut will use to get the actual articles content
 storage_backend = "phorum_mysql"
+
+# for the forwarding_proxy backend, set the next option to the remote nntp server
+forward_host = 'news.php.net'
 
 # full path to the directory where the Phorum configuration files are stored
 phorum_settings_path = "/home/jpm/www/domain.com/phorum_settings/"

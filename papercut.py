@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: papercut.py,v 1.50 2002-04-05 05:35:14 jpm Exp $
+# $Id: papercut.py,v 1.51 2002-04-12 04:41:05 jpm Exp $
 import SocketServer
 import sys
 import signal
@@ -243,6 +243,10 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         elif (len(self.tokens) == 2) and (self.tokens[1].upper() == 'EXTENSIONS'):
             self.send_response("%s\r\n%s\r\n." % (STATUS_EXTENSIONS, "\r\n".join(self.extensions)))
             return
+        #elif (len(self.tokens) > 1) and (self.tokens[1].upper() == 'ACTIVE'):
+        #    lists = backend.get_LIST_ACTIVE(self.tokens[2])
+        #    self.send_response("%s\r\n%s\r\n." % (STATUS_LIST, "\r\n".join(lists)))
+        #    return
         elif (len(self.tokens) > 1) and (self.tokens[1].upper() == 'NEWSGROUPS'):
             self.do_LIST_NEWSGROUPS()
             return
