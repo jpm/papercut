@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
-# $Id: phorum_pgsql.py,v 1.1 2003-02-21 17:30:31 jpm Exp $
+# $Id: phorum_pgsql.py,v 1.2 2003-02-21 18:25:54 jpm Exp $
 from pyPgSQL import PgSQL
 import time
 from mimify import mime_encode_header
@@ -11,8 +11,6 @@ import strutil
 import smtplib
 import binascii
 import md5
-
-# XXX: must fix all of the IF() clauses from the code
 
 
 # we don't need to compile the regexps everytime..
@@ -83,26 +81,35 @@ class Papercut_Storage:
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
-                    IF(MIN(id) IS NULL, 0, MIN(id)) AS first_article
+                    MIN(id) AS first_article
                 FROM
                     %s
                 WHERE
                     approved='Y'""" % (table_name)
-        num_rows = self.cursor.execute(stmt)
-        return self.cursor.fetchone()[0]
+        self.cursor.execute(stmt)
+        minimum = self.cursor.fetchone()[0]
+        if minimum is None:
+            return 0
+        else:
+            return minimum
 
     def get_group_stats(self, table_name):
         stmt = """
                 SELECT
                    COUNT(id) AS total,
-                   IF(MAX(id) IS NULL, 0, MAX(id)) AS maximum,
-                   IF(MIN(id) IS NULL, 0, MIN(id)) AS minimum
+                   MAX(id) AS maximum,
+                   MIN(id) AS minimum
                 FROM
                     %s
                 WHERE
                     approved='Y'""" % (table_name)
-        num_rows = self.cursor.execute(stmt)
-        return self.cursor.fetchone()
+        self.cursor.execute(stmt)
+        total, maximum, minimum = self.cursor.fetchone()
+        if maximum is None:
+            maximum = 0
+        if minimum is None:
+            minimum = 0
+        return (total, maximum, minimum)
 
     def get_table_name(self, group_name):
         stmt = """
@@ -643,7 +650,7 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
             parent_id, void = references[-1].strip().split('@')
             stmt = """
                     SELECT
-                        IF(MAX(id) IS NULL, 1, MAX(id)+1) AS next_id
+                        MAX(id) AS next_id
                     FROM
                         %s""" % (table_name)
             num_rows = self.cursor.execute(stmt)
@@ -651,6 +658,10 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
                 new_id = 1
             else:
                 new_id = self.cursor.fetchone()[0]
+                if new_id is None:
+                    new_id = 1
+                else:
+                    new_id = new_id + 1
             stmt = """
                     SELECT
                         id,
@@ -670,12 +681,16 @@ Sent using Papercut version %(__VERSION__)s <http://papercut.org>
         else:
             stmt = """
                     SELECT
-                        IF(MAX(id) IS NULL, 1, MAX(id)+1) AS next_id,
+                        MAX(id) AS next_id,
                         DATE_PART('epoch', CURRENT_TIMESTAMP())
                     FROM
                         %s""" % (table_name)
             self.cursor.execute(stmt)
             new_id, modifystamp = self.cursor.fetchone()
+            if new_id is None:
+                new_id = 1
+            else:
+                new_id = new_id + 1
             modifystamp = int(modifystamp)
             parent_id = 0
             thread_id = new_id
