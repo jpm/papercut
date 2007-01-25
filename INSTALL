@@ -56,7 +56,7 @@ Step by Step Instructions:
     prevent problems.
 
     $ cd /path/to/where/papercut/will/run/
-    $ cd backends
+    $ cd storage
     $ less phorum_mysql_fix.sql
     [read the information contained on the file]
     $ mysql -u username_here -p database_here < phorum_mysql_fix.sql
