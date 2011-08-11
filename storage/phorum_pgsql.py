@@ -222,7 +222,7 @@ This message was sent from: %(forum_name)s.
 %(msg_body)s
 
 ----------------------------------------------------------------
-Sent using Papercut version %(__VERSION__)s <http://papercut.org>
+Sent using Papercut version %(__VERSION__)s
 """
         stmt = """
                 SELECT
