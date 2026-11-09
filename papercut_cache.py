@@ -1,12 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: papercut_cache.py,v 1.7 2002-10-04 03:14:38 jpm Exp $
 
-import binascii
-import md5
+import hashlib
 import time
 import os
-import cPickle
+import pickle
 import portable_locker
 # papercut settings file
 import settings
@@ -50,8 +49,8 @@ class CallableWrapper:
         inf = open(filename, 'rb')
         # get a lock on the file
         portable_locker.lock(inf, portable_locker.LOCK_SH)
-        expire = cPickle.load(inf)
-        result = cPickle.load(inf)
+        expire = pickle.load(inf)
+        result = pickle.load(inf)
         # release the lock
         portable_locker.unlock(inf)
         inf.close()
@@ -60,11 +59,11 @@ class CallableWrapper:
     def _save_result(self, filename, *args, **kwds):
         result = self.thecallable(*args, **kwds)
         # save the serialized result in the file
-        outf = open(filename, 'w')
+        outf = open(filename, 'wb')
         # file write lock
         portable_locker.lock(outf, portable_locker.LOCK_EX)
-        cPickle.dump(time.time(), outf)
-        cPickle.dump(result, outf)
+        pickle.dump(time.time(), outf)
+        pickle.dump(result, outf)
         # release the lock
         portable_locker.unlock(outf)
         outf.close()
@@ -72,7 +71,7 @@ class CallableWrapper:
 
     def _get_filename(self, *args, **kwds):
         arguments = '%s%s%s' % (self.name, args, kwds)
-        return '%s%s' % (settings.nntp_cache_path, binascii.hexlify(md5.new(arguments).digest()))
+        return '%s%s' % (settings.nntp_cache_path, hashlib.md5(arguments.encode('utf-8', 'surrogateescape')).hexdigest())
 
 
 class Cache:

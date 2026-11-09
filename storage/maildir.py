@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2004 Scott Parish, Joao Prado Maia
 # See the LICENSE file for more information.
 # $Id: maildir.py,v 1.2 2004-08-01 01:51:48 jpm Exp $
@@ -17,26 +17,42 @@
 #     mkdir -p /home/papercut/maildir/my.new.group/{new,cur,tmp}
 #
 
-import dircache
+import email
 from fnmatch import fnmatch
 import glob
 import os
-import mailbox
-import rfc822
 import settings
 import socket
-import strutil
-import string
+from storage import strutil
 import time
 
 
-def maildir_date_cmp(a, b):
-    """compare maildir file names 'a' and 'b' for sort()"""
-    a = os.path.basename(a)
-    b = os.path.basename(b)
-    a = int(a[: a.find(".")])
-    b = int(b[: b.find(".")])
-    return cmp(a, b)
+def sorted_listdir(path):
+    """Replacement for the old dircache.listdir() (removed in Python 3)."""
+    return sorted(os.listdir(path))
+
+
+def maildir_date_key(name):
+    """sort key for maildir file names (by their leading timestamp)"""
+    name = os.path.basename(name)
+    return int(name[: name.find(".")])
+
+
+class MaildirMessage:
+    """Minimal stand-in for the old rfc822.Message: header access plus a
+    file-like 'fp' positioned at the start of the body."""
+
+    def __init__(self, path):
+        with open(path, encoding='utf-8', errors='surrogateescape') as f:
+            text = f.read()
+        sep = text.find('\n\n')
+        header_text = text if sep == -1 else text[:sep]
+        self.body = '' if sep == -1 else text[sep + 2:]
+        self.headers = header_text.split('\n')
+        self.msg = email.message_from_string(header_text + '\n\n')
+
+    def get(self, name, default=None):
+        return self.msg.get(name, default)
 
 
 
@@ -65,14 +81,14 @@ class Papercut_Storage:
 
     def _new_to_cur(self, group):
         groupdir = self._get_group_dir(group)
-        for f in dircache.listdir(os.path.join(groupdir, 'new')):
+        for f in sorted_listdir(os.path.join(groupdir, 'new')):
             ofp = os.path.join(groupdir, 'new', f)
             nfp = os.path.join(groupdir, 'cur', f + ":2,")
             os.rename(ofp, nfp)
 
 
     def get_groupname_list(self):
-        groups = dircache.listdir(self.maildir_dir)
+        groups = sorted_listdir(self.maildir_dir)
         return ["papercut.maildir.%s" % k for k in groups]
 
 
@@ -80,14 +96,14 @@ class Papercut_Storage:
         self._new_to_cur(group)
         groupdir = self._get_group_dir(group)
         articledir = os.path.join(self._get_group_dir(group), 'cur')
-        articles = dircache.listdir(articledir)
-        articles.sort(maildir_date_cmp)
+        articles = sorted_listdir(articledir)
+        articles.sort(key=maildir_date_key)
         return articles
 
     
     def get_group_article_count(self, group):
         self._new_to_cur(group)
-        articles = dircache.listdir(os.path.join(self.maildir_dir, group))
+        articles = sorted_listdir(os.path.join(self.maildir_dir, group))
         return len(articles)
 
        
@@ -97,7 +113,7 @@ class Papercut_Storage:
         
         for name in groupnames:
             # group names are supposed to be case insensitive
-            if string.lower(name) == string.lower(group_name):
+            if name.lower() == group_name.lower():
                 found = True
                 break
             
@@ -132,9 +148,10 @@ class Papercut_Storage:
     # UNTESTED
     def get_NEWNEWS(self, ts, group='*'):
         gpaths = glob.glob(os.path.join(self.maildir_dir, group))
-        articles = []
+        ts = time.mktime(ts)
+        result = []
         for gpath in gpaths:
-            articles = dircache.listdir(os.path.join(gpath, "cur"))
+            articles = sorted_listdir(os.path.join(gpath, "cur"))
             group = os.path.basename(gpath)
             group_name = self._group2groupname(group)
 
@@ -143,12 +160,12 @@ class Papercut_Storage:
                 if os.path.getmtime(apath) < ts:
                     continue
 
-                articles.append("<%s@%s" % (article, group_name))
+                result.append("<%s@%s>" % (article, group_name))
 
-        if len(articles) == 0:
+        if len(result) == 0:
             return ''
         else:
-            return "\r\n".join(articles)
+            return "\r\n".join(result)
 
 
     def get_GROUP(self, group_name):
@@ -190,7 +207,7 @@ class Papercut_Storage:
         try:
             article = self.get_group_article_list(group)[id - 1]
             file = os.path.join(self.maildir_dir, group, "cur", article)
-            return rfc822.Message(open(file))
+            return MaildirMessage(file)
         
         except IndexError:
             return None
@@ -200,7 +217,7 @@ class Papercut_Storage:
         msg = self.get_message(group_name, id)
         if not msg:
             return None
-        return ("\r\n".join(["%s" % string.strip(k) for k in msg.headers]), msg.fp.read())
+        return ("\r\n".join(["%s" % k.strip() for k in msg.headers]), msg.body)
 
 
     def get_LAST(self, group_name, current_id):
@@ -235,7 +252,7 @@ class Papercut_Storage:
         if msg is None:
             return None
         else:
-            return strutil.format_body(msg.fp.read())
+            return strutil.format_body(msg.body)
 
 
     def get_XOVER(self, group_name, start_id, end_id='ggg'):
@@ -256,7 +273,7 @@ class Papercut_Storage:
             author = msg.get('from')
             formatted_time = msg.get('date')
             message_id = self.get_message_id(id, group_name)
-            line_count = len(msg.fp.read().split('\n'))
+            line_count = len(msg.body.split('\n'))
             xref = 'Xref: %s %s:%d' % (settings.nntp_hostname, group_name, id)
             
             if msg.get('references') is not None:
@@ -269,7 +286,7 @@ class Papercut_Storage:
             overviews.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % \
                              (id, msg.get('subject'), author,
                               formatted_time, message_id, reference,
-                              len(strutil.format_body(msg.fp.read())),
+                              len(strutil.format_body(msg.body)),
                               line_count, xref))
             
         return "\r\n".join(overviews)
@@ -301,12 +318,11 @@ class Papercut_Storage:
             
             msg = self.get_message(group_name, id)
             if header == 'BYTES':
-                msg.fp.seek(0, 2)
-                bytes = msg.fp.tell()
+                bytes = len(msg.body)
                 if fnmatch(str(bytes), pattern):
                     hdrs.append('%d %d' % (id, bytes))
             elif header == 'LINES':
-                lines = len(msg.fp.readlines())
+                lines = len(msg.body.splitlines())
                 if fnmatch(str(lines), pattern):
                     hdrs.append('%d %d' % (id, lines))
             else:
@@ -321,6 +337,7 @@ class Papercut_Storage:
 
 
     def get_LISTGROUP(self, group_name):
+        group = self._groupname2group(group_name)
         ids = range(1, self.get_group_article_count(group) + 1)
         ids = [str(id) for id in ids]
         return "\r\n".join(ids)
@@ -331,7 +348,6 @@ class Papercut_Storage:
 
 
     def get_XHDR(self, group_name, header, style, ranges):
-        print group_name, header, style, ranges
         group = self._groupname2group(group_name)
         header = header.upper()
 
@@ -342,7 +358,7 @@ class Papercut_Storage:
                 range_end = self.get_group_article_count(group)
             ids = range(int(ranges[0]), range_end + 1)
         else:
-            ids = (int(ranges[0]))
+            ids = (int(ranges[0]),)
 
         hdrs = []
         for id in ids:
@@ -357,10 +373,9 @@ class Papercut_Storage:
 
             msg = self.get_message(group_name, id)
             if header == 'BYTES':
-                msg.fp.seek(0, 2)
-                hdrs.append('%d %d' % (id, msg.fp.tell()))
+                hdrs.append('%d %d' % (id, len(msg.body)))
             elif header == 'LINES':
-                hdrs.append('%d %d' % (id, len(msg.fp.readlines())))
+                hdrs.append('%d %d' % (id, len(msg.body.splitlines())))
             else:
                 hdr = msg.get(header)
                 if hdr:
@@ -384,9 +399,8 @@ class Papercut_Storage:
         tfpath = os.path.join(self.maildir_dir, groupdir, "tmp", file)
         nfpath = os.path.join(self.maildir_dir, groupdir, "new", file)
         
-        fd = open(tfpath, 'w')
-        fd.write(body)
-        fd.close
+        with open(tfpath, 'w', encoding='utf-8', errors='surrogateescape') as fd:
+            fd.write(body)
 
         os.rename(tfpath, nfpath)
         return 1

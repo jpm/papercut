@@ -1,31 +1,30 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: phorum_mysql.py,v 1.47 2004-08-01 01:51:48 jpm Exp $
 import MySQLdb
 import time
-from mimify import mime_encode_header, mime_decode_header
 import re
 import settings
-import mime
-import strutil
+from storage import mime
+from storage import strutil
 import smtplib
-import md5
+import hashlib
 
 # patch by Andreas Wegmann <Andreas.Wegmann@VSA.de> to fix the handling of unusual encodings of messages
-q_quote_multiline = re.compile("=\?(.*?)\?[qQ]\?(.*?)\?=.*?=\?\\1\?[qQ]\?(.*?)\?=", re.M | re.S)
+q_quote_multiline = re.compile(r"=\?(.*?)\?[qQ]\?(.*?)\?=.*?=\?\1\?[qQ]\?(.*?)\?=", re.M | re.S)
 # we don't need to compile the regexps everytime..
-doubleline_regexp = re.compile("^\.\.", re.M)
-singleline_regexp = re.compile("^\.", re.M)
+doubleline_regexp = re.compile(r"^\.\.", re.M)
+singleline_regexp = re.compile(r"^\.", re.M)
 from_regexp = re.compile("^From:(.*)<(.*)>", re.M)
 subject_regexp = re.compile("^Subject:(.*)", re.M)
 references_regexp = re.compile("^References:(.*)<(.*)>", re.M)
 lines_regexp = re.compile("^Lines:(.*)", re.M)
 # phorum configuration files related regexps
-moderator_regexp = re.compile("(.*)PHORUM\['ForumModeration'\](.*)='(.*)';", re.M)
-url_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)';", re.M)
-admin_regexp = re.compile("(.*)PHORUM\['admin_url'\](.*)='(.*)';", re.M)
-server_regexp = re.compile("(.*)PHORUM\['forum_url'\](.*)='(.*)http://(.*)/(.*)';", re.M)
-mail_code_regexp = re.compile("(.*)PHORUM\['PhorumMailCode'\](.*)=(.*)'(.*)';", re.M)
+moderator_regexp = re.compile(r"(.*)PHORUM\['ForumModeration'\](.*)='(.*)';", re.M)
+url_regexp = re.compile(r"(.*)PHORUM\['forum_url'\](.*)='(.*)';", re.M)
+admin_regexp = re.compile(r"(.*)PHORUM\['admin_url'\](.*)='(.*)';", re.M)
+server_regexp = re.compile(r"(.*)PHORUM\['forum_url'\](.*)='(.*)http://(.*)/(.*)';", re.M)
+mail_code_regexp = re.compile(r"(.*)PHORUM\['PhorumMailCode'\](.*)=(.*)'(.*)';", re.M)
 
 class Papercut_Storage:
     """
@@ -234,7 +233,7 @@ Sent using Papercut version %(__VERSION__)s
                 msg_email = '<%s>' % msg_email
             else:
                 msg_email = ''
-            random_msgid = md5.new(str(time.clock())).hexdigest()
+            random_msgid = hashlib.md5(str(time.time()).encode('utf-8')).hexdigest()
             # this is pretty ugly, right ?
             from papercut import __VERSION__
             phorum_version = settings.phorum_version
@@ -256,7 +255,7 @@ Sent using Papercut version %(__VERSION__)s
                 WHERE
                     nntp_group_name='%s'
                 ORDER BY
-                    nntp_group_name ASC""" % (group_name.replace('*', '%'))
+                    nntp_group_name ASC""" % (group.replace('*', '%'))
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         articles = []
@@ -631,7 +630,7 @@ Sent using Papercut version %(__VERSION__)s
         author, email = from_regexp.search(lines, 0).groups()
         subject = subject_regexp.search(lines, 0).groups()[0].strip()
         # patch by Andreas Wegmann <Andreas.Wegmann@VSA.de> to fix the handling of unusual encodings of messages
-        lines = mime_decode_header(re.sub(q_quote_multiline, "=?\\1?Q?\\2\\3?=", lines))
+        lines = strutil.mime_decode_header(re.sub(q_quote_multiline, "=?\\1?Q?\\2\\3?=", lines))
         if lines.find('References') != -1:
             # get the 'modifystamp' value from the parent (if any)
             references = references_regexp.search(lines, 0).groups()

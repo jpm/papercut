@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: mysql.py,v 1.3 2003-04-26 00:24:55 jpm Exp $
 import MySQLdb

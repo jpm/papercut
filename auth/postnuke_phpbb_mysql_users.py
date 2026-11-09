@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: postnuke_phpbb_mysql_users.py,v 1.1 2004-08-01 01:51:48 jpm Exp $
 import MySQLdb
 import settings
-import md5
+import hashlib
 
 class Papercut_Auth:
     """
@@ -30,7 +30,7 @@ class Papercut_Auth:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))
             return 0
         db_password = self.cursor.fetchone()[0]
-        if db_password != md5.new(password).hexdigest():
+        if db_password != hashlib.md5(password.encode('utf-8')).hexdigest():
             settings.logEvent('Error - Authentication failed for username \'%s\' (incorrect password)' % (username))
             return 0
         else:

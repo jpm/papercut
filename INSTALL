@@ -3,20 +3,26 @@ Papercut NNTP Server
 --------------------
 
 For more information on what exactly Papercut is, and what are its main 
-objectives / intended audience, please read the README file.
+objectives / intended audience, please read the README.md file.
 
 
 Requirements:
 -------------
 
-- Python 2.2 (it needs the email module to parse MIME based messages)
+- Python 3.10 or newer
+  (the last version for Python 2.2 is available under the 'python-2.2' git tag)
 - Database server
   - The Phorum backend needs MySQL or PostgreSQL as the storage driver)
-    - MySQLdb python module (http://sf.net/projects/mysql-python)
+    - mysqlclient python module, which provides MySQLdb (pip install mysqlclient)
     or
-    - pyPgSQL python module (http://pypgsql.sourceforge.net/)
+    - psycopg2 python module (pip install psycopg2-binary)
   - The phpBB backend needs MySQL
-    - MySQLdb python module (http://sf.net/projects/mysql-python)
+    - mysqlclient python module (pip install mysqlclient)
+- On Python 3.13 and newer, the forwarding_proxy backend needs the
+  'standard-nntplib' package and the Phorum auth modules need 'standard-crypt'
+  (both were removed from the standard library)
+
+  See requirements.txt; e.g. pip install -r requirements.txt
   - There are other storage modules, seek the source for details on those
 
 - Permission to add a new column to one of the Phorum tables

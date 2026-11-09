@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: settings.py,v 1.18 2004-08-01 01:03:22 jpm Exp $
 import time
@@ -117,6 +117,14 @@ phpbb_table_prefix = "nuke_bb"
 
 # the full path for where the mbox files are stored in
 mbox_path = "/home/papercut/mboxes/"
+
+
+#
+# MAILDIR STORAGE MODULE OPTIONS
+#
+
+# the full path for where the maildir group directories are stored in
+maildir_path = "/home/papercut/maildir/"
 
 
 # check for the appropriate options

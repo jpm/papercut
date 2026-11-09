@@ -1,15 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: mysql.py,v 1.44 2004-08-01 01:51:48 jpm Exp $
 import MySQLdb
 import time
 import re
 import settings
-import strutil
-import mime
+from storage import strutil
+from storage import mime
 
 # we don't need to compile the regexps everytime..
-singleline_regexp = re.compile("^\.", re.M)
+singleline_regexp = re.compile(r"^\.", re.M)
 from_regexp = re.compile("^From:(.*)", re.M)
 subject_regexp = re.compile("^Subject:(.*)", re.M)
 references_regexp = re.compile("^References:(.*)<(.*)>", re.M)
@@ -116,7 +116,7 @@ class Papercut_Storage:
                 WHERE
                     name='%s'
                 ORDER BY
-                    name ASC""" % (group_name.replace('*', '%'))
+                    name ASC""" % (group.replace('*', '%'))
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         articles = []
@@ -334,7 +334,7 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    id >= %s AND""" % (table_name, header, strutil.format_wildcards(pattern), start_id)
+                    id >= %s""" % (table_name, start_id)
         if header.upper() == 'SUBJECT':
             stmt = "%s AND subject REGEXP '%s'" % (stmt, strutil.format_wildcards(pattern))
         elif header.upper() == 'FROM':

@@ -1,22 +1,21 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002, 2003, 2004 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: phpbb_mysql.py,v 1.20 2004-08-01 01:51:48 jpm Exp $
 import MySQLdb
 import time
-from mimify import mime_encode_header, mime_decode_header
 import re
 import settings
-import md5
-import mime
-import strutil
+import hashlib
+from storage import mime
+from storage import strutil
 
 
 # patch by Andreas Wegmann <Andreas.Wegmann@VSA.de> to fix the handling of unusual encodings of messages
-q_quote_multiline = re.compile("=\?(.*?)\?[qQ]\?(.*?)\?=.*?=\?\\1\?[qQ]\?(.*?)\?=", re.M | re.S)
+q_quote_multiline = re.compile(r"=\?(.*?)\?[qQ]\?(.*?)\?=.*?=\?\1\?[qQ]\?(.*?)\?=", re.M | re.S)
 
 # we don't need to compile the regexps everytime..
-doubleline_regexp = re.compile("^\.\.", re.M)
-singleline_regexp = re.compile("^\.", re.M)
+doubleline_regexp = re.compile(r"^\.\.", re.M)
+singleline_regexp = re.compile(r"^\.", re.M)
 from_regexp = re.compile("^From:(.*)<(.*)>", re.M)
 subject_regexp = re.compile("^Subject:(.*)", re.M)
 references_regexp = re.compile("^References:(.*)<(.*)>", re.M)
@@ -48,7 +47,7 @@ class Papercut_Storage:
         return text.replace("'", "\\'")
 
     def make_bbcode_uid(self):
-        return md5.new(str(time.clock())).hexdigest()
+        return hashlib.md5(str(time.time()).encode('utf-8')).hexdigest()
 
     def encode_ip(self, dotquad_ip):
         t = dotquad_ip.split('.')
@@ -616,7 +615,7 @@ class Papercut_Storage:
         forum_id = self.get_forum(group_name)
         prefix = settings.phpbb_table_prefix
         # patch by Andreas Wegmann <Andreas.Wegmann@VSA.de> to fix the handling of unusual encodings of messages
-        lines = mime_decode_header(re.sub(q_quote_multiline, "=?\\1?Q?\\2\\3?=", lines))
+        lines = strutil.mime_decode_header(re.sub(q_quote_multiline, "=?\\1?Q?\\2\\3?=", lines))
         body = self.get_message_body(lines)
         author, email = from_regexp.search(lines, 0).groups()
         subject = subject_regexp.search(lines, 0).groups()[0].strip()
