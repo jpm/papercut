@@ -23,9 +23,9 @@ class Papercut_Auth:
                 FROM
                     nuke_users
                 WHERE
-                    pn_uname='%s'
-                """ % (username)
-        num_rows = self.cursor.execute(stmt)
+                    pn_uname=%s
+                """
+        num_rows = self.cursor.execute(stmt, (username,))
         if num_rows == 0 or num_rows is None:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))
             return 0

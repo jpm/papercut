@@ -200,7 +200,15 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
                         self.article_lines.append(line)
                     else:
                         if command in self.commands:
-                            getattr(self, "do_%s" % (command))()
+                            try:
+                                getattr(self, "do_%s" % (command))()
+                            except (ValueError, IndexError):
+                                # malformed arguments (e.g. a non-numeric article number)
+                                self.send_response(ERR_CMDSYNTAXERROR)
+                            except Exception:
+                                settings.logEvent('Error - Command %s failed for \'%s\'' % (command, self.client_address[0]))
+                                settings.logEvent(traceback.format_exc())
+                                self.send_response(ERR_NOTPERFORMED)
                         else:
                             self.send_response(ERR_NOTCAPABLE)
         settings.logEvent('Connection closed (IP Address: %s)' % (self.client_address[0]))

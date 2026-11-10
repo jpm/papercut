@@ -25,10 +25,6 @@ class Papercut_Storage:
         self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
         self.cursor = self.conn.cursor()
 
-    def quote_string(self, text):
-        """Quotes strings the MySQL way."""
-        return text.replace("'", "\\'")
-
     def get_body(self, lines):
         pass
 
@@ -42,8 +38,8 @@ class Papercut_Storage:
                 FROM
                     papercut_groups
                 WHERE
-                    LOWER(name)=LOWER('%s')""" % (group_name)
-        self.cursor.execute(stmt)
+                    LOWER(name)=LOWER(%s)"""
+        self.cursor.execute(stmt, (group_name,))
         return self.cursor.fetchone()[0]
 
     def article_exists(self, group_name, style, range):
@@ -56,11 +52,11 @@ class Papercut_Storage:
                 WHERE
                     """ % (table_name)
         if style == 'range':
-            stmt = "%s id > %s" % (stmt, range[0])
+            stmt = "%s id > %s" % (stmt, int(range[0]))
             if len(range) == 2:
-                stmt = "%s AND id < %s" % (stmt, range[1])
+                stmt = "%s AND id < %s" % (stmt, int(range[1]))
         else:
-            stmt = "%s id = %s" % (stmt, range[0])
+            stmt = "%s id = %s" % (stmt, int(range[0]))
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
@@ -96,8 +92,8 @@ class Papercut_Storage:
                 FROM
                     papercut_groups
                 WHERE
-                    name='%s'""" % (group_name.replace('*', '%'))
-        self.cursor.execute(stmt)
+                    name=%s"""
+        self.cursor.execute(stmt, (group_name.replace('*', '%'),))
         return self.cursor.fetchone()[0]
 
     def get_message_id(self, msg_num, group):
@@ -114,10 +110,10 @@ class Papercut_Storage:
                 FROM
                     papercut_groups
                 WHERE
-                    name='%s'
+                    name=%s
                 ORDER BY
-                    name ASC""" % (group.replace('*', '%'))
-        self.cursor.execute(stmt)
+                    name ASC"""
+        self.cursor.execute(stmt, (group.replace('*', '%'),))
         result = list(self.cursor.fetchall())
         articles = []
         for group, table in result:
@@ -127,8 +123,8 @@ class Papercut_Storage:
                     FROM
                         %s
                     WHERE
-                        UNIX_TIMESTAMP(datestamp) >= %s""" % (table, ts)
-            num_rows = self.cursor.execute(stmt)
+                        UNIX_TIMESTAMP(datestamp) >= %%s""" % (table)
+            num_rows = self.cursor.execute(stmt, (int(time.mktime(ts)),))
             if num_rows == 0:
                 continue
             ids = list(self.cursor.fetchall())
@@ -177,7 +173,7 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    id=%s""" % (table_name, id)
+                    id=%s""" % (table_name, int(id))
         return self.cursor.execute(stmt)
 
     def get_ARTICLE(self, group_name, id):
@@ -193,7 +189,7 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    id=%s""" % (table_name, id)
+                    id=%s""" % (table_name, int(id))
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -221,7 +217,7 @@ class Papercut_Storage:
                     id < %s
                 ORDER BY
                     id DESC
-                LIMIT 0, 1""" % (table_name, current_id)
+                LIMIT 0, 1""" % (table_name, int(current_id))
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -238,7 +234,7 @@ class Papercut_Storage:
                     id > %s
                 ORDER BY
                     id ASC
-                LIMIT 0, 1""" % (table_name, current_id)
+                LIMIT 0, 1""" % (table_name, int(current_id))
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -256,7 +252,7 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    id=%s""" % (table_name, id)
+                    id=%s""" % (table_name, int(id))
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -281,7 +277,7 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    id=%s""" % (table_name, id)
+                    id=%s""" % (table_name, int(id))
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -303,9 +299,9 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    id >= %s""" % (table_name, start_id)
+                    id >= %s""" % (table_name, int(start_id))
         if end_id != 'ggg':
-            stmt = "%s AND id <= %s" % (stmt, end_id)
+            stmt = "%s AND id <= %s" % (stmt, int(end_id))
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         overviews = []
@@ -334,16 +330,21 @@ class Papercut_Storage:
                 FROM
                     %s
                 WHERE
-                    id >= %s""" % (table_name, start_id)
+                    id >= %s""" % (table_name, int(start_id))
+        params = []
         if header.upper() == 'SUBJECT':
-            stmt = "%s AND subject REGEXP '%s'" % (stmt, strutil.format_wildcards(pattern))
+            stmt = "%s AND subject REGEXP %%s" % (stmt)
+            params.append(strutil.format_wildcards(pattern))
         elif header.upper() == 'FROM':
-            stmt = "%s AND (author REGEXP '%s' OR email REGEXP '%s')" % (stmt, strutil.format_wildcards(pattern), strutil.format_wildcards(pattern))
+            stmt = "%s AND (author REGEXP %%s OR email REGEXP %%s)" % (stmt)
+            params.extend([strutil.format_wildcards(pattern)] * 2)
         elif header.upper() == 'DATE':
-            stmt = "%s AND %s" % (stmt, pattern)
+            # matching on dates is not supported (this used to splice the
+            # client's pattern into the query as raw SQL)
+            return None
         if end_id != 'ggg':
-            stmt = "%s AND id <= %s" % (stmt, end_id)
-        num_rows = self.cursor.execute(stmt)
+            stmt = "%s AND id <= %s" % (stmt, int(end_id))
+        num_rows = self.cursor.execute(stmt, params)
         if num_rows == 0:
             return None
         result = list(self.cursor.fetchall())
@@ -392,13 +393,15 @@ class Papercut_Storage:
                     papercut_groups
                 WHERE
                     LENGTH(name) > 0"""
+        params = []
         if pattern != None:
             stmt = stmt + """ AND
-                    name REGEXP '%s'""" % (strutil.format_wildcards(pattern))
+                    name REGEXP %s"""
+            params.append(strutil.format_wildcards(pattern))
         stmt = stmt + """
                 ORDER BY
                     name ASC"""
-        self.cursor.execute(stmt)
+        self.cursor.execute(stmt, params)
         result = list(self.cursor.fetchall())
         return "\r\n".join(["%s %s" % (k, v) for k, v in result])
 
@@ -418,11 +421,11 @@ class Papercut_Storage:
                 WHERE
                     """ % (table_name)
         if style == 'range':
-            stmt = '%s id >= %s' % (stmt, range[0])
+            stmt = '%s id >= %s' % (stmt, int(range[0]))
             if len(range) == 2:
-                stmt = '%s AND id <= %s' % (stmt, range[1])
+                stmt = '%s AND id <= %s' % (stmt, int(range[1]))
         else:
-            stmt = '%s id = %s' % (stmt, range[0])
+            stmt = '%s id = %s' % (stmt, int(range[0]))
         if self.cursor.execute(stmt) == 0:
             return None
         result = self.cursor.fetchall()
@@ -475,7 +478,7 @@ class Papercut_Storage:
                     WHERE
                         id=%s
                     GROUP BY
-                        id""" % (table_name, parent_id)
+                        id""" % (table_name, int(parent_id))
             num_rows = self.cursor.execute(stmt)
             if num_rows == 0:
                 return None
@@ -510,15 +513,15 @@ class Papercut_Storage:
                     NOW(),
                     %s,
                     %s,
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%s',
+                    %%s,
+                    %%s,
+                    %%s,
+                    %%s,
                     %s,
                     %s
                 )
-                """ % (table_name, new_id, thread_id, parent_id, self.quote_string(author), self.quote_string(subject), ip_address, self.quote_string(body), len(body), len(body.split('\n')))
-        if not self.cursor.execute(stmt):
+                """ % (table_name, new_id, thread_id, int(parent_id), len(body), len(body.split('\n')))
+        if not self.cursor.execute(stmt, (author, subject, ip_address, body)):
             return None
         else:
             return 1

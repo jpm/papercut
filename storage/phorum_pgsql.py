@@ -56,8 +56,8 @@ class Papercut_Storage:
                 FROM
                     forums
                 WHERE
-                    LOWER(nntp_group_name)=LOWER('%s')""" % (group_name)
-        self.cursor.execute(stmt)
+                    LOWER(nntp_group_name)=LOWER(%s)"""
+        self.cursor.execute(stmt, (group_name,))
         return self.cursor.fetchone()[0]
 
     def article_exists(self, group_name, style, range):
@@ -70,11 +70,11 @@ class Papercut_Storage:
                 WHERE
                     approved='Y'""" % (table_name)
         if style == 'range':
-            stmt = "%s AND id > %s" % (stmt, range[0])
+            stmt = "%s AND id > %s" % (stmt, int(range[0]))
             if len(range) == 2:
-                stmt = "%s AND id < %s" % (stmt, range[1])
+                stmt = "%s AND id < %s" % (stmt, int(range[1]))
         else:
-            stmt = "%s AND id = %s" % (stmt, range[0])
+            stmt = "%s AND id = %s" % (stmt, int(range[0]))
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
@@ -123,8 +123,8 @@ class Papercut_Storage:
                 FROM
                     forums
                 WHERE
-                    nntp_group_name LIKE '%s'""" % (group_name.replace('*', '%'))
-        self.cursor.execute(stmt)
+                    nntp_group_name LIKE %s"""
+        self.cursor.execute(stmt, (group_name.replace('*', '%'),))
         return self.cursor.fetchone()[0]
 
     def get_message_id(self, msg_num, group):
@@ -181,8 +181,8 @@ To edit this message use this URL:
                 FROM
                     forums
                 WHERE
-                    nntp_group_name='%s'""" % (group_name)
-        self.cursor.execute(stmt)
+                    nntp_group_name=%s"""
+        self.cursor.execute(stmt, (group_name,))
         forum_id, forum_name = self.cursor.fetchone()
         forum_name.strip()
         # open the main configuration file
@@ -262,10 +262,10 @@ Sent using Papercut version %(__VERSION__)s
                 FROM
                     forums
                 WHERE
-                    nntp_group_name='%s'
+                    nntp_group_name=%s
                 ORDER BY
-                    nntp_group_name ASC""" % (group.replace('*', '%'))
-        self.cursor.execute(stmt)
+                    nntp_group_name ASC"""
+        self.cursor.execute(stmt, (group.replace('*', '%'),))
         result = list(self.cursor.fetchall())
         articles = []
         for group, table in result:
@@ -276,8 +276,8 @@ Sent using Papercut version %(__VERSION__)s
                         %s
                     WHERE
                         approved='Y' AND
-                        DATE_PART('epoch', datestamp) >= %s""" % (table, ts)
-            self.cursor.execute(stmt)
+                        DATE_PART('epoch', datestamp) >= %%s""" % (table)
+            self.cursor.execute(stmt, (int(time.mktime(ts)),))
             num_rows = self.cursor.rowcount
             if num_rows == 0:
                 continue
@@ -328,7 +328,7 @@ Sent using Papercut version %(__VERSION__)s
                     %s
                 WHERE
                     approved='Y' AND
-                    id=%s""" % (table_name, id)
+                    id=%s""" % (table_name, int(id))
         return self.cursor.execute(stmt)
 
     def get_ARTICLE(self, group_name, id):
@@ -348,7 +348,7 @@ Sent using Papercut version %(__VERSION__)s
                 WHERE
                     A.approved='Y' AND
                     A.id=B.id AND
-                    A.id=%s""" % (table_name, table_name, id)
+                    A.id=%s""" % (table_name, table_name, int(id))
         self.cursor.execute(stmt)
         num_rows = self.cursor.rowcount
         if num_rows == 0:
@@ -383,7 +383,7 @@ Sent using Papercut version %(__VERSION__)s
                     id < %s
                 ORDER BY
                     id DESC
-                LIMIT 1, 0""" % (table_name, current_id)
+                LIMIT 1, 0""" % (table_name, int(current_id))
         self.cursor.execute(stmt)
         num_rows = self.cursor.rowcount
         if num_rows == 0:
@@ -402,7 +402,7 @@ Sent using Papercut version %(__VERSION__)s
                     id > %s
                 ORDER BY
                     id ASC
-                LIMIT 1, 0""" % (table_name, current_id)
+                LIMIT 1, 0""" % (table_name, int(current_id))
         self.cursor.execute(stmt)
         num_rows = self.cursor.rowcount
         if num_rows == 0:
@@ -423,7 +423,7 @@ Sent using Papercut version %(__VERSION__)s
                     %s
                 WHERE
                     approved='Y' AND
-                    id=%s""" % (table_name, id)
+                    id=%s""" % (table_name, int(id))
         self.cursor.execute(stmt)
         num_rows = self.cursor.rowcount
         if num_rows == 0:
@@ -457,7 +457,7 @@ Sent using Papercut version %(__VERSION__)s
                 WHERE
                     A.id=B.id AND
                     A.approved='Y' AND
-                    B.id=%s""" % (table_name, table_name, id)
+                    B.id=%s""" % (table_name, table_name, int(id))
         self.cursor.execute(stmt)
         num_rows = self.cursor.rowcount
         if num_rows == 0:
@@ -482,9 +482,9 @@ Sent using Papercut version %(__VERSION__)s
                 WHERE
                     A.approved='Y' AND
                     A.id=B.id AND
-                    A.id >= %s""" % (table_name, table_name, start_id)
+                    A.id >= %s""" % (table_name, table_name, int(start_id))
         if end_id != 'ggg':
-            stmt = "%s AND A.id <= %s" % (stmt, end_id)
+            stmt = "%s AND A.id <= %s" % (stmt, int(end_id))
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         overviews = []
@@ -508,6 +508,10 @@ Sent using Papercut version %(__VERSION__)s
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):
         # XXX: need to actually check for the header values being passed as
         # XXX: not all header names map to column names on the tables
+        # only headers that map to a column can be searched
+        column = {'SUBJECT': 'subject', 'FROM': 'author'}.get(header.upper())
+        if column is None:
+            return None
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
@@ -523,12 +527,12 @@ Sent using Papercut version %(__VERSION__)s
                     %s_bodies B
                 WHERE
                     A.approved='Y' AND
-                    %s LIKE '%s' AND
+                    %s LIKE %%s AND
                     A.id = B.id AND
-                    A.id >= %s""" % (table_name, table_name, header, strutil.format_wildcards_sql(pattern), start_id)
+                    A.id >= %s""" % (table_name, table_name, column, int(start_id))
         if end_id != 'ggg':
-            stmt = "%s AND A.id <= %s" % (stmt, end_id)
-        self.cursor.execute(stmt)
+            stmt = "%s AND A.id <= %s" % (stmt, int(end_id))
+        self.cursor.execute(stmt, (strutil.format_wildcards_sql(pattern),))
         num_rows = self.cursor.rowcount
         if num_rows == 0:
             return None
@@ -581,13 +585,15 @@ Sent using Papercut version %(__VERSION__)s
                     forums
                 WHERE
                     LENGTH(nntp_group_name) > 0"""
+        params = []
         if pattern != None:
             stmt = stmt + """ AND
-                    nntp_group_name LIKE '%s'""" % (strutil.format_wildcards_sql(pattern))
+                    nntp_group_name LIKE %s"""
+            params.append(strutil.format_wildcards_sql(pattern))
         stmt = stmt + """
                 ORDER BY
                     nntp_group_name ASC"""
-        self.cursor.execute(stmt)
+        self.cursor.execute(stmt, params)
         result = list(self.cursor.fetchall())
         return "\r\n".join(["%s %s" % (k, v) for k, v in result])
 
@@ -609,11 +615,11 @@ Sent using Papercut version %(__VERSION__)s
                     A.approved='Y' AND
                     A.id = B.id AND """ % (table_name, table_name)
         if style == 'range':
-            stmt = '%s A.id >= %s' % (stmt, range[0])
+            stmt = '%s A.id >= %s' % (stmt, int(range[0]))
             if len(range) == 2:
-                stmt = '%s AND A.id <= %s' % (stmt, range[1])
+                stmt = '%s AND A.id <= %s' % (stmt, int(range[1]))
         else:
-            stmt = '%s A.id = %s' % (stmt, range[0])
+            stmt = '%s A.id = %s' % (stmt, int(range[0]))
         self.cursor.execute(stmt)
         if self.cursor.rowcount == 0:
             return None
@@ -678,7 +684,7 @@ Sent using Papercut version %(__VERSION__)s
                         approved='Y' AND
                         id=%s
                     GROUP BY
-                        id""" % (table_name, parent_id)
+                        id""" % (table_name, int(parent_id))
             self.cursor.execute(stmt)
             num_rows = self.cursor.rowcount
             if num_rows == 0:

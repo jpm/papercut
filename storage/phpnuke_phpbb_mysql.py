@@ -41,10 +41,6 @@ class Papercut_Storage:
         """
         return mime.get_text_message(headers)
 
-    def quote_string(self, text):
-        """Quotes strings the MySQL way."""
-        return text.replace("'", "\\'")
-
     def make_bbcode_uid(self):
         return hashlib.md5(str(time.time()).encode('utf-8')).hexdigest()
 
@@ -59,8 +55,8 @@ class Papercut_Storage:
                 FROM
                     %sforums
                 WHERE
-                    LOWER(nntp_group_name)=LOWER('%s')""" % (settings.phpbb_table_prefix, group_name)
-        self.cursor.execute(stmt)
+                    LOWER(nntp_group_name)=LOWER(%%s)""" % (settings.phpbb_table_prefix)
+        self.cursor.execute(stmt, (group_name,))
         return self.cursor.fetchone()[0]
 
     def article_exists(self, group_name, style, range):
@@ -73,11 +69,11 @@ class Papercut_Storage:
                 WHERE
                     forum_id=%s""" % (settings.phpbb_table_prefix, forum_id)
         if style == 'range':
-            stmt = "%s AND post_id > %s" % (stmt, range[0])
+            stmt = "%s AND post_id > %s" % (stmt, int(range[0]))
             if len(range) == 2:
-                stmt = "%s AND post_id < %s" % (stmt, range[1])
+                stmt = "%s AND post_id < %s" % (stmt, int(range[1]))
         else:
-            stmt = "%s AND post_id = %s" % (stmt, range[0])
+            stmt = "%s AND post_id = %s" % (stmt, int(range[0]))
         self.cursor.execute(stmt)
         return self.cursor.fetchone()[0]
 
@@ -117,8 +113,8 @@ class Papercut_Storage:
                 FROM
                     %sforums
                 WHERE
-                    nntp_group_name='%s'""" % (settings.phpbb_table_prefix, group_name)
-        self.cursor.execute(stmt)
+                    nntp_group_name=%%s""" % (settings.phpbb_table_prefix)
+        self.cursor.execute(stmt, (group_name,))
         return self.cursor.fetchone()[0]
 
     def get_message_id(self, msg_num, group):
@@ -136,10 +132,10 @@ class Papercut_Storage:
                 FROM
                     %sforums
                 WHERE
-                    nntp_group_name LIKE '%s'
+                    nntp_group_name LIKE %%s
                 ORDER BY
-                    nntp_group_name ASC""" % (settings.phpbb_table_prefix, group.replace('*', '%'))
-        self.cursor.execute(stmt)
+                    nntp_group_name ASC""" % (settings.phpbb_table_prefix)
+        self.cursor.execute(stmt, (group.replace('*', '%'),))
         result = list(self.cursor.fetchall())
         articles = []
         for group_name, forum_id in result:
@@ -150,8 +146,8 @@ class Papercut_Storage:
                         %sposts
                     WHERE
                         forum_id=%s AND
-                        post_time >= %s""" % (settings.phpbb_table_prefix, forum_id, ts)
-            num_rows = self.cursor.execute(stmt)
+                        post_time >= %%s""" % (settings.phpbb_table_prefix, forum_id)
+            num_rows = self.cursor.execute(stmt, (int(time.mktime(ts)),))
             if num_rows == 0:
                 continue
             ids = list(self.cursor.fetchall())
@@ -201,7 +197,7 @@ class Papercut_Storage:
                     %sposts
                 WHERE
                     forum_id=%s AND
-                    post_id=%s""" % (settings.phpbb_table_prefix, forum_id, id)
+                    post_id=%s""" % (settings.phpbb_table_prefix, forum_id, int(id))
         return self.cursor.execute(stmt)
 
     def get_ARTICLE(self, group_name, id):
@@ -239,7 +235,7 @@ class Papercut_Storage:
                     A.post_id=B.post_id AND
                     A.post_id=%s
                 GROUP BY
-                    D.topic_id""" % (prefix, prefix, prefix, prefix, nuke_prefix, forum_id, id)
+                    D.topic_id""" % (prefix, prefix, prefix, prefix, nuke_prefix, forum_id, int(id))
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -277,7 +273,7 @@ class Papercut_Storage:
                     forum_id=%s
                 ORDER BY
                     post_id DESC
-                LIMIT 0, 1""" % (settings.phpbb_table_prefix, current_id, forum_id)
+                LIMIT 0, 1""" % (settings.phpbb_table_prefix, int(current_id), forum_id)
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -295,7 +291,7 @@ class Papercut_Storage:
                     post_id > %s
                 ORDER BY
                     post_id ASC
-                LIMIT 0, 1""" % (settings.phpbb_table_prefix, forum_id, current_id)
+                LIMIT 0, 1""" % (settings.phpbb_table_prefix, forum_id, int(current_id))
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -335,7 +331,7 @@ class Papercut_Storage:
                     A.post_id=B.post_id AND
                     A.post_id=%s
                 GROUP BY
-                    D.topic_id""" % (prefix, prefix, prefix, prefix, nuke_prefix, forum_id, id)
+                    D.topic_id""" % (prefix, prefix, prefix, prefix, nuke_prefix, forum_id, int(id))
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -373,7 +369,7 @@ class Papercut_Storage:
                 WHERE
                     A.post_id=B.post_id AND
                     A.forum_id=%s AND
-                    A.post_id=%s""" % (prefix, prefix, forum_id, id)
+                    A.post_id=%s""" % (prefix, prefix, forum_id, int(id))
         num_rows = self.cursor.execute(stmt)
         if num_rows == 0:
             return None
@@ -408,9 +404,9 @@ class Papercut_Storage:
                 WHERE
                     A.post_id=B.post_id AND
                     A.forum_id=%s AND
-                    A.post_id >= %s""" % (prefix, prefix, nuke_prefix, prefix, forum_id, start_id)
+                    A.post_id >= %s""" % (prefix, prefix, nuke_prefix, prefix, forum_id, int(start_id))
         if end_id != 'ggg':
-            stmt = "%s AND A.post_id <= %s" % (stmt, end_id)
+            stmt = "%s AND A.post_id <= %s" % (stmt, int(end_id))
         self.cursor.execute(stmt)
         result = list(self.cursor.fetchall())
         overviews = []
@@ -437,6 +433,10 @@ class Papercut_Storage:
     def get_XPAT(self, group_name, header, pattern, start_id, end_id='ggg'):
         # XXX: need to actually check for the header values being passed as
         # XXX: not all header names map to column names on the tables
+        # only headers that map to a column can be searched
+        column = {'SUBJECT': 'B.post_subject', 'FROM': 'C.username'}.get(header.upper())
+        if column is None:
+            return None
         forum_id = self.get_forum(group_name)
         prefix = settings.phpbb_table_prefix
         nuke_prefix = settings.nuke_table_prefix
@@ -463,12 +463,12 @@ class Papercut_Storage:
                     A.topic_id = D.topic_id
                 WHERE
                     A.forum_id=%s AND
-                    %s REGEXP '%s' AND
+                    %s REGEXP %%s AND
                     A.post_id = B.post_id AND
-                    A.post_id >= %s""" % (prefix, prefix, nuke_prefix, prefix, forum_id, header, strutil.format_wildcards(pattern), start_id)
+                    A.post_id >= %s""" % (prefix, prefix, nuke_prefix, prefix, forum_id, column, int(start_id))
         if end_id != 'ggg':
-            stmt = "%s AND A.post_id <= %s" % (stmt, end_id)
-        num_rows = self.cursor.execute(stmt)
+            stmt = "%s AND A.post_id <= %s" % (stmt, int(end_id))
+        num_rows = self.cursor.execute(stmt, (strutil.format_wildcards(pattern),))
         if num_rows == 0:
             return None
         result = list(self.cursor.fetchall())
@@ -520,13 +520,15 @@ class Papercut_Storage:
                     %sforums
                 WHERE
                     LENGTH(nntp_group_name) > 0""" % (settings.phpbb_table_prefix)
+        params = []
         if pattern != None:
             stmt = stmt + """ AND
-                    nntp_group_name REGEXP '%s'""" % (strutil.format_wildcards(pattern))
+                    nntp_group_name REGEXP %s"""
+            params.append(strutil.format_wildcards(pattern))
         stmt = stmt + """
                 ORDER BY
                     nntp_group_name ASC"""
-        self.cursor.execute(stmt)
+        self.cursor.execute(stmt, params)
         result = list(self.cursor.fetchall())
         return "\r\n".join(["%s %s" % (k, v) for k, v in result])
 
@@ -559,11 +561,11 @@ class Papercut_Storage:
                     A.forum_id=%s AND
                     A.post_id = B.post_id AND """ % (prefix, prefix, prefix, nuke_prefix, forum_id)
         if style == 'range':
-            stmt = '%s A.post_id >= %s' % (stmt, range[0])
+            stmt = '%s A.post_id >= %s' % (stmt, int(range[0]))
             if len(range) == 2:
-                stmt = '%s AND A.post_id <= %s' % (stmt, range[1])
+                stmt = '%s AND A.post_id <= %s' % (stmt, int(range[1]))
         else:
-            stmt = '%s A.post_id = %s' % (stmt, range[0])
+            stmt = '%s A.post_id = %s' % (stmt, int(range[0]))
         if self.cursor.execute(stmt) == 0:
             return None
         result = self.cursor.fetchall()
@@ -607,8 +609,8 @@ class Papercut_Storage:
                     FROM
                         %susers
                     WHERE
-                        username='%s'""" % (nuke_prefix, username)
-            num_rows = self.cursor.execute(stmt)
+                        username=%%s""" % (nuke_prefix)
+            num_rows = self.cursor.execute(stmt, (username,))
             if num_rows == 0:
                 poster_id = -1
             else:
@@ -629,7 +631,7 @@ class Papercut_Storage:
                     WHERE
                         post_id=%s
                     GROUP BY
-                        post_id""" % (prefix, parent_id)
+                        post_id""" % (prefix, int(parent_id))
             num_rows = self.cursor.execute(stmt)
             if num_rows == 0:
                 return None
@@ -649,14 +651,14 @@ class Papercut_Storage:
                         topic_type
                     ) VALUES (
                         %s,
-                        '%s',
+                        %%s,
                         %s,
                         UNIX_TIMESTAMP(),
                         0,
                         0,
                         0
-                    )""" % (prefix, forum_id, self.quote_string(subject), poster_id)
-            self.cursor.execute(stmt)
+                    )""" % (prefix, forum_id, poster_id)
+            self.cursor.execute(stmt, (subject,))
             thread_id = self.cursor.insert_id()
         stmt = """
                 INSERT INTO
@@ -677,14 +679,14 @@ class Papercut_Storage:
                     %s,
                     %s,
                     UNIX_TIMESTAMP(),
-                    '%s',
-                    '%s',
+                    %%s,
+                    %%s,
                     1,
                     0,
                     1,
                     0
-                )""" % (prefix, thread_id, forum_id, poster_id, self.encode_ip(ip_address), post_username)
-        self.cursor.execute(stmt)
+                )""" % (prefix, thread_id, forum_id, poster_id)
+        self.cursor.execute(stmt, (self.encode_ip(ip_address), post_username))
         new_id = self.cursor.insert_id()
         if not new_id:
             return None
@@ -700,11 +702,11 @@ class Papercut_Storage:
                         post_text
                     ) VALUES (
                         %s,
-                        '%s',
-                        '%s',
-                        '%s'
-                    )""" % (prefix, new_id, self.make_bbcode_uid(), self.quote_string(subject), self.quote_string(body))
-            if not self.cursor.execute(stmt):
+                        %%s,
+                        %%s,
+                        %%s
+                    )""" % (prefix, new_id)
+            if not self.cursor.execute(stmt, (self.make_bbcode_uid(), subject, body)):
                 # delete from 'topics' and 'posts' tables before returning...
                 stmt = """
                         DELETE FROM

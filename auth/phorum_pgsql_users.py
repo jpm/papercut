@@ -28,9 +28,9 @@ class Papercut_Auth:
                 FROM
                     forums_auth
                 WHERE
-                    username='%s'
-                """ % (username)
-        self.cursor.execute(stmt)
+                    username=%s
+                """
+        self.cursor.execute(stmt, (username,))
         num_rows = self.cursor.rowcount
         if num_rows == 0 or num_rows is None:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))
