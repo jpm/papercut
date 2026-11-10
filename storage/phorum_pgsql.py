@@ -283,7 +283,7 @@ Sent using Papercut version %(__VERSION__)s
                 continue
             ids = list(self.cursor.fetchall())
             for id in ids:
-                articles.append("<%s@%s>" % (id, group))
+                articles.append("<%s@%s>" % (id[0], group))
         if len(articles) == 0:
             return ''
         else:
