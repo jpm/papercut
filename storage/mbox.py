@@ -65,8 +65,10 @@ class Papercut_Storage:
         return (total, min, max, group_name)
 
     def get_mbox_stats(self, filename):
+        # the first message in the file is not served (see get_XOVER and
+        # get_LISTGROUP), so the articles are 1 .. cnt-1
         cnt = len(self.get_messages(filename))
-        return (cnt-1, cnt, 1)
+        return (cnt-1, cnt-1, 1)
 
     def get_message_id(self, msg_num, group):
         return '<%s@%s>' % (msg_num, group)
@@ -109,7 +111,7 @@ class Papercut_Storage:
 
     def get_LAST(self, group_name, current_id):
         current_id = int(current_id)
-        if current_id <= 1 or current_id > len(self.get_group_messages(group_name)):
+        if current_id <= 1 or current_id >= len(self.get_group_messages(group_name)):
             return None
         return current_id - 1
 
