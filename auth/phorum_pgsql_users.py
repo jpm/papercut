@@ -40,7 +40,12 @@ class Papercut_Auth:
         if len(db_password) == 32:
             result = (db_password != hashlib.md5(password.encode('utf-8')).hexdigest())
         else:
-            result = (db_password != crypt.crypt(password, password[:settings.PHP_CRYPT_SALT_LENGTH]))
+            try:
+                result = (db_password != crypt.crypt(password, password[:settings.PHP_CRYPT_SALT_LENGTH]))
+            except OSError:
+                # glibc rejects salt characters outside [a-zA-Z0-9./]; such a
+                # password can't match a DES-crypted one
+                result = True
         if result:
             settings.logEvent('Error - Authentication failed for username \'%s\' (incorrect password)' % (username))
             return 0
