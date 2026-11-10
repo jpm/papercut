@@ -287,9 +287,37 @@ def test_xhdr_ranges(client, backend, command, expected_args):
     assert backend.called("get_XHDR") == [expected_args]
 
 
-def test_xhdr_only_supports_subject_and_from(client):
+def test_xhdr_supports_subject_from_and_references(client):
     client.cmd("GROUP test.group")
     assert code(client.cmd("XHDR date 1-2")) == "501"
+    assert code(client.cmd("XHDR references 1-2")) == "221"
+    client.read_multiline()
+
+
+def test_xhdr_with_no_results_sends_an_empty_list(client, backend):
+    backend.returns["get_XHDR"] = ""
+    client.cmd("GROUP test.group")
+    assert code(client.cmd("XHDR subject 1-2")) == "221"
+    assert client.read_multiline() == []
+
+
+@pytest.mark.parametrize("command, expected_args", [
+    ("XROVER 1-5", ("test.group", "REFERENCES", "range", ("1", "5"))),
+    ("XROVER 3-", ("test.group", "REFERENCES", "range", "3")),
+    ("XROVER", ("test.group", "REFERENCES", "unique", "2")),
+])
+def test_xrover_is_xhdr_references(client, backend, command, expected_args):
+    # regression: XROVER overwrote its range argument with the header name,
+    # and XHDR then refused REFERENCES, so XROVER always failed
+    client.cmd("GROUP test.group")
+    client.cmd("STAT 2")
+    assert code(client.cmd(command)) == "221"
+    client.read_multiline()
+    assert backend.called("get_XHDR") == [expected_args]
+
+
+def test_xrover_needs_a_group(client):
+    assert code(client.cmd("XROVER 1-5")) == "412"
 
 
 def test_xpat(client, backend):
@@ -351,13 +379,28 @@ def test_listgroup_without_a_group(client):
     assert code(client.cmd("LISTGROUP")) == "412"
 
 
-@pytest.mark.xfail(reason="do_LISTGROUP: ''.split('\\r\\n') is [''], so an empty "
-                          "group never resets the current article", strict=True)
 def test_listgroup_of_an_empty_group_clears_the_current_article(client, backend):
+    # regression: ''.split('\r\n') is [''], so an empty group used to make ''
+    # the current article
     backend.returns["get_LISTGROUP"] = ""
-    client.cmd("LISTGROUP test.group")
-    client.read_multiline()
+    client.cmd("GROUP test.group")
+    client.cmd("STAT 2")
+    assert code(client.cmd("LISTGROUP test.group")) == "211"
+    # regression: an empty list used to be sent as one blank line
+    assert client.read_multiline() == []
     assert code(client.cmd("STAT")) == "420"
+
+
+def test_listgroup_selects_an_empty_group(client, backend):
+    client.cmd("GROUP test.group")
+    backend.returns["get_LISTGROUP"] = ""
+    backend.returns["get_group_stats"] = (0, 0, 0, "empty.group")
+    assert client.cmd("LISTGROUP empty.group").startswith("211 0 0 0 empty.group")
+    client.read_multiline()
+    assert backend.called("get_group_stats") == [("empty.group",)]
+    client.cmd("XOVER 1-2")
+    client.read_multiline()
+    assert backend.called("get_XOVER")[0][0] == "empty.group"
 
 
 def test_xgtitle(client, backend):

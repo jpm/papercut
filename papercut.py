@@ -623,18 +623,19 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
                 self.send_response(ERR_NOGROUPSELECTED)
                 return
             numbers = self.backend.get_LISTGROUP(self.selected_group)
-        check = numbers.split('\r\n') 
-        if len(check) > 0:
+        # a group given as an argument is selected, even if it is empty
+        if len(self.tokens) == 2:
+            self.selected_group = self.tokens[1]
+        check = [number for number in numbers.split('\r\n') if number]
+        if check:
             # When a valid group is selected by means of this command, the
             # internally maintained "current article pointer" is set to the first
             # article in the group.
             self.selected_article = check[0]
-            if len(self.tokens) == 2:
-                self.selected_group = self.tokens[1]
         else:
             # If an empty newsgroup is selected, the current article pointer is made invalid.
             self.selected_article = 'ggg'
-        self.send_response("%s\r\n%s\r\n." % (STATUS_LISTGROUP % (self.backend.get_group_stats(self.selected_group)), numbers))
+        self.send_multiline(STATUS_LISTGROUP % (self.backend.get_group_stats(self.selected_group)), numbers)
 
     def do_XGTITLE(self):
         """
@@ -682,7 +683,13 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         self.do_XHDR()
 
     def do_XROVER(self):
-        self.tokens[1] = 'REFERENCES'
+        """
+        Syntax:
+            XROVER [range]
+        Same as XHDR REFERENCES [range].
+        """
+        # (this used to overwrite the range argument with the header name)
+        self.tokens = ['XHDR', 'REFERENCES'] + self.tokens[1:]
         self.do_XHDR()
 
     def do_XHDR(self):
@@ -701,7 +708,7 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         if self.selected_group == 'ggg':
             self.send_response(ERR_NOGROUPSELECTED)
             return
-        if (self.tokens[1].upper() != 'SUBJECT') and (self.tokens[1].upper() != 'FROM'):
+        if self.tokens[1].upper() not in ('SUBJECT', 'FROM', 'REFERENCES'):
             self.send_response(ERR_CMDSYNTAXERROR)
             return
         if len(self.tokens) == 2:
@@ -724,7 +731,7 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         if info == None:
             self.send_response(ERR_NOTCAPABLE)
         else:
-            self.send_response("%s\r\n%s\r\n." % (STATUS_XHDR, info))
+            self.send_multiline(STATUS_XHDR, info)
 
     def do_DATE(self):
         """
@@ -879,6 +886,13 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             ts = time.mktime(fields)
         # backends turn this back into an epoch with time.mktime()
         return time.localtime(ts)
+
+    def send_multiline(self, status, body):
+        """Sends a status line and a multi-line block (body may be empty)."""
+        if body:
+            self.send_response("%s\r\n%s\r\n." % (status, body))
+        else:
+            self.send_response("%s\r\n." % (status))
 
     def send_response(self, message):
         if __DEBUG__:

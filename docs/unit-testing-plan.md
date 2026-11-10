@@ -193,12 +193,15 @@ One PR each:
 
 ## Known bugs these tests will expose
 
-Mark these `xfail` with a reason, and fix them in follow-up PRs:
+Marked `xfail` while the tests were written, and fixed afterwards:
 
 - `papercut.py` `do_LISTGROUP`: `numbers.split('\r\n')` always returns at
-  least one element, so an empty group never resets the current article.
-- `papercut.py` `do_XROVER`: it calls `do_XHDR` with `REFERENCES`, but
-  `do_XHDR` only accepts `SUBJECT` and `FROM`, so `XROVER` always returns 501.
+  least one element, so an empty group never reset the current article (and
+  its empty list was sent as one blank line).
+- `papercut.py` `do_XROVER`: it overwrote its range argument with the header
+  name, and `do_XHDR` only accepted `SUBJECT` and `FROM`, so `XROVER` always
+  returned 501. Once reachable, phpBB/PHP-Nuke's XHDR `REFERENCES` turned out
+  to have the same topic-id bug as their XOVER.
 
 Found and fixed in step 1, with regression tests:
 
