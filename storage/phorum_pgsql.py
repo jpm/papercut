@@ -262,7 +262,7 @@ Sent using Papercut version %(__VERSION__)s
                 FROM
                     forums
                 WHERE
-                    nntp_group_name=%s
+                    nntp_group_name LIKE %s
                 ORDER BY
                     nntp_group_name ASC"""
         self.cursor.execute(stmt, (group.replace('*', '%'),))

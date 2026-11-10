@@ -287,8 +287,9 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         if (len(self.tokens) < 4) or (len(self.tokens) > 6):
             self.send_response(ERR_CMDSYNTAXERROR)
             return
-        # check to see if the group exists
-        if (self.tokens[1] != '*') and (not self.backend.group_exists(self.tokens[1])):
+        # check to see if the group exists (unless it's a wildmat pattern,
+        # which the backend matches against the group names)
+        if (not re.search(r'[*?\[,!]', self.tokens[1])) and (not self.backend.group_exists(self.tokens[1])):
             self.send_response(ERR_NOSUCHGROUP)
             return
         if (len(self.tokens) > 4) and (self.tokens[4] == 'GMT'):

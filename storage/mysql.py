@@ -112,7 +112,7 @@ class Papercut_Storage:
                 FROM
                     papercut_groups
                 WHERE
-                    name=%s
+                    name LIKE %s
                 ORDER BY
                     name ASC"""
         self.cursor.execute(stmt, (group.replace('*', '%'),))
