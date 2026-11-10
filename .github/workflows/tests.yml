@@ -17,8 +17,8 @@ jobs:
       matrix:
         python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
           allow-prereleases: true
@@ -27,7 +27,7 @@ jobs:
       - run: pip install -r requirements-dev.txt
       # the DB drivers and nntplib are replaced by fakes, so they aren't needed
       - run: python -m pytest --cov=. --cov-report=term --cov-report=xml
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: matrix.python == '3.13'
         with:
           name: coverage
