@@ -1,6 +1,6 @@
 # Plan: Unit tests
 
-**Status:** in progress (steps 1-3 done)
+**Status:** in progress (steps 1-4 done)
 **Related:** [integration testing plan](integration-testing-plan.md)
 
 ## Goal
