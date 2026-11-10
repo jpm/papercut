@@ -626,3 +626,46 @@ def test_newnews_accepts_wildmat_patterns(client, backend, pattern):
     assert code(client.cmd("NEWNEWS %s 20240105 000000" % pattern)) == "230"
     client.read_multiline()
     assert backend.called("get_NEWNEWS")[0][1] == pattern
+
+
+# --- logging ---
+
+def received_requests():
+    return [line.split("Received request: ", 1)[1].strip()
+            for line in log_text().splitlines() if "Received request: " in line]
+
+
+def test_only_command_names_are_logged(client):
+    client.cmd("GROUP secret.group.name")
+    client.cmd("XHDR subject 1-2")
+    client.read_multiline()
+    client.cmd("quit")
+    assert wait_for_log("Connection closed")
+    assert received_requests() == ["GROUP", "XHDR", "QUIT"]
+    assert "secret.group.name" not in log_text()
+
+
+def test_unknown_commands_are_not_logged_verbatim(client):
+    client.cmd("SOMETHING private-looking-text")
+    client.cmd("QUIT")
+    assert wait_for_log("Connection closed")
+    assert received_requests() == ["unknown command", "QUIT"]
+    assert "private-looking-text" not in log_text()
+
+
+def test_article_lines_are_not_logged(client):
+    post(client, ARTICLE_LINES[:3] + ["", "confidential body text"])
+    client.cmd("QUIT")
+    assert wait_for_log("Connection closed")
+    assert received_requests() == ["POST", "QUIT"]
+    assert "confidential body text" not in log_text()
+    assert "Tester" not in log_text()
+
+
+def test_login_names_are_not_logged_by_the_server(auth_on, client):
+    client.cmd("AUTHINFO USER alice")
+    client.cmd("AUTHINFO PASS s3cret")
+    client.cmd("QUIT")
+    assert wait_for_log("Connection closed")
+    assert received_requests() == ["AUTHINFO", "AUTHINFO", "QUIT"]
+    assert "alice" not in log_text()

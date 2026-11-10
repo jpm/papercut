@@ -83,8 +83,6 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # so let's create them just once and re-use as needed
 newsgroups_regexp = re.compile("^Newsgroups:(.*)", re.M)
 contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
-# NNTP commands are case-insensitive, so this must be too
-authinfo_regexp = re.compile(r"^\s*AUTHINFO\s+PASS\b", re.I)
 
 if os.name == 'posix':
     class NNTPServer(socketserver.ForkingTCPServer):
@@ -179,10 +177,13 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             self.tokens = line.split(' ')
             # NNTP commands are case-insensitive
             command = self.tokens[0].upper()
-            # don't save the password in the log file
-            match = authinfo_regexp.search(line)
-            if not match:
-                settings.logEvent('Received request: %s' % (line))
+            # log only the command name: arguments can hold passwords, user
+            # names or search patterns, and article lines are message content
+            if not self.sending_article:
+                if command in self.commands:
+                    settings.logEvent('Received request: %s' % (command))
+                else:
+                    settings.logEvent('Received request: unknown command')
             if command == 'POST':
                 if settings.server_type == 'read-only':
                     settings.logEvent('Error - Read-only server received a post request from \'%s\'' % self.client_address[0])
