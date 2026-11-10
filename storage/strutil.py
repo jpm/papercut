@@ -32,6 +32,9 @@ def wrap(text, width=78):
                 if findspc != -1:
                     text = text[:findspc] + '\n' + text[findspc+1:]
                     i = findspc + 1
+                else:
+                    # no more spaces to break at (this used to loop forever)
+                    break
     return text
 
 def get_formatted_time(time_tuple):

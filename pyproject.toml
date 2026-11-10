@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# the modules import each other as top-level modules (import settings, ...)
+pythonpath = ["."]
+markers = [
+    "integration: needs the Docker test databases (see docs/integration-testing-plan.md)",
+]
+addopts = "-m 'not integration'"
