@@ -198,7 +198,7 @@ To edit this message use this URL:
         emails = self.get_notification_emails(forum_id)
         for recipient in emails:
             current_msg = msg_tpl % vars()
-            smtp.sendmail("Phorum <%s>" % (recipient), recipient, current_msg)
+            strutil.send_text_mail(smtp, "Phorum <%s>" % (recipient), recipient, current_msg)
 
         # XXX: Coding blind here. I really don't know much about how Phorum works with
         # XXX: sending forum postings as emails, but it's here. Let's call this a
@@ -247,7 +247,7 @@ Sent using Papercut version %(__VERSION__)s
             from papercut import __VERSION__
             phorum_version = settings.phorum_version
             current_msg = notification_mail_tpl % vars()
-            smtp.sendmail('%s %s' % (msg_author, msg_email), email_list, current_msg)
+            strutil.send_text_mail(smtp, '%s %s' % (msg_author, msg_email), email_list, current_msg)
         smtp.quit()
 
     def get_NEWGROUPS(self, ts, group='%'):
