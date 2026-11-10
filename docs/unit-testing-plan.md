@@ -1,6 +1,6 @@
 # Plan: Unit tests
 
-**Status:** in progress (steps 1 and 2 done)
+**Status:** in progress (steps 1-3 done)
 **Related:** [integration testing plan](integration-testing-plan.md)
 
 ## Goal
@@ -216,3 +216,13 @@ Found and fixed in step 2:
   `authinfo pass ...` logged the password.
 - `settings.logEvent()` crashed on bytes that aren't valid UTF-8, which
   disconnected clients posting e.g. Latin-1 articles.
+
+Found and fixed in step 3:
+
+- `storage/maildir.py`: every group appeared to have 3 articles (it counted
+  the `new`/`cur`/`tmp` directories); `get_group_stats` crashed, breaking
+  `LISTGROUP`; `NEXT`/`LAST` raised `TypeError`; message-ids were built from
+  file names the server can't map back to numbers; `NEWNEWS` only worked
+  with `*`.
+- `storage/mbox.py`: `GROUP`/`LIST` reported a last article that doesn't
+  exist.
