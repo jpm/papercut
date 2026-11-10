@@ -32,3 +32,17 @@ jobs:
         with:
           name: coverage
           path: coverage.xml
+
+  integration:
+    name: integration tests (MySQL 8.4, PostgreSQL 16)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run the integration tests against real databases
+        run: docker compose -f docker-compose.test.yml run --rm papercut
+      - name: Database logs
+        if: failure()
+        run: docker compose -f docker-compose.test.yml logs mysql postgres
+      - name: Stop the databases
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v

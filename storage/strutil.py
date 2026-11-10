@@ -4,6 +4,7 @@
 import time
 import re
 import quopri
+from email.message import EmailMessage
 
 singleline_regexp = re.compile(r"^\.", re.M)
 
@@ -75,6 +76,19 @@ def mime_decode_header(text):
     Replacement for mimify.mime_decode_header(), removed in Python 3.
     """
     return encoded_word_regexp.sub(_decode_encoded_word, text)
+
+def send_text_mail(smtp, from_addr, to_addr, text):
+    """Sends a plain-text email given as 'Header: value' lines, a blank
+    line and the body. Non-ASCII headers are RFC 2047 encoded and the body
+    is sent as UTF-8 (smtplib's sendmail() only accepts ASCII strings)."""
+    head, sep, body = text.replace('\r\n', '\n').partition('\n\n')
+    msg = EmailMessage()
+    for line in head.split('\n'):
+        name, _, value = line.partition(':')
+        if name and value:
+            msg[name.strip()] = value.strip()
+    msg.set_content(body)
+    smtp.send_message(msg, from_addr, [to_addr])
 
 def format_wildcards(pattern):
     return pattern.replace('*', '.*').replace('?', '.*')

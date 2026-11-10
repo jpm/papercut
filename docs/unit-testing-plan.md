@@ -1,6 +1,6 @@
 # Plan: Unit tests
 
-**Status:** in progress (steps 1-6 done; Docker integration tests remain)
+**Status:** done
 **Related:** [integration testing plan](integration-testing-plan.md)
 
 ## Goal
@@ -197,6 +197,8 @@ Mark these `xfail` with a reason, and fix them in follow-up PRs:
 
 - `papercut.py` `do_LISTGROUP`: `numbers.split('\r\n')` always returns at
   least one element, so an empty group never resets the current article.
+- `papercut.py` `do_XROVER`: it calls `do_XHDR` with `REFERENCES`, but
+  `do_XHDR` only accepts `SUBJECT` and `FROM`, so `XROVER` always returns 501.
 
 Found and fixed in step 1, with regression tests:
 

@@ -22,7 +22,9 @@ class Papercut_Storage:
     """
 
     def __init__(self):
-        self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
+        self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass, charset="utf8mb4")
+        # commit every statement (InnoDB tables would otherwise never see posts)
+        self.conn.autocommit(True)
         self.cursor = self.conn.cursor()
 
     def get_body(self, lines):
@@ -34,7 +36,7 @@ class Papercut_Storage:
     def group_exists(self, group_name):
         stmt = """
                 SELECT
-                    COUNT(*) AS check
+                    COUNT(*) AS total
                 FROM
                     papercut_groups
                 WHERE
@@ -46,7 +48,7 @@ class Papercut_Storage:
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
-                    COUNT(*) AS check
+                    COUNT(*) AS total
                 FROM
                     %s
                 WHERE
@@ -110,7 +112,7 @@ class Papercut_Storage:
                 FROM
                     papercut_groups
                 WHERE
-                    name=%s
+                    name LIKE %s
                 ORDER BY
                     name ASC"""
         self.cursor.execute(stmt, (group.replace('*', '%'),))
@@ -129,7 +131,7 @@ class Papercut_Storage:
                 continue
             ids = list(self.cursor.fetchall())
             for id in ids:
-                articles.append("<%s@%s>" % (id, group))
+                articles.append("<%s@%s>" % (id[0], group))
         if len(articles) == 0:
             return ''
         else:

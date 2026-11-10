@@ -198,7 +198,7 @@ To edit this message use this URL:
         emails = self.get_notification_emails(forum_id)
         for recipient in emails:
             current_msg = msg_tpl % vars()
-            smtp.sendmail("Phorum <%s>" % (recipient), recipient, current_msg)
+            strutil.send_text_mail(smtp, "Phorum <%s>" % (recipient), recipient, current_msg)
 
         # XXX: Coding blind here. I really don't know much about how Phorum works with
         # XXX: sending forum postings as emails, but it's here. Let's call this a
@@ -247,7 +247,7 @@ Sent using Papercut version %(__VERSION__)s
             from papercut import __VERSION__
             phorum_version = settings.phorum_version
             current_msg = notification_mail_tpl % vars()
-            smtp.sendmail('%s %s' % (msg_author, msg_email), email_list, current_msg)
+            strutil.send_text_mail(smtp, '%s %s' % (msg_author, msg_email), email_list, current_msg)
         smtp.quit()
 
     def get_NEWGROUPS(self, ts, group='%'):
@@ -262,7 +262,7 @@ Sent using Papercut version %(__VERSION__)s
                 FROM
                     forums
                 WHERE
-                    nntp_group_name=%s
+                    nntp_group_name LIKE %s
                 ORDER BY
                     nntp_group_name ASC"""
         self.cursor.execute(stmt, (group.replace('*', '%'),))
@@ -283,7 +283,7 @@ Sent using Papercut version %(__VERSION__)s
                 continue
             ids = list(self.cursor.fetchall())
             for id in ids:
-                articles.append("<%s@%s>" % (id, group))
+                articles.append("<%s@%s>" % (id[0], group))
         if len(articles) == 0:
             return ''
         else:
@@ -329,7 +329,10 @@ Sent using Papercut version %(__VERSION__)s
                 WHERE
                     approved='Y' AND
                     id=%s""" % (table_name, int(id))
-        return self.cursor.execute(stmt)
+        # (psycopg2's execute() always returns None, so this used to report
+        # every article as missing)
+        self.cursor.execute(stmt)
+        return self.cursor.rowcount > 0
 
     def get_ARTICLE(self, group_name, id):
         table_name = self.get_table_name(group_name)
@@ -383,7 +386,7 @@ Sent using Papercut version %(__VERSION__)s
                     id < %s
                 ORDER BY
                     id DESC
-                LIMIT 1, 0""" % (table_name, int(current_id))
+                LIMIT 1""" % (table_name, int(current_id))
         self.cursor.execute(stmt)
         num_rows = self.cursor.rowcount
         if num_rows == 0:
@@ -402,7 +405,7 @@ Sent using Papercut version %(__VERSION__)s
                     id > %s
                 ORDER BY
                     id ASC
-                LIMIT 1, 0""" % (table_name, int(current_id))
+                LIMIT 1""" % (table_name, int(current_id))
         self.cursor.execute(stmt)
         num_rows = self.cursor.rowcount
         if num_rows == 0:
@@ -694,7 +697,7 @@ Sent using Papercut version %(__VERSION__)s
             stmt = """
                     SELECT
                         MAX(id) AS next_id,
-                        DATE_PART('epoch', CURRENT_TIMESTAMP())
+                        DATE_PART('epoch', CURRENT_TIMESTAMP)
                     FROM
                         %s""" % (table_name)
             self.cursor.execute(stmt)

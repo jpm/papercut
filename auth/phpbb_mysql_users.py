@@ -15,7 +15,9 @@ class Papercut_Auth:
     """
 
     def __init__(self):
-        self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
+        self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass, charset="utf8mb4")
+        # commit every statement (InnoDB tables would otherwise never see posts)
+        self.conn.autocommit(True)
         self.cursor = self.conn.cursor()
 
     def is_valid_user(self, username, password):

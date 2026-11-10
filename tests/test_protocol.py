@@ -573,3 +573,13 @@ def test_client_disconnect_mid_session_is_handled(client):
     client.cmd("GROUP test.group")
     client.close()
     assert wait_for_log("Connection closed")
+
+
+@pytest.mark.parametrize("pattern", ["comp.*", "*", "comp.lang.?", "comp.*,!comp.test"])
+def test_newnews_accepts_wildmat_patterns(client, backend, pattern):
+    # regression: any group argument other than '*' had to be an existing
+    # group, so wildmats like comp.* were refused with 411
+    backend.returns["group_exists"] = False
+    assert code(client.cmd("NEWNEWS %s 20240105 000000" % pattern)) == "230"
+    client.read_multiline()
+    assert backend.called("get_NEWNEWS")[0][1] == pattern

@@ -39,6 +39,7 @@ class FakeCursor:
         self.width = width          # number of columns in every fetched row
         self.statements = []
         self.rowcount = 1
+        self.lastrowid = 1
 
     def execute(self, stmt, params=None):
         self.statements.append((stmt, params))
@@ -57,7 +58,10 @@ class FakeCursor:
 class FakeConnection:
     def __init__(self, cursor):
         self._cursor = cursor
-        self.autocommit = False
+
+    def autocommit(self, on):
+        # MySQLdb style; psycopg2 code assigns 'conn.autocommit = True' instead
+        pass
 
     def cursor(self):
         return self._cursor

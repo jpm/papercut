@@ -30,7 +30,9 @@ class Papercut_Storage:
     """
 
     def __init__(self):
-        self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
+        self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass, charset="utf8mb4")
+        # commit every statement (InnoDB tables would otherwise never see posts)
+        self.conn.autocommit(True)
         self.cursor = self.conn.cursor()
 
     def get_message_body(self, headers):
@@ -152,7 +154,7 @@ class Papercut_Storage:
                 continue
             ids = list(self.cursor.fetchall())
             for id in ids:
-                articles.append("<%s@%s>" % (id, group_name))
+                articles.append("<%s@%s>" % (id[0], group_name))
         if len(articles) == 0:
             return ''
         else:
@@ -216,8 +218,7 @@ class Papercut_Storage:
                     A.post_username,
                     MIN(D.post_id)
                 FROM
-                    %sposts A,
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 INNER JOIN
                     %sposts D
                 ON
@@ -312,8 +313,7 @@ class Papercut_Storage:
                     A.post_username,
                     MIN(D.post_id)
                 FROM
-                    %sposts A,
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 INNER JOIN
                     %stopics E
                 ON
@@ -364,8 +364,7 @@ class Papercut_Storage:
                 SELECT
                     B.post_text
                 FROM
-                    %sposts A,
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 WHERE
                     A.post_id=B.post_id AND
                     A.forum_id=%s AND
@@ -383,7 +382,7 @@ class Papercut_Storage:
         stmt = """
                 SELECT
                     A.post_id,
-                    A.topic_id,
+                    D.topic_first_post_id,
                     C.username,
                     C.user_email,
                     CASE WHEN B.post_subject = '' THEN CONCAT('Re: ', D.topic_title) ELSE B.post_subject END,
@@ -391,8 +390,7 @@ class Papercut_Storage:
                     B.post_text,
                     A.post_username
                 FROM
-                    %sposts A, 
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 LEFT JOIN
                     %susers C
                 ON
@@ -451,8 +449,7 @@ class Papercut_Storage:
                     B.post_text,
                     A.post_username
                 FROM
-                    %sposts A, 
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 LEFT JOIN
                     %susers C
                 ON
@@ -547,8 +544,7 @@ class Papercut_Storage:
                     B.post_text,
                     A.post_username
                 FROM
-                    %sposts A,
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 LEFT JOIN
                     %stopics C
                 ON
@@ -659,7 +655,7 @@ class Papercut_Storage:
                         0
                     )""" % (prefix, forum_id, poster_id)
             self.cursor.execute(stmt, (subject,))
-            thread_id = self.cursor.insert_id()
+            thread_id = self.cursor.lastrowid
         stmt = """
                 INSERT INTO
                     %sposts
@@ -687,7 +683,7 @@ class Papercut_Storage:
                     0
                 )""" % (prefix, thread_id, forum_id, poster_id)
         self.cursor.execute(stmt, (self.encode_ip(ip_address), post_username))
-        new_id = self.cursor.insert_id()
+        new_id = self.cursor.lastrowid
         if not new_id:
             return None
         else:

@@ -36,7 +36,9 @@ class Papercut_Storage:
     """
 
     def __init__(self):
-        self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass)
+        self.conn = MySQLdb.connect(host=settings.dbhost, db=settings.dbname, user=settings.dbuser, passwd=settings.dbpass, charset="utf8mb4")
+        # commit every statement (InnoDB tables would otherwise never see posts)
+        self.conn.autocommit(True)
         self.cursor = self.conn.cursor()
 
     def get_message_body(self, headers):
@@ -186,7 +188,7 @@ To edit this message use this URL:
         emails = self.get_notification_emails(forum_id)
         for recipient in emails:
             current_msg = msg_tpl % vars()
-            smtp.sendmail("Phorum <%s>" % (recipient), recipient, current_msg)
+            strutil.send_text_mail(smtp, "Phorum <%s>" % (recipient), recipient, current_msg)
 
         # XXX: Coding blind here. I really don't know much about how Phorum works with
         # XXX: sending forum postings as emails, but it's here. Let's call this a
@@ -234,7 +236,7 @@ Sent using Papercut version %(__VERSION__)s
             from papercut import __VERSION__
             phorum_version = settings.phorum_version
             current_msg = notification_mail_tpl % vars()
-            smtp.sendmail('%s %s' % (msg_author, msg_email), email_list, current_msg)
+            strutil.send_text_mail(smtp, '%s %s' % (msg_author, msg_email), email_list, current_msg)
         smtp.quit()
 
     def get_NEWGROUPS(self, ts, group='%'):
@@ -249,7 +251,7 @@ Sent using Papercut version %(__VERSION__)s
                 FROM
                     forums
                 WHERE
-                    nntp_group_name=%s
+                    nntp_group_name LIKE %s
                 ORDER BY
                     nntp_group_name ASC"""
         self.cursor.execute(stmt, (group.replace('*', '%'),))
@@ -269,7 +271,7 @@ Sent using Papercut version %(__VERSION__)s
                 continue
             ids = list(self.cursor.fetchall())
             for id in ids:
-                articles.append("<%s@%s>" % (id, group))
+                articles.append("<%s@%s>" % (id[0], group))
         if len(articles) == 0:
             return ''
         else:
