@@ -8,7 +8,8 @@ def get_body(subpart):
     doubleline_regexp = re.compile(r"^\.\.", re.M)
     body = []
     found = 0
-    raw_headers = subpart.split('\r\n')
+    # accept LF as well as CRLF: email's as_string() produces LF line endings
+    raw_headers = re.split(r'\r?\n', subpart)
     for line in raw_headers:
         if not found and line == '':
             found = 1
@@ -36,6 +37,9 @@ def get_text_message(msg_string):
             return text_parts['text/plain']
         elif 'text/html' in text_parts:
             return text_parts['text/html']
+        else:
+            # no text part at all (this used to raise UnboundLocalError)
+            body = ''
     else:
         # not mime based
         body = get_body(msg_string)
