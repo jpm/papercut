@@ -1,3 +1,5 @@
 # Test dependencies (install with: pip install -r requirements-dev.txt)
 pytest
 pytest-cov
+# the Phorum auth modules import crypt, removed from the stdlib in 3.13
+standard-crypt; python_version >= "3.13"

@@ -220,3 +220,42 @@ def test_check_statement_catches_problems():
     assert check_statement("WHERE a=%s AND b=%s", ("x",))
     assert check_statement("WHERE a=%s", None)
     assert check_statement("WHERE a=%s", ("x",)) == []
+
+
+class RowsCursor(FakeCursor):
+    """Cursor that returns a fixed password hash."""
+    def __init__(self, stored):
+        super().__init__(1)
+        self.stored = stored
+
+    def fetchone(self):
+        return (self.stored,)
+
+
+@pytest.mark.parametrize("module_name", ["auth.phorum_mysql_users", "auth.phorum_pgsql_users"],
+                         ids=lambda m: m.split(".")[1])
+@pytest.mark.parametrize("password, accepted", [
+    ("secret", True),
+    ("wrong!", False),
+    # regression: glibc's crypt() raises OSError for salt characters outside
+    # [a-zA-Z0-9./], and Phorum uses the password's first characters as salt
+    ("!secret", False),
+    ("'; --", False),
+])
+def test_phorum_crypt_passwords(load, module_name, password, accepted):
+    import crypt
+    module, _ = load(module_name)
+    auth = module.Papercut_Auth()
+    auth.cursor = RowsCursor(crypt.crypt("secret", "se"))
+    assert bool(auth.is_valid_user("alice", password)) == accepted
+
+
+@pytest.mark.parametrize("module_name", ["auth.phorum_mysql_users", "auth.phorum_pgsql_users"],
+                         ids=lambda m: m.split(".")[1])
+def test_phorum_md5_passwords(load, module_name):
+    import hashlib
+    module, _ = load(module_name)
+    auth = module.Papercut_Auth()
+    auth.cursor = RowsCursor(hashlib.md5(b"secret").hexdigest())
+    assert auth.is_valid_user("alice", "secret")
+    assert not auth.is_valid_user("alice", "wrong")
