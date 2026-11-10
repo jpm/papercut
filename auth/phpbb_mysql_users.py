@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: phpbb_mysql_users.py,v 1.4 2003-09-19 03:11:51 jpm Exp $
 import MySQLdb
 import settings
-import md5
+import hashlib
 
 class Papercut_Auth:
     """
@@ -25,14 +25,14 @@ class Papercut_Auth:
                 FROM
                     %susers
                 WHERE
-                    username='%s'
-                """ % (settings.phpbb_table_prefix, username)
-        num_rows = self.cursor.execute(stmt)
+                    username=%%s
+                """ % (settings.phpbb_table_prefix)
+        num_rows = self.cursor.execute(stmt, (username,))
         if num_rows == 0 or num_rows is None:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))
             return 0
         db_password = self.cursor.fetchone()[0]
-        if db_password != md5.new(password).hexdigest():
+        if db_password != hashlib.md5(password.encode('utf-8')).hexdigest():
             settings.logEvent('Error - Authentication failed for username \'%s\' (incorrect password)' % (username))
             return 0
         else:

@@ -1,14 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: papercut.py,v 1.93 2005-03-05 04:06:54 jpm Exp $
-import SocketServer
+import socketserver
+import importlib
 import sys
 import os
 import signal
 import time
 import re
 import traceback
-import StringIO
+import io
 
 # papercut based modules
 import settings
@@ -19,6 +20,9 @@ __VERSION__ = '0.9.13'
 __DEBUG__ = 0
 # how many seconds to wait for data from the clients (draft 20 of the new NNTP protocol says at least 3 minutes)
 __TIMEOUT__ = 180
+# NNTP is an 8-bit protocol; decode as UTF-8 but round-trip any other bytes untouched
+__ENCODING__ = 'utf-8'
+__ERRORS__ = 'surrogateescape'
 
 
 # some constants to hold the possible responses
@@ -81,16 +85,20 @@ contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
 authinfo_regexp = re.compile("AUTHINFO PASS")
 
 if os.name == 'posix':
-    class NNTPServer(SocketServer.ForkingTCPServer):
+    class NNTPServer(socketserver.ForkingTCPServer):
         allow_reuse_address = 1
         if settings.max_connections:
             max_children = settings.max_connections
 else:
-    class NNTPServer(SocketServer.ThreadingTCPServer):
+    class NNTPServer(socketserver.ThreadingTCPServer):
         allow_reuse_address = 1
 
 
-class NNTPRequestHandler(SocketServer.StreamRequestHandler):
+class NNTPRequestHandler(socketserver.StreamRequestHandler):
+    # socket read timeout; replaces the old SIGALRM approach, which no longer
+    # interrupts a blocking read on Python 3 (PEP 475) and never worked on Windows
+    timeout = __TIMEOUT__
+
     # this is the list of supported commands
     commands = ('ARTICLE', 'BODY', 'HEAD',
                 'STAT', 'GROUP', 'LIST', 'POST',
@@ -115,10 +123,6 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
     broken_oe_checker = 0
     auth_username = ''
 
-    def handle_timeout(self, signum, frame):
-        self.terminated = 1
-        settings.logEvent('Connection timed out from %s' % (self.client_address[0]))
-
     def handle(self):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
         if settings.server_type == 'read-only':
@@ -128,22 +132,26 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         while not self.terminated:
             if self.sending_article == 0:
                 self.article_lines = []
-            if os.name == 'posix':
-                signal.signal(signal.SIGALRM, self.handle_timeout)
-                signal.alarm(__TIMEOUT__)
             try:
-                self.inputline = self.rfile.readline()
-            except IOError:
-                continue
-            if os.name == 'posix':
-                signal.alarm(0)
+                raw = self.rfile.readline()
+            except TimeoutError:
+                settings.logEvent('Connection timed out from %s' % (self.client_address[0]))
+                break
+            except OSError:
+                break
+            if not raw:
+                # client closed the connection
+                break
+            self.inputline = raw.decode(__ENCODING__, __ERRORS__)
             if __DEBUG__:
-                print "client>", repr(self.inputline)
+                print("client>", repr(self.inputline))
             # Strip spaces only if NOT receiving article
             if not self.sending_article:
                 line = self.inputline.strip()
             else:
-                line = self.inputline
+                # keep the article text intact, minus the line terminator
+                # (lines are re-joined with CRLF in do_POST)
+                line = self.inputline.rstrip('\r\n')
             # somehow outlook express sends a lot of newlines (so we need to kill those users when this happens)
             if (not self.sending_article) and (line == ''):
                 self.broken_oe_checker += 1
@@ -178,21 +186,29 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
                                 self.do_POST()
                             except:
                                 # use a temporary file handle object to store the traceback information
-                                temp = StringIO.StringIO()
+                                temp = io.StringIO()
                                 traceback.print_exc(file=temp)
                                 temp_msg = temp.getvalue()
                                 # save on the log file
                                 settings.logEvent('Error - Posting failed for user from \'%s\' (exception triggered)' % self.client_address[0])
                                 settings.logEvent(temp_msg)
                                 if __DEBUG__:
-                                    print 'Error - Posting failed for user from \'%s\' (exception triggered; details below)' % self.client_address[0]
-                                    print temp_msg
+                                    print('Error - Posting failed for user from \'%s\' (exception triggered; details below)' % self.client_address[0])
+                                    print(temp_msg)
                                 self.send_response(ERR_POSTINGFAILED)
                             continue
                         self.article_lines.append(line)
                     else:
                         if command in self.commands:
-                            getattr(self, "do_%s" % (command))()
+                            try:
+                                getattr(self, "do_%s" % (command))()
+                            except (ValueError, IndexError):
+                                # malformed arguments (e.g. a non-numeric article number)
+                                self.send_response(ERR_CMDSYNTAXERROR)
+                            except Exception:
+                                settings.logEvent('Error - Command %s failed for \'%s\'' % (command, self.client_address[0]))
+                                settings.logEvent(traceback.format_exc())
+                                self.send_response(ERR_NOTPERFORMED)
                         else:
                             self.send_response(ERR_NOTCAPABLE)
         settings.logEvent('Connection closed (IP Address: %s)' % (self.client_address[0]))
@@ -842,8 +858,8 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
 
     def send_response(self, message):
         if __DEBUG__:
-            print "server>", message
-        self.wfile.write(message + "\r\n")
+            print("server>", message)
+        self.wfile.write(("%s\r\n" % message).encode(__ENCODING__, __ERRORS__))
         self.wfile.flush()
 
     def finish(self):
@@ -855,23 +871,21 @@ class NNTPRequestHandler(SocketServer.StreamRequestHandler):
         self.sending_article = 0
         self.auth_username = ''
         self.article_lines = []
-        self.wfile.flush()
-        self.wfile.close()
-        self.rfile.close()
+        socketserver.StreamRequestHandler.finish(self)
         if __DEBUG__:
-            print 'Closing the request'
+            print('Closing the request')
 
 
 if __name__ == '__main__':
     # set up signal handler
     def sighandler(signum, frame):
-        if __DEBUG__: print "\nShutting down papercut..."
+        if __DEBUG__: print("\nShutting down papercut...")
         server.socket.close()
         time.sleep(1)
         sys.exit(0)
 
     # dynamic loading of the appropriate storage backend module
-    temp = __import__('storage.%s' % (settings.storage_backend), globals(), locals(), ['Papercut_Storage'])
+    temp = importlib.import_module('storage.%s' % (settings.storage_backend))
     if settings.nntp_cache == 'yes':
         backend = papercut_cache.Cache(temp, papercut_cache.cache_methods)
     else:
@@ -879,10 +893,10 @@ if __name__ == '__main__':
 
     # now for the authentication module, if needed
     if settings.nntp_auth == 'yes':
-        temp = __import__('auth.%s' % (settings.auth_backend), globals(), locals(), ['Papercut_Auth'])
+        temp = importlib.import_module('auth.%s' % (settings.auth_backend))
         auth = temp.Papercut_Auth()
 
     signal.signal(signal.SIGINT, sighandler)
-    print 'Papercut %s (%s storage module) - starting up' % (__VERSION__, settings.storage_backend)
+    print('Papercut %s (%s storage module) - starting up' % (__VERSION__, settings.storage_backend))
     server = NNTPServer((settings.nntp_hostname, settings.nntp_port), NNTPRequestHandler)
     server.serve_forever()

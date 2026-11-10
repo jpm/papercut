@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: p2p.py,v 1.2 2002-04-03 23:07:22 jpm Exp $
 import settings
-import anydbm
+import dbm
 
 class Papercut_Storage:
     """
@@ -11,4 +11,4 @@ class Papercut_Storage:
     """
     def __init__(self):
         # check for the p2p directories and dbm file now
-        db = anydbm.open("p2p.dbm", "c")
+        db = dbm.open("p2p.dbm", "c")

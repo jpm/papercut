@@ -1,10 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2002 Joao Prado Maia. See the LICENSE file for more information.
 # $Id: phorum_pgsql_users.py,v 1.3 2004-01-14 22:26:40 jpm Exp $
-from pyPgSQL import PgSQL
+import psycopg2
 import settings
+# crypt was removed from the standard library in Python 3.13;
+# on newer versions install the 'standard-crypt' package
 import crypt
-import md5
+import hashlib
 
 class Papercut_Auth:
     """
@@ -15,7 +17,8 @@ class Papercut_Auth:
     """
 
     def __init__(self):
-        self.conn = PgSQL.connect(database=settings.dbname, user=settings.dbuser)
+        self.conn = psycopg2.connect(database=settings.dbname, user=settings.dbuser)
+        self.conn.autocommit = True
         self.cursor = self.conn.cursor()
 
     def is_valid_user(self, username, password):
@@ -25,16 +28,17 @@ class Papercut_Auth:
                 FROM
                     forums_auth
                 WHERE
-                    username='%s'
-                """ % (username)
-        num_rows = self.cursor.execute(stmt)
+                    username=%s
+                """
+        self.cursor.execute(stmt, (username,))
+        num_rows = self.cursor.rowcount
         if num_rows == 0 or num_rows is None:
             settings.logEvent('Error - Authentication failed for username \'%s\' (user not found)' % (username))
             return 0
         db_password = self.cursor.fetchone()[0]
         # somehow detect the version of phorum being used and guess the encryption type
         if len(db_password) == 32:
-            result = (db_password != md5.new(password).hexdigest())
+            result = (db_password != hashlib.md5(password.encode('utf-8')).hexdigest())
         else:
             result = (db_password != crypt.crypt(password, password[:settings.PHP_CRYPT_SALT_LENGTH]))
         if result:

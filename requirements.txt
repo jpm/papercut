@@ -1,0 +1,15 @@
+# Papercut has no required dependencies for the mbox and maildir storage
+# backends. Install only what your chosen storage/auth backend needs.
+
+# MySQL based backends (mysql, phorum_mysql, phpbb_mysql, phpnuke_phpbb_mysql)
+# and their auth modules; provides the MySQLdb module
+mysqlclient
+
+# PostgreSQL based backends (phorum_pgsql) and auth module
+psycopg2-binary
+
+# Removed from the standard library in Python 3.13; needed on 3.13+ only.
+# nntplib: forwarding_proxy storage backend and util/check_health.py
+standard-nntplib; python_version >= "3.13"
+# crypt: phorum_mysql_users and phorum_pgsql_users auth modules
+standard-crypt; python_version >= "3.13"
