@@ -382,7 +382,7 @@ class Papercut_Storage:
         stmt = """
                 SELECT
                     A.post_id,
-                    A.topic_id,
+                    D.topic_first_post_id,
                     C.username,
                     C.user_email,
                     CASE WHEN B.post_subject = '' THEN CONCAT('Re: ', D.topic_title) ELSE B.post_subject END,
