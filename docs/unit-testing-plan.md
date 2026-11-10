@@ -1,6 +1,6 @@
 # Plan: Unit tests
 
-**Status:** in progress (step 1 done)
+**Status:** in progress (steps 1 and 2 done)
 **Related:** [integration testing plan](integration-testing-plan.md)
 
 ## Goal
@@ -206,3 +206,13 @@ Found and fixed in step 1, with regression tests:
 - `storage/mime.py` returned an empty body for multipart posts (so the
   database backends stored them blank), and raised `UnboundLocalError` when
   there was no text part.
+
+Found and fixed in step 2:
+
+- `papercut.py` `get_timestamp()` read 8-digit (`yyyymmdd`) dates at the
+  wrong offsets and handled `GMT` backwards, so `NEWGROUPS`/`NEWNEWS` from
+  modern clients asked for the wrong dates.
+- The check that keeps `AUTHINFO PASS` out of the log was case-sensitive, so
+  `authinfo pass ...` logged the password.
+- `settings.logEvent()` crashed on bytes that aren't valid UTF-8, which
+  disconnected clients posting e.g. Latin-1 articles.
