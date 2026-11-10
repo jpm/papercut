@@ -34,7 +34,7 @@ class Papercut_Storage:
     def group_exists(self, group_name):
         stmt = """
                 SELECT
-                    COUNT(*) AS check
+                    COUNT(*) AS total
                 FROM
                     papercut_groups
                 WHERE
@@ -46,7 +46,7 @@ class Papercut_Storage:
         table_name = self.get_table_name(group_name)
         stmt = """
                 SELECT
-                    COUNT(*) AS check
+                    COUNT(*) AS total
                 FROM
                     %s
                 WHERE

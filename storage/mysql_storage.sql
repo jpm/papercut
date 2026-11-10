@@ -8,7 +8,7 @@ CREATE TABLE papercut_groups (
   PRIMARY KEY  (id),
   KEY name (name),  
   KEY active (active)
-) TYPE=MyISAM;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS papercut_groups_auth;
 CREATE TABLE papercut_groups_auth (
@@ -20,12 +20,12 @@ CREATE TABLE papercut_groups_auth (
   PRIMARY KEY  (id),
   KEY name (name),  
   KEY username (username)
-) TYPE=MyISAM;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS papercut_default_table;
 CREATE TABLE papercut_default_table (
   id int(10) unsigned NOT NULL default '0',
-  datestamp datetime NOT NULL default '0000-00-00 00:00:00',
+  datestamp datetime NOT NULL default CURRENT_TIMESTAMP,
   thread int(10) unsigned NOT NULL default '0',
   parent int(10) unsigned NOT NULL default '0',
   author varchar(255) NOT NULL default '',
@@ -41,4 +41,4 @@ CREATE TABLE papercut_default_table (
   KEY subject (subject),
   KEY thread (thread),  
   KEY parent (parent)   
-) TYPE=MyISAM;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
