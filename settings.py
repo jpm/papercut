@@ -140,6 +140,6 @@ if phorum_settings_path[-1] != '/':
 
 # helper function to log information
 def logEvent(msg):
-    f = open(log_file, "a")
-    f.write("[%s] %s\n" % (time.strftime("%a %b %d %H:%M:%S %Y", time.gmtime()), msg))
-    f.close()
+    # backslashreplace: client data that isn't valid UTF-8 must not crash logging
+    with open(log_file, "a", encoding="utf-8", errors="backslashreplace") as f:
+        f.write("[%s] %s\n" % (time.strftime("%a %b %d %H:%M:%S %Y", time.gmtime()), msg))

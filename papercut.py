@@ -83,7 +83,8 @@ overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Byte
 # so let's create them just once and re-use as needed
 newsgroups_regexp = re.compile("^Newsgroups:(.*)", re.M)
 contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
-authinfo_regexp = re.compile("AUTHINFO PASS")
+# NNTP commands are case-insensitive, so this must be too
+authinfo_regexp = re.compile(r"^\s*AUTHINFO\s+PASS\b", re.I)
 
 if os.name == 'posix':
     class NNTPServer(socketserver.ForkingTCPServer):
