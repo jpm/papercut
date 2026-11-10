@@ -29,6 +29,9 @@ See [INSTALL](INSTALL) for step by step instructions.
 ```sh
 pip install -r requirements-dev.txt
 pytest
+
+# the database backends against real MySQL and PostgreSQL (needs Docker)
+make test-integration
 ```
 
 See [docs/unit-testing-plan.md](docs/unit-testing-plan.md) and

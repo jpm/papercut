@@ -1,6 +1,6 @@
 # Plan: Docker integration tests for the database backends
 
-**Status:** proposed
+**Status:** done (MySQL 8.4 and PostgreSQL 16 in CI; MySQL 5.7 optional)
 **Related:** [unit testing plan](unit-testing-plan.md), PR #2 (Python 3 port and SQL injection fixes)
 
 ## Goal
@@ -127,19 +127,31 @@ make test-integration
 requests, or nightly if it proves slow. The `mysql57` target runs only in the
 nightly job.
 
-## Expected findings
+## Findings
 
-The point of this work is to find problems that only a real database shows.
-Some are already visible in the code:
+Running the backends against real databases found these bugs, all fixed with
+the integration test that caught them:
 
-| Backend | Issue |
+| Backend | Bug |
 | --- | --- |
-| `mysql` | `COUNT(*) AS check`: `CHECK` is a reserved word since MySQL 8.0.16, so this is a syntax error there |
-| `phorum_mysql` | `GROUP BY id` with other columns in the SELECT, which MySQL 5.7+ rejects by default (`ONLY_FULL_GROUP_BY`) |
-| `phorum_pgsql` | MySQL-only syntax: `LIMIT 1, 0`, `CURRENT_TIMESTAMP()` with parentheses |
-| `phorum_mysql` / `phorum_pgsql` | `get_NEWNEWS` matches the group with `=` against a pattern that uses `%` as a wildcard (it should probably be `LIKE`) |
+| `mysql` | `storage/mysql_storage.sql` didn't load: `TYPE=MyISAM` (removed in 5.5) and `'0000-00-00'` defaults (rejected by 5.7+ strict mode); MyISAM's key limit is also too small for utf8mb4 |
+| `mysql` | `COUNT(*) AS check`: `CHECK` is reserved since MySQL 8.0.16, so almost every command failed |
+| all MySQL | autocommit was off, so on InnoDB **posts were never committed** and held locks |
+| all MySQL | no connection character set, so non-ASCII text came back as mojibake |
+| all SQL | `NEWNEWS` message-ids came out as `<(2,)@group>` |
+| Phorum | moderator/mailing-list emails raised `UnicodeEncodeError` for non-ASCII posts, after saving them (the client was told the post failed) |
+| `phorum_pgsql` | `get_STAT` reported every article missing (psycopg2's `execute()` returns `None`) |
+| `phorum_pgsql` | MySQL-only syntax: `LIMIT 1, 0` (NEXT/LAST), `CURRENT_TIMESTAMP()` (new threads) |
+| `phorum_pgsql_users` | ignored `dbhost` and `dbpass` |
+| phpBB, PHP-Nuke | comma joins mixed with `LEFT JOIN` fail on MySQL 5.0.12+, breaking ARTICLE/HEAD/XOVER/XHDR/XPAT |
+| phpBB, PHP-Nuke | `cursor.insert_id()` no longer exists, so every post failed |
+| phpBB, PHP-Nuke | XOVER used the topic id as the replied-to article number, mixing up threads |
+| server, `mysql`, Phorum | `NEWNEWS comp.* ...` was refused with 411 (only a bare `*` was allowed), and the backends compared the pattern with `=` instead of `LIKE` |
 
-Fix each one in its own commit, with the integration test that caught it.
+Predicted from reading the code, but not borne out:
+
+- `ONLY_FULL_GROUP_BY`: the Phorum `GROUP BY id` is on the primary key, which
+  MySQL 5.7.5+ accepts.
 
 ## Out of scope
 
