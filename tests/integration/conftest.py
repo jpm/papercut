@@ -15,10 +15,6 @@ import fakes  # noqa: E402
 import papercut  # noqa: E402
 import settings  # noqa: E402
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", DeprecationWarning)
-    import nntplib  # noqa: E402
-
 FIXTURES = os.path.join(os.path.dirname(__file__), "..", "fixtures")
 MYSQL_HOST = os.environ.get("PAPERCUT_TEST_MYSQL_HOSTS", "")
 POSTGRES_HOST = os.environ.get("PAPERCUT_TEST_POSTGRES_HOST", "")
@@ -70,6 +66,11 @@ class Live:
         return self.server.server_address[1]
 
     def nntp(self, **kwargs):
+        # imported here: on Python 3.13+ it comes from standard-nntplib, which
+        # only the Docker image installs (collecting these tests mustn't need it)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            import nntplib
         return nntplib.NNTP("127.0.0.1", self.port, readermode=False, **kwargs)
 
     def raw(self):
