@@ -24,6 +24,17 @@ python3 papercut.py
 
 See [INSTALL](INSTALL) for step by step instructions.
 
+## Running the tests
+
+```sh
+pip install -r requirements-dev.txt
+pytest
+```
+
+See [docs/unit-testing-plan.md](docs/unit-testing-plan.md) and
+[docs/integration-testing-plan.md](docs/integration-testing-plan.md) for what
+is covered and what's planned.
+
 ## Storage backends
 
 The original need for this server was to integrate my PHP related web site

@@ -1,6 +1,6 @@
 # Plan: Unit tests
 
-**Status:** proposed
+**Status:** in progress (step 1 done)
 **Related:** [integration testing plan](integration-testing-plan.md)
 
 ## Goal
@@ -195,7 +195,14 @@ One PR each:
 
 Mark these `xfail` with a reason, and fix them in follow-up PRs:
 
-- `storage/mime.py`: a multipart message with no text part raises
-  `UnboundLocalError`.
 - `papercut.py` `do_LISTGROUP`: `numbers.split('\r\n')` always returns at
   least one element, so an empty group never resets the current article.
+
+Found and fixed in step 1, with regression tests:
+
+- `storage/strutil.py` `wrap()` looped forever on text with no space after a
+  long run of characters. The Phorum backends call it on every posted body,
+  so a post ending in a long URL hung the server process.
+- `storage/mime.py` returned an empty body for multipart posts (so the
+  database backends stored them blank), and raised `UnboundLocalError` when
+  there was no text part.

@@ -1,0 +1,3 @@
+# Test dependencies (install with: pip install -r requirements-dev.txt)
+pytest
+pytest-cov
