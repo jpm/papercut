@@ -7,6 +7,7 @@ import sys
 import os
 import signal
 import time
+import calendar
 import re
 import traceback
 import io
@@ -859,18 +860,23 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
     def get_timestamp(self, date, times, gmt='yes'):
         # like the new NNTP draft explains...
         if len(date) == 8:
+            # yyyymmdd: drop the century so the offsets below match yymmdd
             year = date[:4]
+            date = date[2:]
         else:
             local_year = str(time.localtime()[0])
             if date[:2] > local_year[2:4]:
                 year = "19%s" % (date[:2])
             else:
                 year = "20%s" % (date[:2])
-        ts = time.mktime((int(year), int(date[2:4]), int(date[4:6]), int(times[:2]), int(times[2:4]), int(times[4:6]), 0, 0, 0))
+        fields = (int(year), int(date[2:4]), int(date[4:6]), int(times[:2]), int(times[2:4]), int(times[4:6]), 0, 0, -1)
         if gmt == 'yes':
-            return time.gmtime(ts)
+            # the client's time is in GMT
+            ts = calendar.timegm(fields)
         else:
-            return time.localtime(ts)
+            ts = time.mktime(fields)
+        # backends turn this back into an epoch with time.mktime()
+        return time.localtime(ts)
 
     def send_response(self, message):
         if __DEBUG__:
