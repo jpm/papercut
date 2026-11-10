@@ -87,17 +87,33 @@ authinfo_regexp = re.compile("AUTHINFO PASS")
 if os.name == 'posix':
     class NNTPServer(socketserver.ForkingTCPServer):
         allow_reuse_address = 1
+        # storage and auth backends, set before serve_forever()
+        backend = None
+        auth = None
         if settings.max_connections:
             max_children = settings.max_connections
 else:
     class NNTPServer(socketserver.ThreadingTCPServer):
         allow_reuse_address = 1
+        # storage and auth backends, set before serve_forever()
+        backend = None
+        auth = None
 
 
 class NNTPRequestHandler(socketserver.StreamRequestHandler):
     # socket read timeout; replaces the old SIGALRM approach, which no longer
     # interrupts a blocking read on Python 3 (PEP 475) and never worked on Windows
     timeout = __TIMEOUT__
+
+    # the backends live on the server, so each server (and each test) can
+    # use its own
+    @property
+    def backend(self):
+        return self.server.backend
+
+    @property
+    def auth(self):
+        return self.server.auth
 
     # this is the list of supported commands
     commands = ('ARTICLE', 'BODY', 'HEAD',
@@ -227,7 +243,7 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             ts = self.get_timestamp(self.tokens[1], self.tokens[2], 'yes')
         else:
             ts = self.get_timestamp(self.tokens[1], self.tokens[2], 'no')
-        groups = backend.get_NEWGROUPS(ts)
+        groups = self.backend.get_NEWGROUPS(ts)
         if groups == None:
             msg = "%s\r\n." % (STATUS_NEWGROUPS)
         else:
@@ -251,11 +267,11 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             self.send_response(ERR_CMDSYNTAXERROR)
             return
         # check to see if the group exists
-        if not backend.group_exists(self.tokens[1]):
+        if not self.backend.group_exists(self.tokens[1]):
             self.send_response(ERR_NOSUCHGROUP)
             return
         self.selected_group = self.tokens[1]
-        total_articles, first_art_num, last_art_num = backend.get_GROUP(self.tokens[1])
+        total_articles, first_art_num, last_art_num = self.backend.get_GROUP(self.tokens[1])
         self.send_response(STATUS_GROUPSELECTED % (total_articles, first_art_num, last_art_num, self.tokens[1]))
 
     def do_NEWNEWS(self):
@@ -270,14 +286,14 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             self.send_response(ERR_CMDSYNTAXERROR)
             return
         # check to see if the group exists
-        if (self.tokens[1] != '*') and (not backend.group_exists(self.tokens[1])):
+        if (self.tokens[1] != '*') and (not self.backend.group_exists(self.tokens[1])):
             self.send_response(ERR_NOSUCHGROUP)
             return
         if (len(self.tokens) > 4) and (self.tokens[4] == 'GMT'):
             ts = self.get_timestamp(self.tokens[2], self.tokens[3], 'yes')
         else:
             ts = self.get_timestamp(self.tokens[2], self.tokens[3], 'no')
-        news = backend.get_NEWNEWS(ts, self.tokens[1])
+        news = self.backend.get_NEWNEWS(ts, self.tokens[1])
         if len(news) == 0:
             msg = "%s\r\n." % (STATUS_NEWNEWS)
         else:
@@ -307,7 +323,7 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             self.send_response("%s\r\n%s\r\n." % (STATUS_EXTENSIONS, "\r\n".join(self.extensions)))
             return
         #elif (len(self.tokens) > 1) and (self.tokens[1].upper() == 'ACTIVE'):
-        #    lists = backend.get_LIST_ACTIVE(self.tokens[2])
+        #    lists = self.backend.get_LIST_ACTIVE(self.tokens[2])
         #    self.send_response("%s\r\n%s\r\n." % (STATUS_LIST, "\r\n".join(lists)))
         #    return
         elif (len(self.tokens) > 1) and (self.tokens[1].upper() == 'NEWSGROUPS'):
@@ -316,7 +332,7 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         elif len(self.tokens) == 2:
             self.send_response(ERR_NOTPERFORMED)
             return
-        result = backend.get_LIST(self.auth_username)
+        result = self.backend.get_LIST(self.auth_username)
         self.send_response("%s\r\n%s\r\n." % (STATUS_LIST, result))
 
     def do_STAT(self):
@@ -352,13 +368,13 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
                 report_article_number = 0
             else:
                 report_article_number = self.tokens[1]      
-        if not backend.get_STAT(self.selected_group, self.tokens[1]):
+        if not self.backend.get_STAT(self.selected_group, self.tokens[1]):
             self.send_response(ERR_NOSUCHARTICLENUM)
             return
         # only set the internally selected article if the article number variation is used
         if len(self.tokens) == 2 and self.tokens[1].find('<') == -1:
             self.selected_article = self.tokens[1]
-        self.send_response(STATUS_STAT % (report_article_number, backend.get_message_id(self.tokens[1], self.selected_group)))
+        self.send_response(STATUS_STAT % (report_article_number, self.backend.get_message_id(self.tokens[1], self.selected_group)))
 
     def do_ARTICLE(self):
         """
@@ -388,14 +404,14 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             report_article_number = 0
         else:
             report_article_number = self.tokens[1]
-        result = backend.get_ARTICLE(self.selected_group, self.tokens[1])
+        result = self.backend.get_ARTICLE(self.selected_group, self.tokens[1])
         if result == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
             # only set the internally selected article if the article number variation is used
             if len(self.tokens) == 2 and self.tokens[1].find('<') == -1:
                 self.selected_article = self.tokens[1]
-            response = STATUS_ARTICLE % (report_article_number, backend.get_message_id(self.selected_article, self.selected_group))
+            response = STATUS_ARTICLE % (report_article_number, self.backend.get_message_id(self.selected_article, self.selected_group))
             self.send_response("%s\r\n%s\r\n\r\n%s\r\n." % (response, result[0], result[1]))
 
     def do_LAST(self):
@@ -413,12 +429,12 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         if self.selected_article == 'ggg':
             self.send_response(ERR_NOARTICLESELECTED)
             return
-        article_num = backend.get_LAST(self.selected_group, self.selected_article)
+        article_num = self.backend.get_LAST(self.selected_group, self.selected_article)
         if article_num == None:
             self.send_response(ERR_NOPREVIOUSARTICLE)
             return
         self.selected_article = article_num
-        self.send_response(STATUS_STAT % (article_num, backend.get_message_id(article_num, self.selected_group)))
+        self.send_response(STATUS_STAT % (article_num, self.backend.get_message_id(article_num, self.selected_group)))
 
     def do_NEXT(self):
         """
@@ -436,14 +452,14 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             self.send_response(ERR_NOGROUPSELECTED)
             return
         if self.selected_article == 'ggg':
-            article_num = backend.get_first_article(self.selected_group)
+            article_num = self.backend.get_first_article(self.selected_group)
         else:
-            article_num = backend.get_NEXT(self.selected_group, self.selected_article)
+            article_num = self.backend.get_NEXT(self.selected_group, self.selected_article)
         if article_num == None:
             self.send_response(ERR_NONEXTARTICLE)
             return
         self.selected_article = article_num
-        self.send_response(STATUS_STAT % (article_num, backend.get_message_id(article_num, self.selected_group)))
+        self.send_response(STATUS_STAT % (article_num, self.backend.get_message_id(article_num, self.selected_group)))
 
     def do_BODY(self):
         """
@@ -462,17 +478,17 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             if self.tokens[1].find('<') != -1:
                 self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
             article_number = self.tokens[1]
-            body = backend.get_BODY(self.selected_group, self.tokens[1])
+            body = self.backend.get_BODY(self.selected_group, self.tokens[1])
         else:
             article_number = self.selected_article
-            body = backend.get_BODY(self.selected_group, self.selected_article)
+            body = self.backend.get_BODY(self.selected_group, self.selected_article)
         if body == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
             # only set the internally selected article if the article number variation is used
             if len(self.tokens) == 2 and self.tokens[1].find('<') == -1:
                 self.selected_article = self.tokens[1]
-            self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (article_number, backend.get_message_id(self.selected_article, self.selected_group)), body))
+            self.send_response("%s\r\n%s\r\n." % (STATUS_BODY % (article_number, self.backend.get_message_id(self.selected_article, self.selected_group)), body))
 
     def do_HEAD(self):
         """
@@ -491,17 +507,17 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             if self.tokens[1].find('<') != -1:
                 self.tokens[1] = self.get_number_from_msg_id(self.tokens[1])
             article_number = self.tokens[1]
-            head = backend.get_HEAD(self.selected_group, self.tokens[1])
+            head = self.backend.get_HEAD(self.selected_group, self.tokens[1])
         else:
             article_number = self.selected_article
-            head = backend.get_HEAD(self.selected_group, self.selected_article)
+            head = self.backend.get_HEAD(self.selected_group, self.selected_article)
         if head == None:
             self.send_response(ERR_NOSUCHARTICLENUM)
         else:
             # only set the internally selected article if the article number variation is used
             if len(self.tokens) == 2 and self.tokens[1].find('<') == -1:
                 self.selected_article = self.tokens[1]
-            self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (article_number, backend.get_message_id(self.selected_article, self.selected_group)), head))
+            self.send_response("%s\r\n%s\r\n." % (STATUS_HEAD % (article_number, self.backend.get_message_id(self.selected_article, self.selected_group)), head))
 
     def do_OVER(self):
         self.do_XOVER()
@@ -525,18 +541,18 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             if self.selected_article == 'ggg':
                 self.send_response(ERR_NOARTICLESELECTED)
                 return
-            overviews = backend.get_XOVER(self.selected_group, self.selected_article, self.selected_article)
+            overviews = self.backend.get_XOVER(self.selected_group, self.selected_article, self.selected_article)
         else:
             if self.tokens[1].find('-') == -1:
-                overviews = backend.get_XOVER(self.selected_group, self.tokens[1], self.tokens[1])
+                overviews = self.backend.get_XOVER(self.selected_group, self.tokens[1], self.tokens[1])
             else: 
                 ranges = self.tokens[1].split('-')
                 if ranges[1] == '':
                     # this is a start-everything style of XOVER
-                    overviews = backend.get_XOVER(self.selected_group, ranges[0])
+                    overviews = self.backend.get_XOVER(self.selected_group, ranges[0])
                 else:
                     # this is a start-end style of XOVER
-                    overviews = backend.get_XOVER(self.selected_group, ranges[0], ranges[1])
+                    overviews = self.backend.get_XOVER(self.selected_group, ranges[0], ranges[1])
         if overviews == None:
             self.send_response(ERR_NOTCAPABLE)
             return
@@ -571,9 +587,9 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         else:
             ranges = self.tokens[2].split('-')
             if ranges[1] == '':
-                overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0])
+                overviews = self.backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0])
             else:
-                overviews = backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0], ranges[1])
+                overviews = self.backend.get_XPAT(self.selected_group, self.tokens[1], self.tokens[3], ranges[0], ranges[1])
         if overviews == None:
             self.send_response(ERR_NOTCAPABLE)
             return
@@ -594,16 +610,16 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             return
         if len(self.tokens) == 2:
             # check if the group exists
-            if not backend.group_exists(self.tokens[1]):
+            if not self.backend.group_exists(self.tokens[1]):
                 # the draft of the new NNTP protocol tell us to reply this instead of an empty list
                 self.send_response(ERR_NOSUCHGROUP)
                 return
-            numbers = backend.get_LISTGROUP(self.tokens[1])
+            numbers = self.backend.get_LISTGROUP(self.tokens[1])
         else:
             if self.selected_group == 'ggg':
                 self.send_response(ERR_NOGROUPSELECTED)
                 return
-            numbers = backend.get_LISTGROUP(self.selected_group)
+            numbers = self.backend.get_LISTGROUP(self.selected_group)
         check = numbers.split('\r\n') 
         if len(check) > 0:
             # When a valid group is selected by means of this command, the
@@ -615,7 +631,7 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         else:
             # If an empty newsgroup is selected, the current article pointer is made invalid.
             self.selected_article = 'ggg'
-        self.send_response("%s\r\n%s\r\n." % (STATUS_LISTGROUP % (backend.get_group_stats(self.selected_group)), numbers))
+        self.send_response("%s\r\n%s\r\n." % (STATUS_LISTGROUP % (self.backend.get_group_stats(self.selected_group)), numbers))
 
     def do_XGTITLE(self):
         """
@@ -629,12 +645,12 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             self.send_response(ERR_CMDSYNTAXERROR)
             return
         if len(self.tokens) == 2:
-            info = backend.get_XGTITLE(self.tokens[1])
+            info = self.backend.get_XGTITLE(self.tokens[1])
         else:
             if self.selected_group == 'ggg':
                 self.send_response(ERR_NOGROUPSELECTED)
                 return
-            info = backend.get_XGTITLE(self.selected_group)
+            info = self.backend.get_XGTITLE(self.selected_group)
         if info is None:
             self.send_response(ERR_NODESCAVAILABLE)
         elif len(info) == 0:
@@ -654,9 +670,9 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             self.send_response(ERR_CMDSYNTAXERROR)
             return
         if len(self.tokens) == 3:
-            info = backend.get_XGTITLE(self.tokens[2])
+            info = self.backend.get_XGTITLE(self.tokens[2])
         else:
-            info = backend.get_XGTITLE()
+            info = self.backend.get_XGTITLE()
         self.send_response("%s\r\n%s\r\n." % (STATUS_LISTNEWSGROUPS, info))
 
     def do_HDR(self):
@@ -689,18 +705,18 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             if self.selected_article == 'ggg':
                 self.send_response(ERR_NOARTICLESELECTED)
                 return
-            info = backend.get_XHDR(self.selected_group, self.tokens[1], 'unique', (self.selected_article))
+            info = self.backend.get_XHDR(self.selected_group, self.tokens[1], 'unique', (self.selected_article))
         else:
             # check the XHDR style now
             if self.tokens[2].find('@') != -1:
                 self.tokens[2] = self.get_number_from_msg_id(self.tokens[2])
-                info = backend.get_XHDR(self.selected_group, self.tokens[1], 'unique', (self.tokens[2]))
+                info = self.backend.get_XHDR(self.selected_group, self.tokens[1], 'unique', (self.tokens[2]))
             else:
                 ranges = self.tokens[2].split('-')
                 if ranges[1] == '':
-                    info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0]))
+                    info = self.backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0]))
                 else:
-                    info = backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0], ranges[1]))
+                    info = self.backend.get_XHDR(self.selected_group, self.tokens[1], 'range', (ranges[0], ranges[1]))
         # check for empty results
         if info == None:
             self.send_response(ERR_NOTCAPABLE)
@@ -791,10 +807,10 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         lines = "\r\n".join(self.article_lines)
         # check the 'Newsgroups' header
         group_name = newsgroups_regexp.search(lines, 0).groups()[0].strip()
-        if not backend.group_exists(group_name):
+        if not self.backend.group_exists(group_name):
             self.send_response(ERR_POSTINGFAILED)
             return
-        result = backend.do_POST(group_name, lines, self.client_address[0], self.auth_username)
+        result = self.backend.do_POST(group_name, lines, self.client_address[0], self.auth_username)
         if result == None:
             self.send_response(ERR_POSTINGFAILED)
         else:
@@ -822,7 +838,7 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             self.auth_username = self.tokens[2]
             self.send_response(STATUS_AUTH_CONTINUE)
         elif self.tokens[1].upper() == 'PASS' and settings.nntp_auth == 'yes':
-            if auth.is_valid_user(self.auth_username, self.tokens[2]):
+            if self.auth.is_valid_user(self.auth_username, self.tokens[2]):
                 self.send_response(STATUS_AUTH_ACCEPTED)
             else:
                 self.send_response(ERR_AUTH_NO_PERMISSION)
@@ -884,6 +900,8 @@ if __name__ == '__main__':
         time.sleep(1)
         sys.exit(0)
 
+    settings.validate()
+
     # dynamic loading of the appropriate storage backend module
     temp = importlib.import_module('storage.%s' % (settings.storage_backend))
     if settings.nntp_cache == 'yes':
@@ -892,6 +910,7 @@ if __name__ == '__main__':
         backend = temp.Papercut_Storage()
 
     # now for the authentication module, if needed
+    auth = None
     if settings.nntp_auth == 'yes':
         temp = importlib.import_module('auth.%s' % (settings.auth_backend))
         auth = temp.Papercut_Auth()
@@ -899,4 +918,6 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, sighandler)
     print('Papercut %s (%s storage module) - starting up' % (__VERSION__, settings.storage_backend))
     server = NNTPServer((settings.nntp_hostname, settings.nntp_port), NNTPRequestHandler)
+    server.backend = backend
+    server.auth = auth
     server.serve_forever()

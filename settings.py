@@ -127,9 +127,11 @@ mbox_path = "/home/papercut/mboxes/"
 maildir_path = "/home/papercut/maildir/"
 
 
-# check for the appropriate options
-if nntp_auth == 'yes' and auth_backend == '':
-    sys.exit("Please configure the 'nntp_auth' and 'auth_backend' options correctly")
+# check for the appropriate options (called on startup, so that importing
+# this module never exits the process)
+def validate():
+    if nntp_auth == 'yes' and auth_backend == '':
+        sys.exit("Please configure the 'nntp_auth' and 'auth_backend' options correctly")
 
 # check for the trailing slash
 if phorum_settings_path[-1] != '/':
