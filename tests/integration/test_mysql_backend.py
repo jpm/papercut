@@ -146,3 +146,10 @@ def test_injection_payloads_are_harmless(live, command):
     c.close()
     assert response[:3] in ("211", "230", "282", "411", "481")
     assert live.query("SELECT COUNT(*) FROM papercut_default_table") == before
+
+
+def test_xrover(live):
+    with live.nntp() as s:
+        s.group(GROUP)
+        _, lines = s._longcmdstring("XROVER 1-3")
+    assert lines == ["2 <1@%s>" % GROUP]
