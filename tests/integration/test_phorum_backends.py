@@ -186,3 +186,10 @@ def test_newnews_with_a_wildcard(live):
     with live.nntp() as s:
         _, ids = s.newnews("phorum.*", datetime.datetime(2024, 1, 2))
     assert ids == ["<2@%s>" % GROUP, "<4@%s>" % GROUP]
+
+
+def test_xrover(live):
+    with live.nntp() as s:
+        s.group(GROUP)
+        _, lines = s._longcmdstring("XROVER 1-4")
+    assert lines == ["2 <1@%s>" % GROUP]

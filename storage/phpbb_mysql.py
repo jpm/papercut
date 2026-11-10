@@ -559,7 +559,7 @@ class Papercut_Storage:
         stmt = """
                 SELECT
                     A.post_id,
-                    A.topic_id,
+                    C.topic_first_post_id,
                     D.username,
                     D.user_email,
                     CASE WHEN B.post_subject = '' THEN CONCAT('Re: ', C.topic_title) ELSE B.post_subject END,
@@ -598,7 +598,9 @@ class Papercut_Storage:
                 hdrs.append('%s %s' % (row[0], strutil.get_formatted_time(time.localtime(result[5]))))
             elif header.upper() == 'MESSAGE-ID':
                 hdrs.append('%s <%s@%s>' % (row[0], row[0], group_name))
-            elif (header.upper() == 'REFERENCES') and (row[1] != 0):
+            elif (header.upper() == 'REFERENCES') and (row[1] != row[0]):
+                # replies reference the first post of their topic (this used
+                # to use the topic id as an article number)
                 hdrs.append('%s <%s@%s>' % (row[0], row[1], group_name))
             elif header.upper() == 'BYTES':
                 hdrs.append('%s %s' % (row[0], len(row[6])))

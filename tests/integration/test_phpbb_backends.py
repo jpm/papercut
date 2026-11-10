@@ -201,3 +201,12 @@ def test_injection_payloads_are_harmless(live, command):
     c.close()
     assert response[:3] in ("211", "230", "282", "411", "481")
     assert live.query("SELECT COUNT(*) FROM %sposts" % live.prefix) == before
+
+
+def test_xrover(live):
+    # only post 2 is a reply; post 3 starts topic 2 (the topic id used to be
+    # reported as the replied-to article)
+    with live.nntp() as s:
+        s.group(live.group)
+        _, lines = s._longcmdstring("XROVER 1-3")
+    assert lines == ["2 <1@%s>" % live.group]
