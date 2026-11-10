@@ -245,8 +245,7 @@ class Papercut_Storage:
                     A.post_username,
                     MIN(D.post_id)
                 FROM
-                    %sposts A,
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 INNER JOIN
                     %sposts D
                 ON
@@ -340,8 +339,7 @@ class Papercut_Storage:
                     A.post_username,
                     MIN(D.post_id)
                 FROM
-                    %sposts A,
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 INNER JOIN
                     %stopics E
                 ON
@@ -392,8 +390,7 @@ class Papercut_Storage:
                 SELECT
                     B.post_text
                 FROM
-                    %sposts A,
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 WHERE
                     A.post_id=B.post_id AND
                     A.forum_id=%s AND
@@ -418,8 +415,7 @@ class Papercut_Storage:
                     B.post_text,
                     A.post_username
                 FROM
-                    %sposts A, 
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 LEFT JOIN
                     %susers C
                 ON
@@ -477,8 +473,7 @@ class Papercut_Storage:
                     B.post_text,
                     A.post_username
                 FROM
-                    %sposts A, 
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 LEFT JOIN
                     %susers C
                 ON
@@ -572,8 +567,7 @@ class Papercut_Storage:
                     B.post_text,
                     A.post_username
                 FROM
-                    %sposts A,
-                    %sposts_text B
+                    (%sposts A, %sposts_text B)
                 LEFT JOIN
                     %stopics C
                 ON
@@ -683,7 +677,7 @@ class Papercut_Storage:
                         0
                     )""" % (prefix, forum_id, poster_id)
             self.cursor.execute(stmt, (subject,))
-            thread_id = self.cursor.insert_id()
+            thread_id = self.cursor.lastrowid
         stmt = """
                 INSERT INTO
                     %sposts
@@ -711,7 +705,7 @@ class Papercut_Storage:
                     0
                 )""" % (prefix, thread_id, forum_id, poster_id)
         self.cursor.execute(stmt, (self.encode_ip(ip_address), post_username))
-        new_id = self.cursor.insert_id()
+        new_id = self.cursor.lastrowid
         if not new_id:
             return None
         else:
