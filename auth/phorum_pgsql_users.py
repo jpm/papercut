@@ -17,7 +17,9 @@ class Papercut_Auth:
     """
 
     def __init__(self):
-        self.conn = psycopg2.connect(database=settings.dbname, user=settings.dbuser)
+        # (this used to ignore dbhost and dbpass, so it only worked over a
+        # local socket without a password)
+        self.conn = psycopg2.connect(host=settings.dbhost, database=settings.dbname, user=settings.dbuser, password=settings.dbpass)
         self.conn.autocommit = True
         self.cursor = self.conn.cursor()
 
