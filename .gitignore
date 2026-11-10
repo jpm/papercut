@@ -1,2 +1,5 @@
 __pycache__/
 *.py[co]
+.coverage
+coverage.xml
+.pytest_cache/

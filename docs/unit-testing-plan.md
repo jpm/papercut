@@ -1,6 +1,6 @@
 # Plan: Unit tests
 
-**Status:** in progress (steps 1-5 done)
+**Status:** in progress (steps 1-6 done; Docker integration tests remain)
 **Related:** [integration testing plan](integration-testing-plan.md)
 
 ## Goal
