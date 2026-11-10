@@ -40,11 +40,11 @@ class Papercut_Storage:
         # Not implemented
         return 1
 
-    def get_group_stats(self, container):
-        # log(">get_group_stats")
-        # Returns: (total, maximum, minimum)
-        max, min = container
-        return (max-min, max, min)
+    def get_group_stats(self, group_name):
+        # Returns: (total, first, last, group_name), like the other backends
+        # (this used to unpack the group name as a (max, min) pair)
+        response, count, first, last, name = self.nntp.group(group_name)
+        return (count, first, last, group_name)
 
     def get_message_id(self, msg_num, group):
         return '<%s@%s>' % (msg_num, group)
@@ -146,7 +146,12 @@ class Papercut_Storage:
     def get_XHDR(self, group_name, header, style, range):
         log(">get_XHDR")
         if style == "range":
-            range = "-".join(range)
+            if isinstance(range, str):
+                # open-ended range: the server passes just the start
+                # ("-".join("12") used to turn this into "1-2")
+                range = range + "-"
+            else:
+                range = "-".join(range)
         resp, result = self.nntp.xhdr(header, range) 
         return "\r\n".join(["%s %s" % (num, text) for num, text in result])
 
