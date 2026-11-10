@@ -102,9 +102,9 @@ class Papercut_Storage:
 
     
     def get_group_article_count(self, group):
-        self._new_to_cur(group)
-        articles = sorted_listdir(os.path.join(self.maildir_dir, group))
-        return len(articles)
+        # (this used to count the group directory's entries -- new, cur and
+        # tmp -- so every group appeared to have 3 articles)
+        return len(self.get_group_article_list(group))
 
        
     def group_exists(self, group_name):
@@ -125,7 +125,7 @@ class Papercut_Storage:
 
 
     def get_group_stats(self, group_name):
-        total, max, min = self.get_maildir_stats(group_name)
+        total, max, min = self.get_maildir_stats(self._groupname2group(group_name))
         return (total, min, max, group_name)
 
 
@@ -135,10 +135,9 @@ class Papercut_Storage:
 
 
     def get_message_id(self, msg_num, group_name):
-        msg_num = int(msg_num)
-        group = self._groupname2group(group_name)
-        return '<%s@%s>' % (self.get_group_article_list(group)[msg_num - 1],
-                            group_name)
+        # <number@group>, like HEAD and the other backends, so the server
+        # can map it back to an article number
+        return '<%d@%s>' % (int(msg_num), group_name)
 
 
     def get_NEWGROUPS(self, ts, group='%'):
@@ -147,20 +146,20 @@ class Papercut_Storage:
 
     # UNTESTED
     def get_NEWNEWS(self, ts, group='*'):
-        gpaths = glob.glob(os.path.join(self.maildir_dir, group))
+        # the pattern is a newsgroup name (or wildmat); groups are directories
+        gpaths = glob.glob(os.path.join(self.maildir_dir, self._groupname2group(group)))
         ts = time.mktime(ts)
         result = []
         for gpath in gpaths:
-            articles = sorted_listdir(os.path.join(gpath, "cur"))
             group = os.path.basename(gpath)
             group_name = self._group2groupname(group)
 
-            for article in articles:
+            for number, article in enumerate(self.get_group_article_list(group), 1):
                 apath = os.path.join(gpath, "cur", article)
                 if os.path.getmtime(apath) < ts:
                     continue
 
-                result.append("<%s@%s>" % (article, group_name))
+                result.append(self.get_message_id(number, group_name))
 
         if len(result) == 0:
             return ''
@@ -221,12 +220,14 @@ class Papercut_Storage:
 
 
     def get_LAST(self, group_name, current_id):
+        current_id = int(current_id)
         if current_id <= 1:
             return None
         return current_id - 1
 
 
     def get_NEXT(self, group_name, current_id):
+        current_id = int(current_id)
         group = self._groupname2group(group_name)
         if current_id >= self.get_group_article_count(group):
             return None
@@ -399,8 +400,9 @@ class Papercut_Storage:
         tfpath = os.path.join(self.maildir_dir, groupdir, "tmp", file)
         nfpath = os.path.join(self.maildir_dir, groupdir, "new", file)
         
-        with open(tfpath, 'w', encoding='utf-8', errors='surrogateescape') as fd:
-            fd.write(body)
+        # maildir files conventionally use LF (articles arrive with CRLF)
+        with open(tfpath, 'w', encoding='utf-8', errors='surrogateescape', newline='\n') as fd:
+            fd.write(body.replace('\r\n', '\n'))
 
         os.rename(tfpath, nfpath)
         return 1
