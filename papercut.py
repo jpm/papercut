@@ -915,16 +915,12 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
             print('Closing the request')
 
 
-if __name__ == '__main__':
-    # set up signal handler
-    def sighandler(signum, frame):
-        if __DEBUG__: print("\nShutting down papercut...")
-        server.socket.close()
-        time.sleep(1)
-        sys.exit(0)
+def build_server(address, server_class=None):
+    """Creates the server, with the storage and auth backends from settings.
 
-    settings.validate()
-
+    server_class defaults to NNTPServer (forking on POSIX, threading on
+    Windows); the tests also run the other one.
+    """
     # dynamic loading of the appropriate storage backend module
     temp = importlib.import_module('storage.%s' % (settings.storage_backend))
     if settings.nntp_cache == 'yes':
@@ -938,9 +934,22 @@ if __name__ == '__main__':
         temp = importlib.import_module('auth.%s' % (settings.auth_backend))
         auth = temp.Papercut_Auth()
 
-    signal.signal(signal.SIGINT, sighandler)
-    print('Papercut %s (%s storage module) - starting up' % (__VERSION__, settings.storage_backend))
-    server = NNTPServer((settings.nntp_hostname, settings.nntp_port), NNTPRequestHandler)
+    server = (server_class or NNTPServer)(address, NNTPRequestHandler)
     server.backend = backend
     server.auth = auth
+    return server
+
+
+if __name__ == '__main__':
+    # set up signal handler
+    def sighandler(signum, frame):
+        if __DEBUG__: print("\nShutting down papercut...")
+        server.socket.close()
+        time.sleep(1)
+        sys.exit(0)
+
+    settings.validate()
+    signal.signal(signal.SIGINT, sighandler)
+    print('Papercut %s (%s storage module) - starting up' % (__VERSION__, settings.storage_backend))
+    server = build_server((settings.nntp_hostname, settings.nntp_port))
     server.serve_forever()
