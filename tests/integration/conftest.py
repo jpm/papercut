@@ -80,23 +80,28 @@ class Live:
         return query(self.kind, self.database, sql, params)
 
 
-def start_live(monkeypatch, request, storage_module, kind, database, auth_module=None, **extra_settings):
+def settings_for(kind, database, **extra_settings):
+    """The settings values for running a backend against a test database."""
     host = POSTGRES_HOST if kind == "postgres" else MYSQL_HOST
     values = dict(dbhost=host, dbname=database, dbuser="papercut", dbpass="papercut",
                   nntp_hostname="news.example.com",
                   phorum_settings_path=os.path.join(FIXTURES, "phorum_settings") + "/")
     values.update(extra_settings)
-    for name, value in values.items():
+    return values
+
+
+def start_live(monkeypatch, request, storage_module, kind, database, auth_module=None, **extra_settings):
+    for name, value in settings_for(kind, database, **extra_settings).items():
         monkeypatch.setattr(settings, name, value)
-    if kind == "postgres":
-        # the PostgreSQL user is the database owner (see the postgres fixtures)
-        monkeypatch.setattr(settings, "dbuser", "papercut")
-    backend = importlib.import_module(storage_module).Papercut_Storage()
-    auth = importlib.import_module(auth_module).Papercut_Auth() if auth_module else None
-    server = fakes.start_server(papercut.NNTPRequestHandler, backend, auth)
+    # factories, as build_server sets up: each connection gets its own backends
+    backend_factory = importlib.import_module(storage_module).Papercut_Storage
+    auth_factory = importlib.import_module(auth_module).Papercut_Auth if auth_module else None
+    server = fakes.start_server(papercut.NNTPRequestHandler, None)
+    server.backend_factory = backend_factory
+    server.auth_factory = auth_factory
     request.addfinalizer(server.server_close)
     request.addfinalizer(server.shutdown)
-    return Live(server, backend, kind, database)
+    return Live(server, backend_factory, kind, database)
 
 
 @pytest.fixture(autouse=True)

@@ -669,3 +669,96 @@ def test_login_names_are_not_logged_by_the_server(auth_on, client):
     assert wait_for_log("Connection closed")
     assert received_requests() == ["AUTHINFO", "AUTHINFO", "QUIT"]
     assert "alice" not in log_text()
+
+
+# --- backends per connection ---
+
+class RecordingConnection:
+    def __init__(self):
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+def make_factory(created, fail=False):
+    def factory():
+        if fail:
+            raise RuntimeError("database unreachable")
+        backend = fakes.FakeBackend()
+        backend.conn = RecordingConnection()
+        created.append(backend)
+        return backend
+    return factory
+
+
+@pytest.fixture
+def factory_server():
+    srv = fakes.start_server(papercut.NNTPRequestHandler, None)
+    yield srv
+    srv.shutdown()
+    srv.server_close()
+
+
+def test_each_connection_gets_its_own_backend(factory_server):
+    created = []
+    factory_server.backend_factory = make_factory(created)
+    first = fakes.Client(factory_server.server_address[1])
+    second = fakes.Client(factory_server.server_address[1])
+    first.cmd("GROUP test.group")
+    second.cmd("GROUP test.group")
+    assert len(created) == 2
+    assert [b.called("get_GROUP") for b in created] == [[("test.group",)], [("test.group",)]]
+    first.cmd("QUIT")
+    second.cmd("QUIT")
+    assert wait_until(lambda: all(b.conn.closed for b in created))
+
+
+def test_unreachable_database_gets_a_400(factory_server):
+    factory_server.backend_factory = make_factory([], fail=True)
+    c = fakes.Client(factory_server.server_address[1])
+    assert code(c.greeting) == "400"
+    assert c.readline_bytes() == b""
+    assert wait_for_log("database unreachable")
+    c.close()
+
+
+def test_auth_backend_is_created_only_on_login(factory_server, monkeypatch):
+    monkeypatch.setattr(settings, "nntp_auth", "yes")
+    factory_server.backend_factory = make_factory([])
+    logins = []
+    factory_server.auth_factory = lambda: logins.append(1) or fakes.FakeAuth({"alice": "s3cret"})
+    c = fakes.Client(factory_server.server_address[1])
+    c.cmd("MODE READER")
+    assert logins == []
+    c.cmd("AUTHINFO USER alice")
+    assert code(c.cmd("AUTHINFO PASS s3cret")) == "281"
+    assert logins == [1]
+    c.close()
+
+
+def wait_until(condition, seconds=5):
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        if condition():
+            return True
+        time.sleep(0.02)
+    return False
+
+
+def test_build_server_uses_factories_and_checks_the_configuration(monkeypatch):
+    monkeypatch.setattr(settings, "storage_backend", "maildir")
+    srv = papercut.build_server(("127.0.0.1", 0), fakes.FakeServer)
+    try:
+        assert srv.backend_factory is not None and srv.auth_factory is None
+        assert not hasattr(srv, "backend") or srv.backend is None
+    finally:
+        srv.server_close()
+
+
+def test_build_server_fails_on_startup_with_a_bad_configuration(monkeypatch):
+    monkeypatch.setattr(settings, "storage_backend", "mbox")
+    monkeypatch.setattr(settings, "nntp_auth", "yes")
+    monkeypatch.setattr(settings, "auth_backend", "no_such_module")
+    with pytest.raises(ModuleNotFoundError):
+        papercut.build_server(("127.0.0.1", 0), fakes.FakeServer)

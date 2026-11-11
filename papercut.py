@@ -75,6 +75,7 @@ STATUS_AUTH_REQUIRED = '480 Authentication required'
 STATUS_AUTH_ACCEPTED = '281 Authentication accepted'
 STATUS_AUTH_CONTINUE = '381 More authentication information required'
 STATUS_SERVER_VERSION = '200 Papercut %s' % (__VERSION__)
+STATUS_UNAVAILABLE = '400 service temporarily unavailable'
 
 # the currently supported overview headers
 overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References', 'Bytes', 'Lines', 'Xref')
@@ -87,17 +88,30 @@ contenttype_regexp = re.compile("^Content-Type:(.*);", re.M)
 if os.name == 'posix':
     class NNTPServer(socketserver.ForkingTCPServer):
         allow_reuse_address = 1
-        # storage and auth backends, set before serve_forever()
-        backend = None
-        auth = None
+        # callables that create the storage and auth backends for each
+        # connection (set by build_server)
+        backend_factory = None
+        auth_factory = None
         if settings.max_connections:
             max_children = settings.max_connections
 else:
     class NNTPServer(socketserver.ThreadingTCPServer):
         allow_reuse_address = 1
-        # storage and auth backends, set before serve_forever()
-        backend = None
-        auth = None
+        # callables that create the storage and auth backends for each
+        # connection (set by build_server)
+        backend_factory = None
+        auth_factory = None
+
+
+def close_backend(backend):
+    """Closes a backend's database (or upstream NNTP) connection, if any."""
+    try:
+        if hasattr(backend, 'conn'):
+            backend.conn.close()
+        elif hasattr(backend, 'nntp'):
+            backend.nntp.quit()
+    except Exception:
+        pass
 
 
 class NNTPRequestHandler(socketserver.StreamRequestHandler):
@@ -105,15 +119,34 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
     # interrupts a blocking read on Python 3 (PEP 475) and never worked on Windows
     timeout = __TIMEOUT__
 
-    # the backends live on the server, so each server (and each test) can
-    # use its own
-    @property
-    def backend(self):
-        return self.server.backend
+    backend = None
+    _auth = None
+
+    def setup(self):
+        socketserver.StreamRequestHandler.setup(self)
+        # Each connection gets its own storage backend, and so its own
+        # database connection: one shared between forked children or
+        # threads interleaves their queries and results. (A server with no
+        # factory, as in the unit tests, shares its 'backend' instance.)
+        factory = getattr(self.server, 'backend_factory', None)
+        self.owns_backend = factory is not None
+        if factory is not None:
+            try:
+                self.backend = factory()
+            except Exception:
+                settings.logEvent('Error - Could not create the storage backend for %s' % (self.client_address[0]))
+                settings.logEvent(traceback.format_exc())
+                self.backend = None
+        else:
+            self.backend = getattr(self.server, 'backend', None)
 
     @property
     def auth(self):
-        return self.server.auth
+        # created on first use: most connections never log in
+        if self._auth is None:
+            factory = getattr(self.server, 'auth_factory', None)
+            self._auth = factory() if factory is not None else getattr(self.server, 'auth', None)
+        return self._auth
 
     # this is the list of supported commands
     commands = ('ARTICLE', 'BODY', 'HEAD',
@@ -141,6 +174,9 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
 
     def handle(self):
         settings.logEvent('Connection from %s' % (self.client_address[0]))
+        if self.backend is None:
+            self.send_response(STATUS_UNAVAILABLE)
+            return
         if settings.server_type == 'read-only':
             self.send_response(STATUS_READYNOPOST % (settings.nntp_hostname, __VERSION__))
         else:
@@ -910,6 +946,10 @@ class NNTPRequestHandler(socketserver.StreamRequestHandler):
         self.sending_article = 0
         self.auth_username = ''
         self.article_lines = []
+        if getattr(self, 'owns_backend', False):
+            close_backend(self.backend)
+        if self._auth is not None and getattr(self.server, 'auth_factory', None) is not None:
+            close_backend(self._auth)
         socketserver.StreamRequestHandler.finish(self)
         if __DEBUG__:
             print('Closing the request')
@@ -922,21 +962,28 @@ def build_server(address, server_class=None):
     Windows); the tests also run the other one.
     """
     # dynamic loading of the appropriate storage backend module
-    temp = importlib.import_module('storage.%s' % (settings.storage_backend))
+    storage_module = importlib.import_module('storage.%s' % (settings.storage_backend))
     if settings.nntp_cache == 'yes':
-        backend = papercut_cache.Cache(temp, papercut_cache.cache_methods)
+        def backend_factory():
+            return papercut_cache.Cache(storage_module, papercut_cache.cache_methods)
     else:
-        backend = temp.Papercut_Storage()
+        backend_factory = storage_module.Papercut_Storage
 
     # now for the authentication module, if needed
-    auth = None
+    auth_factory = None
     if settings.nntp_auth == 'yes':
-        temp = importlib.import_module('auth.%s' % (settings.auth_backend))
-        auth = temp.Papercut_Auth()
+        auth_factory = importlib.import_module('auth.%s' % (settings.auth_backend)).Papercut_Auth
 
+    # connect once now, so a configuration problem shows up on startup
+    # rather than on the first client's connection
+    close_backend(backend_factory())
+    if auth_factory is not None:
+        close_backend(auth_factory())
+
+    # each connection creates its own backends (see NNTPRequestHandler.setup)
     server = (server_class or NNTPServer)(address, NNTPRequestHandler)
-    server.backend = backend
-    server.auth = auth
+    server.backend_factory = backend_factory
+    server.auth_factory = auth_factory
     return server
 
 
